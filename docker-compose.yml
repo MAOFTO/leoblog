@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  leoblog:
+    image: maofto/leoblog:latest
+    container_name: leoblog
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.leoblog.rule=Host(`leoblog.lehnert-it.com`)"
+      - "traefik.http.routers.leoblog.entrypoints=websecure"
+      - "traefik.http.routers.leoblog.tls.certresolver=letsencrypt"
+      - "traefik.http.services.leoblog.loadbalancer.server.port=8080"
