@@ -2,7 +2,8 @@ version: "3.8"
 
 services:
   leoblog:
-    image: maofto/leoblog:latest
+    build: .
+    image: leoblog:local
     container_name: leoblog
     restart: unless-stopped
     labels:
