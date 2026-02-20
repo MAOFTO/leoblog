@@ -6,9 +6,15 @@ services:
     image: leoblog:local
     container_name: leoblog
     restart: unless-stopped
+    networks:
+      - proxy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.leoblog.rule=Host(`leoblog.lehnert-it.com`)"
       - "traefik.http.routers.leoblog.entrypoints=websecure"
       - "traefik.http.routers.leoblog.tls.certresolver=letsencrypt"
       - "traefik.http.services.leoblog.loadbalancer.server.port=80"
+
+networks:
+  proxy:
+    external: true
