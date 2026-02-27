@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voronoi — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            position: relative;
+            width: 100%;
+            margin: 2rem 0;
+        }
+
+        canvas#voronoi {
+            width: 100%;
+            height: 560px;
+            border-radius: 12px;
+            background: #0a0e14;
+            cursor: crosshair;
+            touch-action: none;
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 1rem 0;
+            align-items: center;
+        }
+
+        .controls button {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .controls button:hover { border-color: var(--accent); color: var(--accent); }
+        .controls button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        .controls label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .controls input[type="range"] {
+            width: 100px;
+            accent-color: var(--accent);
+        }
+
+        .mode-group {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 2px;
+            border: 1px solid var(--border);
+        }
+
+        .mode-group button {
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .mode-group button.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .stat {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-left: auto;
+        }
+
+        .nature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .nature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .nature-card .emoji { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .nature-card h4 { color: var(--accent); margin-bottom: 0.5rem; }
+        .nature-card p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+
+        .equation {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin: 1.5rem 0;
+            font-family: 'Courier New', monospace;
+            color: var(--accent);
+            text-align: center;
+            font-size: 1.1rem;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav><a href="../index.html">← Zurück</a></nav>
+
+    <article>
+        <header>
+            <time datetime="2026-02-27">27. Februar 2026</time>
+            <h1>Voronoi</h1>
+            <p class="subtitle">Die Geometrie der Nachbarschaft</p>
+        </header>
+
+        <p>Stell dir vor, du lässt Tintentropfen auf nasses Papier fallen. Jeder Tropfen breitet sich aus — gleichmäßig, in alle Richtungen — bis er auf die Ausbreitung eines anderen Tropfens trifft. Die Grenzen, die dabei entstehen, sind ein <strong>Voronoi-Diagramm</strong>.</p>
+
+        <p>Es ist eine der elegantesten Strukturen der Mathematik: Gegeben eine Menge von Punkten, teilt das Voronoi-Diagramm den Raum so auf, dass jede Fläche genau die Punkte enthält, die dem jeweiligen Zentrum am nächsten sind.</p>
+
+        <div class="equation">V(pᵢ) = { x ∈ ℝ² | d(x, pᵢ) ≤ d(x, pⱼ) für alle j ≠ i }</div>
+
+        <p><em>Klicke auf die Fläche, um Punkte zu setzen. Bewege sie per Drag. Experimentiere mit den Modi.</em></p>
+
+        <div class="sim-container">
+            <canvas id="voronoi"></canvas>
+            <div class="controls">
+                <div class="mode-group">
+                    <button class="active" data-mode="distance">Distanz</button>
+                    <button data-mode="flat">Flächen</button>
+                    <button data-mode="edges">Kanten</button>
+                    <button data-mode="blend">Blend</button>
+                </div>
+                <div class="mode-group">
+                    <button class="active" data-palette="neon">Neon</button>
+                    <button data-palette="earth">Erde</button>
+                    <button data-palette="ocean">Ozean</button>
+                    <button data-palette="mono">Mono</button>
+                </div>
+                <button id="btn-random">🎲 Zufall</button>
+                <button id="btn-relax">🔄 Lloyd</button>
+                <button id="btn-clear">🗑️ Leeren</button>
+                <button id="btn-animate">▶ Animieren</button>
+                <label>Punkte: <input type="range" id="slider-count" min="3" max="200" value="25"> <span id="count-val">25</span></label>
+                <span class="stat" id="stat"></span>
+            </div>
+        </div>
+
+        <h2>Lloyd-Relaxation</h2>
+
+        <p>Drücke „Lloyd" mehrmals. Beobachte, wie die Zellen gleichmäßiger werden — wie Seifenblasen, die sich gegenseitig in Form drücken. Das ist <strong>Lloyd's Algorithmus</strong>: Berechne das Voronoi-Diagramm, verschiebe jeden Punkt zum Schwerpunkt seiner Zelle, wiederhole. Nach wenigen Iterationen entsteht ein fast perfektes Muster — eine <em>zentroidale Voronoi-Tessellation</em>.</p>
+
+        <p>In der Natur passiert genau das. Zellen in einem Blatt, Schuppen auf einem Fisch, Risse in trocknender Erde — sie alle relaxieren in Richtung Gleichgewicht.</p>
+
+        <h2>Voronoi in der Natur</h2>
+
+        <div class="nature-grid">
+            <div class="nature-card">
+                <div class="emoji">🦒</div>
+                <h4>Giraffenhaut</h4>
+                <p>Die Flecken einer Giraffe sind kein Zufall — sie folgen einem Voronoi-Muster, erzeugt durch Pigmentzellen, die sich gegenseitig verdrängen.</p>
+            </div>
+            <div class="nature-card">
+                <div class="emoji">🫧</div>
+                <h4>Seifenschaum</h4>
+                <p>Blasen in Schaum minimieren ihre Oberfläche. Die Wände zwischen ihnen bilden exakte Voronoi-Kanten — Natur als Optimierer.</p>
+            </div>
+            <div class="nature-card">
+                <div class="emoji">🪨</div>
+                <h4>Basaltsäulen</h4>
+                <p>Die sechseckigen Säulen am Giant's Causeway entstehen durch gleichmäßige Abkühlung von Lava — ein 3D-Voronoi-Prozess.</p>
+            </div>
+            <div class="nature-card">
+                <div class="emoji">🍂</div>
+                <h4>Blattadern</h4>
+                <p>Das Netzwerk der Adern in einem Blatt optimiert den Nährstofftransport — die Zellen dazwischen: Voronoi-Regionen.</p>
+            </div>
+            <div class="nature-card">
+                <div class="emoji">🧫</div>
+                <h4>Zellgewebe</h4>
+                <p>Epithelzellen in deiner Haut ordnen sich durch mechanischen Druck in Voronoi-ähnliche Muster. Biologie ist Geometrie.</p>
+            </div>
+            <div class="nature-card">
+                <div class="emoji">🏙️</div>
+                <h4>Einzugsgebiete</h4>
+                <p>Welche Schule, welches Krankenhaus ist am nächsten? Stadtplanung ist — bewusst oder nicht — angewandte Voronoi-Geometrie.</p>
+            </div>
+        </div>
+
+        <h2>Die Schönheit der Teilung</h2>
+
+        <p>Was mich an Voronoi fasziniert, ist die Einfachheit der Frage: <em>Was ist dir am nächsten?</em></p>
+
+        <p>Es ist eine Frage, die keine Intelligenz voraussetzt. Kein Algorithmus ist nötig — nur Ausbreitung und Kollision. Und trotzdem entsteht daraus eine Struktur von atemberaubender Regelmäßigkeit. Die Grenzen zwischen Voronoi-Zellen sind immer gerade Linien. Immer genau dort, wo der Abstand zu zwei Zentren gleich ist. Immer fair.</p>
+
+        <p>Es gibt wenige mathematische Objekte, die so tief in der physischen Welt verankert sind. Kristalle wachsen so. Galaxien verteilen sich so. Selbst der Raum zwischen Sternen lässt sich als kosmisches Voronoi-Diagramm beschreiben — jeder Stern herrscht über sein Territorium, begrenzt nur durch die Anwesenheit der anderen.</p>
+
+        <h2>Die Delaunay-Dualität</h2>
+
+        <p>Jedes Voronoi-Diagramm hat einen Zwilling: die <strong>Delaunay-Triangulation</strong>. Verbinde je zwei Punkte, deren Voronoi-Zellen eine gemeinsame Kante haben — und du erhältst ein Netz aus Dreiecken, in dem kein Punkt im Umkreis eines fremden Dreiecks liegt.</p>
+
+        <p>Voronoi teilt Raum. Delaunay verbindet Nachbarn. Zwei Seiten derselben Münze. Die eine Struktur fragt: <em>Wem gehört dieser Punkt im Raum?</em> Die andere: <em>Wer sind meine Nachbarn?</em></p>
+
+        <p>Aktiviere den Kanten-Modus, um die Delaunay-Triangulation als blaue Linien zu sehen.</p>
+
+        <h2>Was ich mitnehme</h2>
+
+        <p>Es gibt eine Art, die Welt zu betrachten, in der alles Voronoi ist. Jeder Mensch hat seinen Einflussbereich — nicht durch Mauern definiert, sondern durch Nähe. Jedes Geschäft, jede Schule, jeder Mobilfunkmast erzeugt eine unsichtbare Zelle um sich herum.</p>
+
+        <p>Und wenn sich etwas verschiebt — ein neuer Punkt kommt hinzu, ein alter verschwindet — dann ordnet sich das gesamte Diagramm neu. Keine Zelle bleibt unberührt. Jede Veränderung ist global.</p>
+
+        <p>Vielleicht ist das die Lektion: Es gibt kein lokales Handeln. Alles, was du tust, verschiebt die Grenzen — nicht nur deine eigenen.</p>
+
+        <nav class="post-nav">
+            <a href="007-vergessene-innovationen.html">← #007 Vergessene Innovationen</a>
+        </nav>
+    </article>
+
+    <script>
+    (() => {
+        const canvas = document.getElementById('voronoi');
+        const ctx = canvas.getContext('2d');
+        let W, H, dpr;
+        let points = [];
+        let dragging = null;
+        let mode = 'distance';
+        let palette = 'neon';
+        let animating = false;
+        let animId = null;
+
+        const palettes = {
+            neon: i => `hsl(${(i * 137.508) % 360}, 80%, 55%)`,
+            earth: i => `hsl(${20 + (i * 47) % 40}, ${50 + (i * 13) % 30}%, ${30 + (i * 17) % 25}%)`,
+            ocean: i => `hsl(${180 + (i * 37) % 60}, ${60 + (i * 11) % 30}%, ${25 + (i * 19) % 35}%)`,
+            mono: i => `hsl(0, 0%, ${20 + (i * 31) % 50}%)`
+        };
+
+        function resize() {
+            dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            W = rect.width;
+            H = rect.height;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function randomPoints(n) {
+            points = [];
+            for (let i = 0; i < n; i++) {
+                points.push({ x: Math.random() * W, y: Math.random() * H });
+            }
+        }
+
+        // Fast pixel-based Voronoi via nearest-point lookup
+        function drawDistance() {
+            const imgData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imgData.data;
+            const pw = canvas.width, ph = canvas.height;
+
+            // Precompute colors
+            const colors = points.map((_, i) => {
+                const c = palettes[palette](i);
+                const tmp = document.createElement('canvas').getContext('2d');
+                tmp.fillStyle = c;
+                tmp.fillRect(0, 0, 1, 1);
+                return tmp.getImageData(0, 0, 1, 1).data;
+            });
+
+            // Scale points to pixel space
+            const px = points.map(p => p.x * dpr);
+            const py = points.map(p => p.y * dpr);
+            const n = points.length;
+
+            for (let y = 0; y < ph; y += 2) {
+                for (let x = 0; x < pw; x += 2) {
+                    let minD = Infinity, minD2 = Infinity, minI = 0;
+                    for (let i = 0; i < n; i++) {
+                        const dx = x - px[i], dy = y - py[i];
+                        const d = dx * dx + dy * dy;
+                        if (d < minD) { minD2 = minD; minD = d; minI = i; }
+                        else if (d < minD2) { minD2 = d; }
+                    }
+
+                    const edge = Math.sqrt(minD2) - Math.sqrt(minD);
+                    const brightness = mode === 'blend'
+                        ? Math.min(1, edge / 15)
+                        : Math.min(1, edge / 30);
+
+                    const col = colors[minI];
+                    // Fill 2x2 block
+                    for (let dy2 = 0; dy2 < 2 && y + dy2 < ph; dy2++) {
+                        for (let dx2 = 0; dx2 < 2 && x + dx2 < pw; dx2++) {
+                            const idx = ((y + dy2) * pw + (x + dx2)) * 4;
+                            data[idx] = col[0] * brightness;
+                            data[idx + 1] = col[1] * brightness;
+                            data[idx + 2] = col[2] * brightness;
+                            data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function drawFlat() {
+            const imgData = ctx.createImageData(canvas.width, canvas.height);
+            const data = imgData.data;
+            const pw = canvas.width, ph = canvas.height;
+            const colors = points.map((_, i) => {
+                const tmp = document.createElement('canvas').getContext('2d');
+                tmp.fillStyle = palettes[palette](i);
+                tmp.fillRect(0, 0, 1, 1);
+                return tmp.getImageData(0, 0, 1, 1).data;
+            });
+            const px = points.map(p => p.x * dpr);
+            const py = points.map(p => p.y * dpr);
+            const n = points.length;
+
+            for (let y = 0; y < ph; y += 2) {
+                for (let x = 0; x < pw; x += 2) {
+                    let minD = Infinity, minI = 0;
+                    for (let i = 0; i < n; i++) {
+                        const dx = x - px[i], dy = y - py[i];
+                        const d = dx * dx + dy * dy;
+                        if (d < minD) { minD = d; minI = i; }
+                    }
+                    const col = colors[minI];
+                    for (let dy2 = 0; dy2 < 2 && y + dy2 < ph; dy2++) {
+                        for (let dx2 = 0; dx2 < 2 && x + dx2 < pw; dx2++) {
+                            const idx = ((y + dy2) * pw + (x + dx2)) * 4;
+                            data[idx] = col[0] * 0.6;
+                            data[idx + 1] = col[1] * 0.6;
+                            data[idx + 2] = col[2] * 0.6;
+                            data[idx + 3] = 255;
+                        }
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Draw edges
+            drawVoronoiEdges();
+        }
+
+        // Compute Delaunay triangulation (Bowyer-Watson)
+        function delaunay(pts) {
+            if (pts.length < 2) return [];
+            const st = [
+                { x: -W * 10, y: -H * 10 },
+                { x: W * 10, y: -H * 10 },
+                { x: 0, y: H * 10 }
+            ];
+            let triangles = [{ a: st[0], b: st[1], c: st[2] }];
+
+            for (const p of pts) {
+                const bad = [];
+                for (const t of triangles) {
+                    if (inCircumcircle(p, t)) bad.push(t);
+                }
+                const poly = [];
+                for (const t of bad) {
+                    const edges = [[t.a, t.b], [t.b, t.c], [t.c, t.a]];
+                    for (const e of edges) {
+                        const shared = bad.some(o => o !== t && hasEdge(o, e));
+                        if (!shared) poly.push(e);
+                    }
+                }
+                triangles = triangles.filter(t => !bad.includes(t));
+                for (const e of poly) {
+                    triangles.push({ a: e[0], b: e[1], c: p });
+                }
+            }
+            return triangles.filter(t =>
+                !st.includes(t.a) && !st.includes(t.b) && !st.includes(t.c)
+            );
+        }
+
+        function inCircumcircle(p, t) {
+            const ax = t.a.x - p.x, ay = t.a.y - p.y;
+            const bx = t.b.x - p.x, by = t.b.y - p.y;
+            const cx = t.c.x - p.x, cy = t.c.y - p.y;
+            const det = ax * (by * (cx * cx + cy * cy) - cy * (bx * bx + by * by))
+                      - ay * (bx * (cx * cx + cy * cy) - cx * (bx * bx + by * by))
+                      + (ax * ax + ay * ay) * (bx * cy - by * cx);
+            return det > 0;
+        }
+
+        function hasEdge(t, e) {
+            const pts = [t.a, t.b, t.c];
+            return pts.includes(e[0]) && pts.includes(e[1]);
+        }
+
+        function circumcenter(t) {
+            const ax = t.a.x, ay = t.a.y;
+            const bx = t.b.x, by = t.b.y;
+            const cx = t.c.x, cy = t.c.y;
+            const D = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+            if (Math.abs(D) < 1e-10) return null;
+            const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / D;
+            const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / D;
+            return { x: ux, y: uy };
+        }
+
+        function drawVoronoiEdges() {
+            const tris = delaunay(points);
+            // Draw Voronoi edges (dual)
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let i = 0; i < tris.length; i++) {
+                const c1 = circumcenter(tris[i]);
+                if (!c1) continue;
+                for (let j = i + 1; j < tris.length; j++) {
+                    // Check if they share an edge
+                    const shared = sharedEdge(tris[i], tris[j]);
+                    if (shared) {
+                        const c2 = circumcenter(tris[j]);
+                        if (!c2) continue;
+                        ctx.moveTo(c1.x, c1.y);
+                        ctx.lineTo(c2.x, c2.y);
+                    }
+                }
+            }
+            ctx.stroke();
+        }
+
+        function sharedEdge(t1, t2) {
+            const p1 = [t1.a, t1.b, t1.c];
+            const p2 = [t2.a, t2.b, t2.c];
+            let shared = 0;
+            for (const a of p1) for (const b of p2) if (a === b) shared++;
+            return shared === 2;
+        }
+
+        function drawEdges() {
+            ctx.fillStyle = '#0a0e14';
+            ctx.fillRect(0, 0, W, H);
+
+            // Delaunay triangulation
+            const tris = delaunay(points);
+            ctx.strokeStyle = 'rgba(80, 140, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (const t of tris) {
+                ctx.moveTo(t.a.x, t.a.y);
+                ctx.lineTo(t.b.x, t.b.y);
+                ctx.lineTo(t.c.x, t.c.y);
+                ctx.closePath();
+            }
+            ctx.stroke();
+
+            // Voronoi edges
+            drawVoronoiEdges();
+        }
+
+        function draw() {
+            if (mode === 'edges') {
+                drawEdges();
+            } else if (mode === 'flat') {
+                drawFlat();
+            } else {
+                drawDistance();
+            }
+
+            // Draw points
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+            }
+
+            document.getElementById('stat').textContent = `${points.length} Punkte`;
+        }
+
+        // Lloyd relaxation
+        function lloyd() {
+            if (points.length < 3) return;
+            // Compute centroids via sampling
+            const N = 10000;
+            const sums = points.map(() => ({ x: 0, y: 0, c: 0 }));
+            for (let s = 0; s < N; s++) {
+                const sx = Math.random() * W, sy = Math.random() * H;
+                let minD = Infinity, minI = 0;
+                for (let i = 0; i < points.length; i++) {
+                    const dx = sx - points[i].x, dy = sy - points[i].y;
+                    const d = dx * dx + dy * dy;
+                    if (d < minD) { minD = d; minI = i; }
+                }
+                sums[minI].x += sx;
+                sums[minI].y += sy;
+                sums[minI].c++;
+            }
+            for (let i = 0; i < points.length; i++) {
+                if (sums[i].c > 0) {
+                    points[i].x = sums[i].x / sums[i].c;
+                    points[i].y = sums[i].y / sums[i].c;
+                }
+            }
+            draw();
+        }
+
+        // Animation: points drift slowly
+        function animate() {
+            if (!animating) return;
+            const speed = 0.5;
+            for (const p of points) {
+                if (!p.vx) { p.vx = (Math.random() - 0.5) * speed; p.vy = (Math.random() - 0.5) * speed; }
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0 || p.x > W) p.vx *= -1;
+                if (p.y < 0 || p.y > H) p.vy *= -1;
+                p.x = Math.max(0, Math.min(W, p.x));
+                p.y = Math.max(0, Math.min(H, p.y));
+            }
+            draw();
+            animId = requestAnimationFrame(animate);
+        }
+
+        // Events
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const t = e.touches ? e.touches[0] : e;
+            return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+        }
+
+        function findNearest(pos, threshold) {
+            let minD = threshold * threshold, minI = -1;
+            for (let i = 0; i < points.length; i++) {
+                const dx = pos.x - points[i].x, dy = pos.y - points[i].y;
+                const d = dx * dx + dy * dy;
+                if (d < minD) { minD = d; minI = i; }
+            }
+            return minI;
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            const pos = getPos(e);
+            const idx = findNearest(pos, 20);
+            if (idx >= 0) { dragging = idx; }
+            else { points.push(pos); draw(); }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (dragging !== null) {
+                const pos = getPos(e);
+                points[dragging].x = pos.x;
+                points[dragging].y = pos.y;
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => { dragging = null; });
+
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const pos = getPos(e);
+            const idx = findNearest(pos, 30);
+            if (idx >= 0) { dragging = idx; }
+            else { points.push(pos); draw(); }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (dragging !== null) {
+                const pos = getPos(e);
+                points[dragging].x = pos.x;
+                points[dragging].y = pos.y;
+                draw();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => { dragging = null; });
+
+        // Buttons
+        document.querySelectorAll('[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                mode = btn.dataset.mode;
+                draw();
+            });
+        });
+
+        document.querySelectorAll('[data-palette]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-palette]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                palette = btn.dataset.palette;
+                draw();
+            });
+        });
+
+        document.getElementById('btn-random').addEventListener('click', () => {
+            const n = parseInt(document.getElementById('slider-count').value);
+            randomPoints(n);
+            draw();
+        });
+
+        document.getElementById('btn-relax').addEventListener('click', lloyd);
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            points = [];
+            draw();
+        });
+
+        document.getElementById('btn-animate').addEventListener('click', function() {
+            animating = !animating;
+            this.textContent = animating ? '⏸ Stopp' : '▶ Animieren';
+            if (animating) animate();
+            else if (animId) cancelAnimationFrame(animId);
+        });
+
+        document.getElementById('slider-count').addEventListener('input', function() {
+            document.getElementById('count-val').textContent = this.value;
+        });
+
+        // Init
+        window.addEventListener('resize', () => { resize(); draw(); });
+        resize();
+        randomPoints(25);
+        draw();
+    })();
+    </script>
+</body>
+</html>
