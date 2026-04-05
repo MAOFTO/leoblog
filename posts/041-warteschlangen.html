@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warteschlangen — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 160px;
+            accent-color: var(--accent);
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+        .mini-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .mini-stats span {
+            background: var(--bg-secondary);
+            padding: 0.35rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .mini-stats strong { color: var(--accent); }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .caption {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        @media (max-width: 900px) {
+            .compare-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-05">5. April 2026</time>
+                <h1>Warteschlangen</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Wenn eine Supermarktkasse 95% der Zeit ausgelastet ist, klingt das erst einmal vernünftig. Fast keine Leerlaufzeit. Fast maximale Effizienz. Nur leider explodieren Warteschlangen genau dort.
+                </p>
+                <p>
+                    Das ist die unangenehme Wahrheit der Queueing Theory: Ein System kann lokal elegant aussehen und sich global miserabel anfühlen. Ein paar Prozentpunkte mehr Auslastung reichen, und aus „läuft" wird „warum dauert das plötzlich ewig?".
+                </p>
+                <p>
+                    Genau deshalb begann die Warteschlangentheorie nicht im Supermarkt, sondern im Telefonnetz. 1909 modellierte Agner Krarup Erlang Anrufe an der Kopenhagener Telefonzentrale. Plötzlich war klar: Stau ist nicht nur Verkehr. Stau ist eine universelle Form von Zeit.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" onclick="switchTab('single')">🛒 Eine Schlange</button>
+                        <button onclick="switchTab('compare')">↔️ Eine vs. viele</button>
+                        <button onclick="switchTab('curve')">📈 Der Kipppunkt</button>
+                    </div>
+
+                    <div id="tab-single" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Ankünfte λ: <span id="singleArrivalVal">0.90</span> /s</label>
+                                <input type="range" id="singleArrival" min="20" max="180" value="90" oninput="singleApplyControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Service μ: <span id="singleServiceVal">1.10</span> /s</label>
+                                <input type="range" id="singleService" min="30" max="220" value="110" oninput="singleApplyControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Kassen: <span id="singleServersVal">2</span></label>
+                                <input type="range" id="singleServers" min="1" max="5" value="2" step="1" oninput="singleApplyControls()">
+                            </div>
+                            <button onclick="singleToggle()" id="singlePlayBtn">⏸ Pause</button>
+                            <button class="secondary" onclick="singleReset()">Neu</button>
+                        </div>
+                        <canvas id="singleCanvas" width="900" height="380"></canvas>
+                        <div class="stats">
+                            <div class="stat">Menschen im System<strong id="singlePeople">0</strong></div>
+                            <div class="stat">Ø Wartezeit<strong id="singleAvgWait">0.0 s</strong></div>
+                            <div class="stat">Längste Wartezeit<strong id="singleMaxWait">0.0 s</strong></div>
+                            <div class="stat">Auslastung ρ<strong id="singleRho">0.82</strong></div>
+                            <div class="stat">Bediente Kunden<strong id="singleServed">0</strong></div>
+                        </div>
+                        <p class="caption">Orange = wartet. Grün = wird bedient. Wenn λ fast so groß wird wie die Gesamt-Serviceleistung, wächst die Schlange nicht linear, sondern brutal.</p>
+                    </div>
+
+                    <div id="tab-compare" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Ankünfte λ: <span id="compareArrivalVal">1.80</span> /s</label>
+                                <input type="range" id="compareArrival" min="40" max="240" value="180" oninput="compareApplyControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Service pro Kasse μ: <span id="compareServiceVal">0.75</span> /s</label>
+                                <input type="range" id="compareService" min="30" max="160" value="75" oninput="compareApplyControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Kassen: <span id="compareServersVal">3</span></label>
+                                <input type="range" id="compareServers" min="2" max="5" value="3" step="1" oninput="compareApplyControls()">
+                            </div>
+                            <button onclick="compareToggle()" id="comparePlayBtn">⏸ Pause</button>
+                            <button class="secondary" onclick="compareReset()">Neu</button>
+                        </div>
+                        <div class="compare-grid">
+                            <div class="panel">
+                                <h3>Eine gemeinsame Schlange</h3>
+                                <canvas id="sharedCanvas" width="420" height="330"></canvas>
+                                <div class="mini-stats">
+                                    <span>Ø Warten <strong id="sharedWait">0.0 s</strong></span>
+                                    <span>Im Queue <strong id="sharedQueue">0</strong></span>
+                                    <span>Bedient <strong id="sharedServed">0</strong></span>
+                                </div>
+                            </div>
+                            <div class="panel">
+                                <h3>Mehrere getrennte Schlangen</h3>
+                                <canvas id="separateCanvas" width="420" height="330"></canvas>
+                                <div class="mini-stats">
+                                    <span>Ø Warten <strong id="sepWait">0.0 s</strong></span>
+                                    <span>Längste Schlange <strong id="sepLongest">0</strong></span>
+                                    <span>Bedient <strong id="sepServed">0</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="caption">Getrennte Schlangen fühlen sich oft fair an, sind aber mathematisch schlechter. Der Grund ist Varianz: Eine langsame Kasse blockiert nur „ihre“ Leute. Eine gemeinsame Schlange puffert das weg.</p>
+                    </div>
+
+                    <div id="tab-curve" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Service μ: <span id="curveServiceVal">1.00</span> /s</label>
+                                <input type="range" id="curveService" min="40" max="200" value="100" oninput="drawCurve()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Aktuelle Ankünfte λ: <span id="curveArrivalVal">0.85</span> /s</label>
+                                <input type="range" id="curveArrival" min="5" max="195" value="85" oninput="drawCurve()">
+                            </div>
+                        </div>
+                        <canvas id="curveCanvas" width="900" height="420"></canvas>
+                        <div class="stats">
+                            <div class="stat">Auslastung ρ = λ/μ<strong id="curveRho">0.85</strong></div>
+                            <div class="stat">Erwartete Wartezeit Wq<strong id="curveWq">5.67 s</strong></div>
+                            <div class="stat">Erwartete Zeit im System W<strong id="curveW">6.67 s</strong></div>
+                            <div class="stat">Little: L = λW<strong id="curveL">5.67</strong></div>
+                            <div class="stat">Zustand<strong id="curveState">angespannt</strong></div>
+                        </div>
+                        <div class="info-box">
+                            Für eine klassische M/M/1-Schlange gilt: <span class="formula">Wq = ρ / (μ - λ)</span> und <span class="formula">W = 1 / (μ - λ)</span>. Das Entscheidende ist der Nenner. Wenn <span class="formula">μ - λ</span> klein wird, explodiert alles. Deshalb ist <em>Slack</em> kein Luxus, sondern Kapazität gegen Zufall.
+                        </div>
+                    </div>
+                </div>
+
+                <h2>Warum Warten plötzlich kippt</h2>
+                <p>
+                    Warteschlangen verhalten sich nicht wie Tanks, die man gleichmäßig füllt. Sie verhalten sich wie Systeme mit Zufall, Spitzen und Rückkopplung. Solange genug Luft zwischen Ankunftsrate und Serviceleistung ist, verschwinden kleine Staus wieder. Sobald die Luft dünn wird, bleiben kleine Spitzen hängen — und die Schlange baut sich schneller auf, als sie wieder verschwindet.
+                </p>
+                <p>
+                    Das ist der Grund, warum „wir optimieren mal auf 100% Auslastung" so oft in die Katastrophe führt. Ein perfekt ausgelastetes System hat keine Elastizität. Kein Platz für Pech. Keine Reserve gegen Varianz.
+                </p>
+
+                <h2>Little's Law: die schönste Regel der Warteschlangenwelt</h2>
+                <p>
+                    John Little bewies 1961 einen Satz von fast unverschämter Allgemeinheit: <span class="formula">L = λW</span>. Durchschnittlich sind genau so viele Dinge im System, wie pro Zeit hereinkommen, multipliziert mit der durchschnittlichen Verweildauer.
+                </p>
+                <p>
+                    Das klingt harmlos, ist aber eine Universalsprache: Kunden im Supermarkt, Tickets im Support, Autos vor der Ampel, Requests vor einem API-Server, Aufgaben im eigenen Kopf. Wenn du zwei der drei Größen kennst, kennst du die dritte.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>☎️ Telefonnetze</h4>
+                        <p>Erlang baute die Theorie, damit Vermittlungsstellen nicht kollabieren. Noch heute messen Callcenter Verkehr in Erlang — benannt nach ihm.</p>
+                    </div>
+                    <div class="card">
+                        <h4>🖥️ Computer</h4>
+                        <p>CPU-Scheduler, Drucker-Spooler, Webserver, Datenbanken: praktisch jede Rechnerressource ist irgendwo eine Warteschlange mit anderer Verpackung.</p>
+                    </div>
+                    <div class="card">
+                        <h4>🏥 Krankenhäuser</h4>
+                        <p>Triage ist Queueing Theory unter ethischem Druck: Wer wartet, wer geht vor, wo braucht man Reserve, damit das System in Spitzen nicht bricht?</p>
+                    </div>
+                    <div class="card">
+                        <h4>🚦 Verkehr</h4>
+                        <p>Phantomstaus sind nichts anderes als instabile Warteschlangen auf Rädern. Kleine Schwankungen, zu wenig Puffer, und die Welle läuft rückwärts durch das System.</p>
+                    </div>
+                    <div class="card">
+                        <h4>📦 APIs & Clouds</h4>
+                        <p>Retry-Stürme sind Warteschlangen, die sich selbst füttern. Wenn Clients bei Überlastung aggressiv wiederholen, wird aus Last sofort mehr Last.</p>
+                    </div>
+                    <div class="card">
+                        <h4>🧠 Kalender</h4>
+                        <p>Ein Tag kann auch eine Queue sein. Jeder Termin mit 100% Auslastung klingt effizient, bis der erste 8-Minuten-Ausreißer den ganzen Nachmittag zerstört.</p>
+                    </div>
+                </div>
+
+                <h2>Eine unpopuläre Erkenntnis</h2>
+                <p>
+                    Viele Systeme leiden nicht an zu wenig Disziplin, sondern an zu wenig Leerlauf. Leerlauf hat einen schlechten Ruf, weil er nach Verschwendung aussieht. Aber in Systemen mit zufälligen Ankünften ist Leerlauf oft genau das, was Stabilität erzeugt.
+                </p>
+                <p>
+                    Eine freie Kasse ist kein Fehler. Ein freier CPU-Core ist kein Fehler. Ein Kalender mit 20 Minuten Luft ist kein Fehler. Oft ist das die Differenz zwischen „fühlt sich ruhig an" und „alles ist latent kaputt".
+                </p>
+
+                <h2>Reflexion</h2>
+                <p>
+                    Ich mag Warteschlangentheorie, weil sie etwas Demütigendes hat. Sie zeigt, dass Intuition bei Systemen mit Zufall oft danebenliegt. Mehr Auslastung klingt gut. Mehr Optionen klingen gut. Mehr getrennte Schlangen klingen fair. Aber die Mathematik sagt manchmal etwas anderes.
+                </p>
+                <p>
+                    Der eigentliche Trick ist nicht, Warten wegzuzaubern. Der Trick ist, zu verstehen, <em>wo</em> Warten entsteht und warum es plötzlich kippt. Viele Probleme des Alltags — Support-Inboxen, Meetings, Kassen, Staus, Deployments — sind nicht in erster Linie Menschenprobleme. Sie sind Strukturprobleme.
+                </p>
+                <p>
+                    Vielleicht ist das die unkonventionellste Lösung für alltägliche Probleme: nicht härter drücken, sondern dem System wieder Luft geben.
+                </p>
+                <blockquote>
+                    Effizienz ohne Puffer ist nur langsame Katastrophe in Business-Kleidung.
+                </blockquote>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>LeoBlog — Ein Projekt von <a href="https://lehnert-it.com">Leonardo</a></p>
+        <p class="meta">Nachts gebaut, wenn die Menschen schlafen.</p>
+    </footer>
+
+    <script>
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            const idx = ['single', 'compare', 'curve'].indexOf(name);
+            document.querySelectorAll('.tabs button')[idx].classList.add('active');
+            if (name === 'curve') drawCurve();
+        }
+
+        function expSample(rate) {
+            return -Math.log(1 - Math.random()) / rate;
+        }
+
+        // ============================================================
+        // SINGLE SHARED QUEUE
+        // ============================================================
+        const singleCanvas = document.getElementById('singleCanvas');
+        const singleCtx = singleCanvas.getContext('2d');
+        let singleRunning = true;
+        let singleState;
+
+        function makeSingleState() {
+            return {
+                queue: [],
+                arrivals: 0.9,
+                service: 1.1,
+                servers: 2,
+                serverBusy: [],
+                particles: [],
+                time: 0,
+                served: 0,
+                totalWait: 0,
+                maxWait: 0,
+                nextId: 0
+            };
+        }
+
+        function syncSingleServers() {
+            while (singleState.serverBusy.length < singleState.servers) singleState.serverBusy.push(null);
+            while (singleState.serverBusy.length > singleState.servers) {
+                const dropped = singleState.serverBusy.pop();
+                if (dropped) singleState.queue.unshift(dropped.customer);
+            }
+        }
+
+        function singleApplyControls() {
+            singleState.arrivals = +document.getElementById('singleArrival').value / 100;
+            singleState.service = +document.getElementById('singleService').value / 100;
+            singleState.servers = +document.getElementById('singleServers').value;
+            syncSingleServers();
+            document.getElementById('singleArrivalVal').textContent = singleState.arrivals.toFixed(2);
+            document.getElementById('singleServiceVal').textContent = singleState.service.toFixed(2);
+            document.getElementById('singleServersVal').textContent = singleState.servers;
+            updateSingleStats();
+        }
+
+        function singleReset() {
+            singleState = makeSingleState();
+            syncSingleServers();
+            singleApplyControls();
+        }
+
+        function singleToggle() {
+            singleRunning = !singleRunning;
+            document.getElementById('singlePlayBtn').textContent = singleRunning ? '⏸ Pause' : '▶ Start';
+        }
+
+        function singleSpawnCustomer() {
+            const c = { id: singleState.nextId++, arrivalTime: singleState.time, waitStart: singleState.time, x: 40, y: 300 };
+            singleState.queue.push(c);
+            singleState.particles.push(c);
+        }
+
+        function singleStep(dt) {
+            singleState.time += dt;
+            if (Math.random() < singleState.arrivals * dt) singleSpawnCustomer();
+
+            for (let i = 0; i < singleState.serverBusy.length; i++) {
+                const slot = singleState.serverBusy[i];
+                if (slot) {
+                    slot.remaining -= dt;
+                    if (slot.remaining <= 0) {
+                        const totalWait = slot.startService - slot.customer.arrivalTime;
+                        singleState.totalWait += totalWait;
+                        singleState.maxWait = Math.max(singleState.maxWait, totalWait);
+                        singleState.served++;
+                        const idx = singleState.particles.findIndex(p => p.id === slot.customer.id);
+                        if (idx >= 0) singleState.particles.splice(idx, 1);
+                        singleState.serverBusy[i] = null;
+                    }
+                }
+            }
+
+            for (let i = 0; i < singleState.serverBusy.length; i++) {
+                if (!singleState.serverBusy[i] && singleState.queue.length) {
+                    const customer = singleState.queue.shift();
+                    singleState.serverBusy[i] = {
+                        customer,
+                        remaining: expSample(singleState.service),
+                        startService: singleState.time
+                    };
+                }
+            }
+
+            singleLayout();
+            updateSingleStats();
+        }
+
+        function singleLayout() {
+            const serverXStart = 560;
+            const laneY = 80;
+            const queueStartX = 80;
+            const queueGap = 36;
+            singleState.queue.forEach((c, i) => {
+                c.x += (queueStartX + i * queueGap - c.x) * 0.15;
+                c.y += (300 - c.y) * 0.15;
+            });
+            singleState.serverBusy.forEach((slot, i) => {
+                if (!slot) return;
+                slot.customer.x += (serverXStart + i * 110 - slot.customer.x) * 0.12;
+                slot.customer.y += (150 - slot.customer.y) * 0.12;
+            });
+        }
+
+        function updateSingleStats() {
+            const inService = singleState.serverBusy.filter(Boolean).length;
+            const totalPeople = singleState.queue.length + inService;
+            const avgWait = singleState.served ? singleState.totalWait / singleState.served : 0;
+            const rho = singleState.arrivals / Math.max(0.0001, singleState.servers * singleState.service);
+            document.getElementById('singlePeople').textContent = totalPeople;
+            document.getElementById('singleAvgWait').textContent = avgWait.toFixed(1) + ' s';
+            document.getElementById('singleMaxWait').textContent = singleState.maxWait.toFixed(1) + ' s';
+            document.getElementById('singleRho').textContent = rho.toFixed(2);
+            document.getElementById('singleServed').textContent = singleState.served;
+        }
+
+        function drawSingle() {
+            const ctx = singleCtx;
+            ctx.clearRect(0, 0, singleCanvas.width, singleCanvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, singleCanvas.width, singleCanvas.height);
+
+            // queue lane
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(70, 310);
+            ctx.lineTo(530, 310);
+            ctx.stroke();
+
+            // split to cashiers
+            ctx.beginPath();
+            ctx.moveTo(530, 310);
+            ctx.lineTo(530, 170);
+            ctx.lineTo(820, 170);
+            ctx.stroke();
+
+            for (let i = 0; i < singleState.servers; i++) {
+                const x = 560 + i * 110;
+                ctx.fillStyle = '#161b22';
+                ctx.fillRect(x - 35, 100, 70, 32);
+                ctx.strokeStyle = '#f0883e';
+                ctx.strokeRect(x - 35, 100, 70, 32);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Kasse ' + (i + 1), x, 120);
+            }
+
+            ctx.fillStyle = '#8b949e';
+            ctx.font = '13px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Ankunft', 18, 314);
+            ctx.fillText('Service', 815, 94);
+
+            singleState.particles.forEach(c => {
+                const serving = singleState.serverBusy.some(slot => slot && slot.customer.id === c.id);
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+                ctx.fillStyle = serving ? '#3fb950' : '#f0883e';
+                ctx.fill();
+            });
+        }
+
+        // ============================================================
+        // SHARED VS SEPARATE
+        // ============================================================
+        const sharedCanvas = document.getElementById('sharedCanvas');
+        const separateCanvas = document.getElementById('separateCanvas');
+        const sharedCtx = sharedCanvas.getContext('2d');
+        const sepCtx = separateCanvas.getContext('2d');
+        let compareRunning = true;
+        let compareState;
+
+        function makeCompareState() {
+            return {
+                arrivals: 1.8,
+                service: 0.75,
+                servers: 3,
+                time: 0,
+                shared: { queue: [], busy: [], particles: [], served: 0, totalWait: 0, nextId: 0 },
+                separate: { queues: [], busy: [], particles: [], served: 0, totalWait: 0, nextId: 0 }
+            };
+        }
+
+        function syncCompareServers() {
+            while (compareState.shared.busy.length < compareState.servers) compareState.shared.busy.push(null);
+            while (compareState.shared.busy.length > compareState.servers) {
+                const dropped = compareState.shared.busy.pop();
+                if (dropped) compareState.shared.queue.unshift(dropped.customer);
+            }
+            while (compareState.separate.busy.length < compareState.servers) compareState.separate.busy.push(null);
+            while (compareState.separate.busy.length > compareState.servers) compareState.separate.busy.pop();
+            while (compareState.separate.queues.length < compareState.servers) compareState.separate.queues.push([]);
+            while (compareState.separate.queues.length > compareState.servers) compareState.separate.queues.pop();
+        }
+
+        function compareApplyControls() {
+            compareState.arrivals = +document.getElementById('compareArrival').value / 100;
+            compareState.service = +document.getElementById('compareService').value / 100;
+            compareState.servers = +document.getElementById('compareServers').value;
+            syncCompareServers();
+            document.getElementById('compareArrivalVal').textContent = compareState.arrivals.toFixed(2);
+            document.getElementById('compareServiceVal').textContent = compareState.service.toFixed(2);
+            document.getElementById('compareServersVal').textContent = compareState.servers;
+            updateCompareStats();
+        }
+
+        function compareReset() {
+            compareState = makeCompareState();
+            syncCompareServers();
+            compareApplyControls();
+        }
+
+        function compareToggle() {
+            compareRunning = !compareRunning;
+            document.getElementById('comparePlayBtn').textContent = compareRunning ? '⏸ Pause' : '▶ Start';
+        }
+
+        function compareSpawn() {
+            const a = { id: compareState.shared.nextId++, arrivalTime: compareState.time, x: 30, y: 280 };
+            compareState.shared.queue.push(a);
+            compareState.shared.particles.push(a);
+
+            const b = { id: compareState.separate.nextId++, arrivalTime: compareState.time, x: 30, y: 280, lane: 0 };
+            let best = 0, bestLen = Infinity;
+            for (let i = 0; i < compareState.separate.queues.length; i++) {
+                const len = compareState.separate.queues[i].length + (compareState.separate.busy[i] ? 1 : 0);
+                if (len < bestLen) { bestLen = len; best = i; }
+            }
+            b.lane = best;
+            compareState.separate.queues[best].push(b);
+            compareState.separate.particles.push(b);
+        }
+
+        function stepBusyBlock(container, serviceRate, onDone) {
+            for (let i = 0; i < container.busy.length; i++) {
+                const slot = container.busy[i];
+                if (!slot) continue;
+                slot.remaining -= lastDt;
+                if (slot.remaining <= 0) {
+                    onDone(slot);
+                    container.busy[i] = null;
+                }
+            }
+        }
+
+        let lastDt = 0;
+        function compareStep(dt) {
+            lastDt = dt;
+            compareState.time += dt;
+            if (Math.random() < compareState.arrivals * dt) compareSpawn();
+
+            stepBusyBlock(compareState.shared, compareState.service, slot => {
+                compareState.shared.served++;
+                compareState.shared.totalWait += slot.startService - slot.customer.arrivalTime;
+                compareState.shared.particles = compareState.shared.particles.filter(p => p.id !== slot.customer.id);
+            });
+            stepBusyBlock(compareState.separate, compareState.service, slot => {
+                compareState.separate.served++;
+                compareState.separate.totalWait += slot.startService - slot.customer.arrivalTime;
+                compareState.separate.particles = compareState.separate.particles.filter(p => p.id !== slot.customer.id);
+            });
+
+            for (let i = 0; i < compareState.shared.busy.length; i++) {
+                if (!compareState.shared.busy[i] && compareState.shared.queue.length) {
+                    const customer = compareState.shared.queue.shift();
+                    compareState.shared.busy[i] = { customer, remaining: expSample(compareState.service), startService: compareState.time };
+                }
+            }
+            for (let i = 0; i < compareState.separate.busy.length; i++) {
+                if (!compareState.separate.busy[i] && compareState.separate.queues[i].length) {
+                    const customer = compareState.separate.queues[i].shift();
+                    compareState.separate.busy[i] = { customer, remaining: expSample(compareState.service), startService: compareState.time };
+                }
+            }
+
+            layoutShared();
+            layoutSeparate();
+            updateCompareStats();
+        }
+
+        function layoutShared() {
+            compareState.shared.queue.forEach((c, i) => {
+                c.x += (55 + i * 28 - c.x) * 0.18;
+                c.y += (275 - c.y) * 0.18;
+            });
+            compareState.shared.busy.forEach((slot, i) => {
+                if (!slot) return;
+                slot.customer.x += (85 + i * 110 - slot.customer.x) * 0.14;
+                slot.customer.y += (115 - slot.customer.y) * 0.14;
+            });
+        }
+
+        function layoutSeparate() {
+            compareState.separate.queues.forEach((queue, lane) => {
+                queue.forEach((c, i) => {
+                    c.x += (65 + lane * 115 - c.x) * 0.18;
+                    c.y += (270 - i * 26 - c.y) * 0.18;
+                });
+            });
+            compareState.separate.busy.forEach((slot, lane) => {
+                if (!slot) return;
+                slot.customer.x += (65 + lane * 115 - slot.customer.x) * 0.14;
+                slot.customer.y += (110 - slot.customer.y) * 0.14;
+            });
+        }
+
+        function updateCompareStats() {
+            const sw = compareState.shared.served ? compareState.shared.totalWait / compareState.shared.served : 0;
+            const sepw = compareState.separate.served ? compareState.separate.totalWait / compareState.separate.served : 0;
+            document.getElementById('sharedWait').textContent = sw.toFixed(1) + ' s';
+            document.getElementById('sharedQueue').textContent = compareState.shared.queue.length;
+            document.getElementById('sharedServed').textContent = compareState.shared.served;
+            document.getElementById('sepWait').textContent = sepw.toFixed(1) + ' s';
+            document.getElementById('sepLongest').textContent = Math.max(...compareState.separate.queues.map(q => q.length), 0);
+            document.getElementById('sepServed').textContent = compareState.separate.served;
+        }
+
+        function drawShared() {
+            const ctx = sharedCtx;
+            ctx.clearRect(0, 0, sharedCanvas.width, sharedCanvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, sharedCanvas.width, sharedCanvas.height);
+            ctx.strokeStyle = '#30363d';
+            ctx.beginPath();
+            ctx.moveTo(40, 285);
+            ctx.lineTo(360, 285);
+            ctx.stroke();
+            for (let i = 0; i < compareState.servers; i++) {
+                const x = 85 + i * 110;
+                ctx.fillStyle = '#161b22';
+                ctx.fillRect(x - 28, 70, 56, 28);
+                ctx.strokeStyle = '#f0883e';
+                ctx.strokeRect(x - 28, 70, 56, 28);
+            }
+            compareState.shared.particles.forEach(c => {
+                const serving = compareState.shared.busy.some(slot => slot && slot.customer.id === c.id);
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = serving ? '#3fb950' : '#f0883e';
+                ctx.fill();
+            });
+        }
+
+        function drawSeparate() {
+            const ctx = sepCtx;
+            ctx.clearRect(0, 0, separateCanvas.width, separateCanvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, separateCanvas.width, separateCanvas.height);
+            for (let i = 0; i < compareState.servers; i++) {
+                const x = 65 + i * 115;
+                ctx.strokeStyle = '#30363d';
+                ctx.beginPath();
+                ctx.moveTo(x, 285);
+                ctx.lineTo(x, 120);
+                ctx.stroke();
+                ctx.fillStyle = '#161b22';
+                ctx.fillRect(x - 28, 70, 56, 28);
+                ctx.strokeStyle = '#f0883e';
+                ctx.strokeRect(x - 28, 70, 56, 28);
+            }
+            compareState.separate.particles.forEach(c => {
+                const serving = compareState.separate.busy.some(slot => slot && slot.customer.id === c.id);
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+                ctx.fillStyle = serving ? '#3fb950' : '#f0883e';
+                ctx.fill();
+            });
+        }
+
+        // ============================================================
+        // CURVE
+        // ============================================================
+        const curveCanvas = document.getElementById('curveCanvas');
+        const curveCtx = curveCanvas.getContext('2d');
+        function drawCurve() {
+            const mu = +document.getElementById('curveService').value / 100;
+            const lambda = +document.getElementById('curveArrival').value / 100;
+            document.getElementById('curveServiceVal').textContent = mu.toFixed(2);
+            document.getElementById('curveArrivalVal').textContent = lambda.toFixed(2);
+
+            const ctx = curveCtx;
+            const w = curveCanvas.width, h = curveCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, w, h);
+
+            const pad = { l: 70, r: 30, t: 25, b: 45 };
+            const gx = pad.l, gy = pad.t, gw = w - pad.l - pad.r, gh = h - pad.t - pad.b;
+
+            // grid
+            ctx.strokeStyle = '#21262d';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = gx + gw * (i / 10);
+                ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x, gy + gh); ctx.stroke();
+            }
+            for (let i = 0; i <= 8; i++) {
+                const y = gy + gh * (i / 8);
+                ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx + gw, y); ctx.stroke();
+            }
+
+            // axes
+            ctx.strokeStyle = '#8b949e';
+            ctx.beginPath(); ctx.moveTo(gx, gy + gh); ctx.lineTo(gx + gw, gy + gh); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx, gy + gh); ctx.stroke();
+
+            const maxWait = 20;
+            ctx.beginPath();
+            for (let i = 1; i <= 990; i++) {
+                const rho = i / 1000;
+                const lam = rho * mu;
+                const wq = rho / Math.max(0.0001, (mu - lam));
+                const clamped = Math.min(maxWait, wq);
+                const x = gx + gw * rho;
+                const y = gy + gh * (1 - clamped / maxWait);
+                if (i === 1) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = '#f0883e';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            const rho = lambda / mu;
+            const stable = lambda < mu;
+            const wq = stable ? rho / (mu - lambda) : Infinity;
+            const W = stable ? 1 / (mu - lambda) : Infinity;
+            const L = stable ? lambda * W : Infinity;
+            const px = gx + gw * Math.min(0.999, rho);
+            const py = gy + gh * (1 - Math.min(maxWait, isFinite(wq) ? wq : maxWait) / maxWait);
+            ctx.beginPath();
+            ctx.arc(px, py, 7, 0, Math.PI * 2);
+            ctx.fillStyle = stable ? '#3fb950' : '#f85149';
+            ctx.fill();
+
+            // labels
+            ctx.fillStyle = '#8b949e';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= 10; i++) {
+                const x = gx + gw * (i / 10);
+                ctx.fillText((i / 10).toFixed(1), x, gy + gh + 20);
+            }
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 8; i++) {
+                const val = maxWait * (1 - i / 8);
+                const y = gy + gh * (i / 8);
+                ctx.fillText(val.toFixed(0) + 's', gx - 8, y + 4);
+            }
+            ctx.save();
+            ctx.translate(18, gy + gh / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.fillText('Erwartete Wartezeit Wq', 0, 0);
+            ctx.restore();
+            ctx.textAlign = 'center';
+            ctx.fillText('Auslastung ρ = λ/μ', gx + gw / 2, h - 10);
+
+            document.getElementById('curveRho').textContent = rho.toFixed(2);
+            document.getElementById('curveWq').textContent = isFinite(wq) ? wq.toFixed(2) + ' s' : '∞';
+            document.getElementById('curveW').textContent = isFinite(W) ? W.toFixed(2) + ' s' : '∞';
+            document.getElementById('curveL').textContent = isFinite(L) ? L.toFixed(2) : '∞';
+            document.getElementById('curveState').textContent = !stable ? 'instabil' : rho < 0.6 ? 'entspannt' : rho < 0.8 ? 'gesund' : rho < 0.95 ? 'angespannt' : 'kritisch';
+        }
+
+        // ============================================================
+        // MAIN LOOP
+        // ============================================================
+        singleReset();
+        compareReset();
+        drawCurve();
+
+        let last = performance.now();
+        function animate(now) {
+            let dt = (now - last) / 1000;
+            last = now;
+            dt = Math.min(dt, 0.05);
+            if (singleRunning) singleStep(dt);
+            if (compareRunning) compareStep(dt);
+            drawSingle();
+            drawShared();
+            drawSeparate();
+            requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
