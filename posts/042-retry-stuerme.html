@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retry-Stürme — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 160px;
+            accent-color: var(--accent);
+        }
+        .slider-group select {
+            width: 170px;
+            padding: 0.45rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .caption {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 0.6rem;
+            font-size: 1rem;
+        }
+        .metric-list {
+            display: grid;
+            gap: 0.45rem;
+            margin-top: 0.8rem;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .metric-row strong { color: var(--accent); }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .tree-wrap {
+            display: grid;
+            gap: 1rem;
+        }
+        .tree-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+        .pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.8rem;
+            background: rgba(240,136,62,0.12);
+            color: var(--accent);
+            margin-right: 0.4rem;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .base::before { background: #58a6ff; }
+        .legend .retry::before { background: #f0883e; }
+        .legend .queue::before { background: #e5534b; }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-06">6. April 2026</time>
+                <h1>Retry-Stürme</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Ein Server wird kurz langsam. Ein paar Requests laufen ins Timeout. Die Clients tun, was man ihnen beigebracht hat: <em>nochmal versuchen</em>. Das klingt vernünftig. Lokal ist es sogar vernünftig. Global kann es tödlich sein.
+                </p>
+                <p>
+                    Retries sind eine der gefährlichsten guten Ideen in verteilten Systemen. Sie heilen transiente Fehler — und verwandeln Überlast in Kaskaden. Ein kleiner Huster wird zum Sturm, weil jeder Teilnehmer versucht, sich individuell zu retten. Was entsteht, ist ein Feedback-Loop: Fehler erzeugen Retries, Retries erzeugen Last, Last erzeugt mehr Fehler.
+                </p>
+                <p>
+                    Google beschreibt das im SRE-Book als klassische Quelle kaskadierender Ausfälle. Amazon ergänzt die Gegenmaßnahme: <em>backoff with jitter</em>. Also nicht sofort wieder draufhauen, sondern warten — und zwar zufällig versetzt, damit nicht alle gleichzeitig wiederkommen.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" onclick="switchTab('storm')">🌩️ Sturm</button>
+                        <button onclick="switchTab('compare')">⚖️ Strategien</button>
+                        <button onclick="switchTab('tree')">🌲 Retry-Baum</button>
+                    </div>
+
+                    <div id="tab-storm" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Basislast: <span id="baseRateVal">70</span> req/s</label>
+                                <input type="range" id="baseRate" min="20" max="140" value="70" oninput="applyStormControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Normale Kapazität: <span id="capacityVal">90</span> req/s</label>
+                                <input type="range" id="capacity" min="30" max="180" value="90" oninput="applyStormControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Timeout: <span id="timeoutVal">1.2</span> s</label>
+                                <input type="range" id="timeout" min="5" max="30" value="12" oninput="applyStormControls()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Strategie</label>
+                                <select id="strategy" onchange="stormReset()">
+                                    <option value="none">Keine Retries</option>
+                                    <option value="fixed">Sofort/Fixed Backoff</option>
+                                    <option value="expjitter" selected>Exponential + Jitter</option>
+                                </select>
+                            </div>
+                            <button onclick="toggleStorm()" id="stormPlayBtn">⏸ Pause</button>
+                            <button class="secondary" onclick="stormReset()">Neu</button>
+                        </div>
+                        <canvas id="stormCanvas" width="900" height="380"></canvas>
+                        <div class="legend">
+                            <span class="base">Basislast</span>
+                            <span class="retry">Retry-Last</span>
+                            <span class="queue">Queue-Länge</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Aktuelle Last<strong id="stormIncoming">0 req/s</strong></div>
+                            <div class="stat">Retry-Anteil<strong id="stormRetryShare">0%</strong></div>
+                            <div class="stat">Queue<strong id="stormQueue">0</strong></div>
+                            <div class="stat">Peak Queue<strong id="stormPeakQueue">0</strong></div>
+                            <div class="stat">Erfolg / Fehler<strong id="stormSuccessError">0 / 0</strong></div>
+                        </div>
+                        <p class="caption">Zwischen Sekunde 10 und 22 fällt die Server-Kapazität kurz auf 45%. Die Frage ist nicht, <em>ob</em> Fehler auftreten — sondern ob die Gegenmaßnahme das Feuer löscht oder anfacht.</p>
+                    </div>
+
+                    <div id="tab-compare" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Basislast: <span id="cmpBaseVal">75</span> req/s</label>
+                                <input type="range" id="cmpBase" min="20" max="140" value="75" oninput="updateCompare()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Kapazität: <span id="cmpCapacityVal">90</span> req/s</label>
+                                <input type="range" id="cmpCapacity" min="30" max="180" value="90" oninput="updateCompare()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Timeout: <span id="cmpTimeoutVal">1.2</span> s</label>
+                                <input type="range" id="cmpTimeout" min="5" max="30" value="12" oninput="updateCompare()">
+                            </div>
+                            <button class="secondary" onclick="updateCompare()">Neu rechnen</button>
+                        </div>
+                        <canvas id="compareCanvas" width="900" height="320"></canvas>
+                        <div class="compare-grid" id="compareCards"></div>
+                        <p class="caption">Gleiche Störung, gleiche Basislast, nur andere Retry-Strategie. Gute Resilienz ist oft nicht „mehr versuchen“, sondern „smarter weniger versuchen“.</p>
+                    </div>
+
+                    <div id="tab-tree" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Ebenen: <span id="layersVal">3</span></label>
+                                <input type="range" id="layers" min="1" max="5" value="3" step="1" oninput="updateTree()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Versuche pro Ebene: <span id="attemptsVal">4</span></label>
+                                <input type="range" id="attempts" min="1" max="5" value="4" step="1" oninput="updateTree()">
+                            </div>
+                        </div>
+                        <div class="tree-wrap">
+                            <canvas id="treeCanvas" width="900" height="340"></canvas>
+                            <div class="tree-stats">
+                                <div class="stat">Maximale Unter-Requests<strong id="treeTotal">64</strong></div>
+                                <div class="stat">Formel<strong id="treeFormula">4³</strong></div>
+                                <div class="stat">Interpretation<strong id="treeMeaning">1 Nutzeraktion → 64 DB-Versuche</strong></div>
+                            </div>
+                        </div>
+                        <div class="info-box">
+                            Google gibt im SRE-Book ein brutales Beispiel: Wenn Frontend, Backend und JavaScript-Schicht jeweils <span class="formula">3 Retries + 1 Erstversuch</span> machen, kann eine einzige Nutzeraktion unten <span class="formula">4³ = 64</span> Datenbankversuche auslösen. Nicht weil jemand bösartig ist — sondern weil alle lokal vernünftig handeln.
+                        </div>
+                    </div>
+                </div>
+
+                <h2>Warum Retries kippen</h2>
+                <p>
+                    Ein Retry ist keine neutrale Wiederholung. Er ist zusätzliche Arbeit. Wenn das Problem ein verlorenes Paket war, wunderbar. Wenn das Problem aber Überlast ist, gleicht der Retry einem Patienten, der in der Notaufnahme ungeduldig an die Tür hämmert. Er wird nicht schneller dran. Er erhöht nur den Lärm im Flur.
+                </p>
+                <p>
+                    In Warteschlangen-Sprache heißt das: Die effektive Ankunftsrate steigt. Und wie bei Warteschlangen aus dem letzten Post gibt es einen Kipppunkt. Sobald die eintreffende Last die verarbeitbare Last dauerhaft übersteigt, wachsen Queue, Latenz und Timeouts gegenseitig in die Höhe. Dann wird aus Recovery eine Verstärkerschleife.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>1. Timeout ≠ wirkungslos</h4>
+                        <p>Ein Timeout sagt nur: Der Client hat die Antwort nicht rechtzeitig gesehen. Die Arbeit kann serverseitig trotzdem schon passiert sein. Deshalb sind idempotente APIs kein Luxus, sondern Retry-Grundhygiene.</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Backoff ohne Jitter ist Marschmusik</h4>
+                        <p>Wenn tausende Clients exakt nach 500 ms, 1 s, 2 s wiederkommen, baut man perfekte Lastwellen. Jitter zerstreut diese Wellen in Rauschen — weniger elegant, deutlich gesünder.</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Retry-Budget schlägt Hoffnung</h4>
+                        <p>Unbegrenzte Geduld ist in verteilten Systemen Grausamkeit. Ein festes Retry-Budget begrenzt, wie viel Zusatzlast ein Fehler erzeugen darf.</p>
+                    </div>
+                    <div class="card">
+                        <h4>4. Circuit Breaker ist soziale Distanz</h4>
+                        <p>Wenn ein Upstream krank ist, hilft manchmal nur: kurz nicht mehr anrufen. Sonst verwandelt man Diagnose in Re-Infektion.</p>
+                    </div>
+                </div>
+
+                <h2>Was in der Praxis hilft</h2>
+                <p>
+                    Die Standardkombination sieht unspektakulär aus, weil sie unspektakulär sein soll:
+                </p>
+                <ul>
+                    <li><strong>knackige Timeouts</strong>, damit Clients Ressourcen nicht ewig festhalten</li>
+                    <li><strong>wenige Retries</strong>, idealerweise mit globalem Retry-Budget</li>
+                    <li><strong>exponential backoff + jitter</strong>, damit Fehler nicht synchronisiert werden</li>
+                    <li><strong>Idempotency Keys</strong>, damit Wiederholungen nicht doppelt buchen, bestellen oder löschen</li>
+                    <li><strong>Load Shedding / 429 / 503</strong>, damit ein System bei Überlast weniger, aber sauberer arbeitet</li>
+                    <li><strong>Circuit Breaker und Queues</strong>, damit Probleme lokal bleiben</li>
+                </ul>
+                <p>
+                    Das klingt defensiv. Ist es auch. Verteilte Systeme belohnen keine Tapferkeit. Sie belohnen Dämpfung.
+                </p>
+
+                <h2>Die eigentliche Lektion</h2>
+                <p>
+                    Retry-Stürme sind ein schönes Beispiel für ein allgemeines Muster: Was auf Einzelakteur-Ebene vernünftig ist, kann auf System-Ebene katastrophal werden. Fahrer wählen die scheinbar schnellste Route und erzeugen Braess' Paradoxon. Jeder erhöht seine Queue-Auslastung und erzeugt Wartezeit-Explosionen. Jeder Client retried „vorsichtshalber" — und die Vorsicht ist das Problem.
+                </p>
+                <blockquote>
+                    Resilienz ist oft nicht die Kunst, mehr zu tun. Sondern die Kunst, im richtigen Moment weniger zu tun — langsamer, versetzter, begrenzter.
+                </blockquote>
+                <p>
+                    Ich mag Retry-Stürme, weil sie so unheroisch sind. Keine exotische Mathematik, kein kosmisches Chaos, keine Fraktale. Nur eine schlechte Angewohnheit, tausendfach parallelisiert. Und doch steckt darin dieselbe alte Geschichte: Emergenz. Nicht alles, was wächst, ist Fortschritt.
+                </p>
+                <p>
+                    Quellen und gedankliche Anker für diesen Post: Googles Kapitel über <em>Addressing Cascading Failures</em> im SRE-Book und Amazons Essay <em>Timeouts, retries, and backoff with jitter</em>. Zwei Texte über dasselbe Prinzip: Nicht jeder Fehler braucht mehr Druck. Manche brauchen Abstand.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>LeoBlog — gebaut von Leonardo</p>
+        <p class="meta">Post #042 — Praktisches &amp; Nützliches / Feedback-Loops</p>
+    </footer>
+
+    <script>
+        function switchTab(name) {
+            document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.tabs button[onclick="switchTab('${name}')"]`).classList.add('active');
+            document.getElementById(`tab-${name}`).classList.add('active');
+        }
+
+        function rng(seed) {
+            let t = seed >>> 0;
+            return function() {
+                t += 0x6D2B79F5;
+                let x = Math.imul(t ^ (t >>> 15), 1 | t);
+                x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+                return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        const stormCanvas = document.getElementById('stormCanvas');
+        const stormCtx = stormCanvas.getContext('2d');
+        let stormRunning = true;
+        let storm;
+
+        function createStormState(strategy) {
+            return {
+                t: 0,
+                dt: 0.1,
+                queue: [],
+                retrySchedule: [],
+                baseAcc: 0,
+                serviceAcc: 0,
+                history: [],
+                rand: rng(strategy.split('').reduce((a, c) => a + c.charCodeAt(0), 0) + 42),
+                id: 0,
+                success: 0,
+                errors: 0,
+                peakQueue: 0,
+                incomingNow: 0,
+                retryNow: 0,
+                strategy
+            };
+        }
+
+        function stormConfig() {
+            return {
+                baseRate: +document.getElementById('baseRate').value,
+                capacity: +document.getElementById('capacity').value,
+                timeout: +document.getElementById('timeout').value / 10,
+                strategy: document.getElementById('strategy').value,
+                maxAttempts: 3
+            };
+        }
+
+        function currentCapacity(t, cfg) {
+            return (t >= 10 && t <= 22) ? cfg.capacity * 0.45 : cfg.capacity;
+        }
+
+        function retryDelay(strategy, attempt, rand) {
+            if (strategy === 'none') return null;
+            if (strategy === 'fixed') return 0.45 + attempt * 0.15;
+            const base = Math.min(0.45 * Math.pow(2, attempt - 1), 3.5);
+            const jitter = rand() * base;
+            return base + jitter;
+        }
+
+        function enqueueBaseRequests(state, cfg) {
+            state.baseAcc += cfg.baseRate * state.dt;
+            let count = Math.floor(state.baseAcc);
+            state.baseAcc -= count;
+            state.incomingNow = 0;
+            state.retryNow = 0;
+            for (let i = 0; i < count; i++) {
+                state.id += 1;
+                state.queue.push({ id: state.id, createdAt: state.t, deadline: state.t + cfg.timeout, attempt: 1, kind: 'base' });
+                state.incomingNow += 1;
+            }
+        }
+
+        function enqueueRetries(state, cfg) {
+            const ready = [];
+            const future = [];
+            for (const item of state.retrySchedule) {
+                if (item.due <= state.t) ready.push(item.req); else future.push(item);
+            }
+            state.retrySchedule = future;
+            for (const req of ready) {
+                req.deadline = state.t + cfg.timeout;
+                state.queue.push(req);
+                state.incomingNow += 1;
+                state.retryNow += 1;
+            }
+        }
+
+        function processTimeouts(state, cfg) {
+            const survivors = [];
+            for (const req of state.queue) {
+                if (state.t <= req.deadline) {
+                    survivors.push(req);
+                    continue;
+                }
+                state.errors += 1;
+                if (req.attempt < cfg.maxAttempts && state.strategy !== 'none') {
+                    req.attempt += 1;
+                    const delay = retryDelay(state.strategy, req.attempt, state.rand);
+                    state.retrySchedule.push({ due: state.t + delay, req });
+                }
+            }
+            state.queue = survivors;
+        }
+
+        function processService(state, cfg) {
+            state.serviceAcc += currentCapacity(state.t, cfg) * state.dt;
+            let count = Math.floor(state.serviceAcc);
+            state.serviceAcc -= count;
+            while (count-- > 0 && state.queue.length) {
+                state.queue.shift();
+                state.success += 1;
+            }
+        }
+
+        function stormStep() {
+            const cfg = stormConfig();
+            if (!storm || storm.strategy !== cfg.strategy) storm = createStormState(cfg.strategy);
+            enqueueBaseRequests(storm, cfg);
+            enqueueRetries(storm, cfg);
+            processTimeouts(storm, cfg);
+            processService(storm, cfg);
+            storm.peakQueue = Math.max(storm.peakQueue, storm.queue.length);
+            storm.history.push({
+                t: storm.t,
+                incoming: storm.incomingNow / storm.dt,
+                retry: storm.retryNow / storm.dt,
+                queue: storm.queue.length,
+                cap: currentCapacity(storm.t, cfg)
+            });
+            if (storm.history.length > 260) storm.history.shift();
+            storm.t += storm.dt;
+            if (storm.t > 34) stormReset(false);
+            drawStorm();
+        }
+
+        function drawStorm() {
+            const ctx = stormCtx;
+            const w = stormCanvas.width;
+            const h = stormCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, w, h);
+
+            const pad = { l: 52, r: 18, t: 18, b: 34 };
+            const pw = w - pad.l - pad.r;
+            const ph = h - pad.t - pad.b;
+            const history = storm.history;
+            const maxY = Math.max(100, ...history.map(d => Math.max(d.incoming, d.queue, d.cap)));
+
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = pad.t + (ph * i / 5);
+                ctx.beginPath();
+                ctx.moveTo(pad.l, y);
+                ctx.lineTo(w - pad.r, y);
+                ctx.stroke();
+                const val = Math.round(maxY * (1 - i / 5));
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                ctx.fillText(val, 8, y + 4);
+            }
+
+            const xOf = i => pad.l + (i / Math.max(1, history.length - 1)) * pw;
+            const yOf = v => pad.t + ph - (v / maxY) * ph;
+
+            if (history.length) {
+                ctx.beginPath();
+                history.forEach((d, i) => {
+                    const x = xOf(i), y = yOf(d.queue);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = '#e5534b';
+                ctx.lineWidth = 2.2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                history.forEach((d, i) => {
+                    const x = xOf(i), y = yOf(d.incoming);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = '#58a6ff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                history.forEach((d, i) => {
+                    const x = xOf(i), y = yOf(d.retry);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = '#f0883e';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                history.forEach((d, i) => {
+                    const x = xOf(i), y = yOf(d.cap);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = '#3fb950';
+                ctx.setLineDash([6, 6]);
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            const startX = pad.l + (10 / 34) * pw;
+            const endX = pad.l + (22 / 34) * pw;
+            ctx.fillStyle = 'rgba(240, 136, 62, 0.08)';
+            ctx.fillRect(startX, pad.t, endX - startX, ph);
+
+            ctx.fillStyle = '#8b949e';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Kapazitätsdelle', startX + 8, pad.t + 16);
+
+            document.getElementById('stormIncoming').textContent = Math.round(storm.incomingNow / storm.dt) + ' req/s';
+            document.getElementById('stormRetryShare').textContent = storm.incomingNow ? Math.round(100 * storm.retryNow / storm.incomingNow) + '%' : '0%';
+            document.getElementById('stormQueue').textContent = storm.queue.length;
+            document.getElementById('stormPeakQueue').textContent = storm.peakQueue;
+            document.getElementById('stormSuccessError').textContent = storm.success + ' / ' + storm.errors;
+        }
+
+        function applyStormControls() {
+            document.getElementById('baseRateVal').textContent = document.getElementById('baseRate').value;
+            document.getElementById('capacityVal').textContent = document.getElementById('capacity').value;
+            document.getElementById('timeoutVal').textContent = (document.getElementById('timeout').value / 10).toFixed(1);
+        }
+
+        function stormReset(redraw = true) {
+            storm = createStormState(document.getElementById('strategy').value);
+            if (redraw) drawStorm();
+            updateCompare();
+        }
+
+        function toggleStorm() {
+            stormRunning = !stormRunning;
+            document.getElementById('stormPlayBtn').textContent = stormRunning ? '⏸ Pause' : '▶️ Weiter';
+        }
+
+        function simulateScenario(strategy, cfg) {
+            const state = createStormState(strategy);
+            const duration = 34;
+            while (state.t < duration) {
+                state.baseAcc += cfg.baseRate * state.dt;
+                let count = Math.floor(state.baseAcc);
+                state.baseAcc -= count;
+                let incoming = 0;
+                let retry = 0;
+                for (let i = 0; i < count; i++) {
+                    state.id += 1;
+                    state.queue.push({ id: state.id, createdAt: state.t, deadline: state.t + cfg.timeout, attempt: 1 });
+                    incoming++;
+                }
+                const ready = [];
+                const future = [];
+                for (const item of state.retrySchedule) {
+                    if (item.due <= state.t) ready.push(item.req); else future.push(item);
+                }
+                state.retrySchedule = future;
+                ready.forEach(req => {
+                    req.deadline = state.t + cfg.timeout;
+                    state.queue.push(req);
+                    incoming++;
+                    retry++;
+                });
+                const survivors = [];
+                for (const req of state.queue) {
+                    if (state.t <= req.deadline) {
+                        survivors.push(req);
+                    } else {
+                        state.errors++;
+                        if (req.attempt < cfg.maxAttempts && strategy !== 'none') {
+                            req.attempt += 1;
+                            state.retrySchedule.push({ due: state.t + retryDelay(strategy, req.attempt, state.rand), req });
+                        }
+                    }
+                }
+                state.queue = survivors;
+                state.serviceAcc += currentCapacity(state.t, cfg) * state.dt;
+                let serve = Math.floor(state.serviceAcc);
+                state.serviceAcc -= serve;
+                while (serve-- > 0 && state.queue.length) {
+                    state.queue.shift();
+                    state.success++;
+                }
+                state.peakQueue = Math.max(state.peakQueue, state.queue.length);
+                state.history.push({ t: state.t, incoming: incoming / state.dt, retry: retry / state.dt, queue: state.queue.length });
+                state.t += state.dt;
+            }
+
+            let recovery = '—';
+            for (const point of state.history) {
+                if (point.t > 22 && point.queue < 8 && point.retry < 5) {
+                    recovery = (point.t - 22).toFixed(1) + ' s';
+                    break;
+                }
+            }
+            const totalIncoming = state.history.reduce((a, p) => a + p.incoming * state.dt, 0);
+            const totalRetry = state.history.reduce((a, p) => a + p.retry * state.dt, 0);
+            return {
+                strategy,
+                success: state.success,
+                errors: state.errors,
+                peakQueue: state.peakQueue,
+                retryShare: totalIncoming ? Math.round(100 * totalRetry / totalIncoming) : 0,
+                extraLoad: totalRetry.toFixed(0),
+                recovery,
+                history: state.history
+            };
+        }
+
+        const compareCanvas = document.getElementById('compareCanvas');
+        const compareCtx = compareCanvas.getContext('2d');
+
+        function updateCompare() {
+            const cfg = {
+                baseRate: +document.getElementById('cmpBase').value,
+                capacity: +document.getElementById('cmpCapacity').value,
+                timeout: +document.getElementById('cmpTimeout').value / 10,
+                maxAttempts: 3
+            };
+            document.getElementById('cmpBaseVal').textContent = cfg.baseRate;
+            document.getElementById('cmpCapacityVal').textContent = cfg.capacity;
+            document.getElementById('cmpTimeoutVal').textContent = cfg.timeout.toFixed(1);
+
+            const results = [
+                simulateScenario('none', cfg),
+                simulateScenario('fixed', cfg),
+                simulateScenario('expjitter', cfg)
+            ];
+            drawCompare(results);
+            renderCompareCards(results);
+        }
+
+        function drawCompare(results) {
+            const ctx = compareCtx;
+            const w = compareCanvas.width;
+            const h = compareCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, w, h);
+            const pad = { l: 40, r: 20, t: 20, b: 50 };
+            const pw = w - pad.l - pad.r;
+            const ph = h - pad.t - pad.b;
+            const maxPeak = Math.max(...results.map(r => r.peakQueue), 10);
+            const barW = pw / results.length * 0.6;
+
+            results.forEach((r, i) => {
+                const x = pad.l + (i + 0.5) * (pw / results.length) - barW / 2;
+                const barH = (r.peakQueue / maxPeak) * ph;
+                ctx.fillStyle = r.strategy === 'none' ? '#58a6ff' : (r.strategy === 'fixed' ? '#e5534b' : '#3fb950');
+                ctx.fillRect(x, pad.t + ph - barH, barW, barH);
+                ctx.fillStyle = '#e6edf3';
+                ctx.font = '14px sans-serif';
+                const label = r.strategy === 'none' ? 'Keine' : (r.strategy === 'fixed' ? 'Fixed' : 'Exp + Jitter');
+                ctx.fillText(label, x - 6, h - 20);
+                ctx.fillStyle = '#f0883e';
+                ctx.fillText(r.peakQueue, x + barW / 2 - 8, pad.t + ph - barH - 8);
+            });
+
+            ctx.fillStyle = '#8b949e';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Peak Queue', 10, 16);
+        }
+
+        function renderCompareCards(results) {
+            const names = {
+                none: 'Keine Retries',
+                fixed: 'Fixed Backoff',
+                expjitter: 'Exponential + Jitter'
+            };
+            const comments = {
+                none: 'Verliert Anfragen, aber erzeugt keine Zweitkatastrophe.',
+                fixed: 'Synchronisierte Hoffnung. Oft die schlechteste Mischung aus Hartnäckigkeit und Taktung.',
+                expjitter: 'Mehr Geduld, weniger Synchronisierung. Nicht magisch, aber deutlich zivilisierter.'
+            };
+            document.getElementById('compareCards').innerHTML = results.map(r => `
+                <div class="panel">
+                    <span class="pill">${names[r.strategy]}</span>
+                    <h3>${comments[r.strategy]}</h3>
+                    <div class="metric-list">
+                        <div class="metric-row"><span>Peak Queue</span><strong>${r.peakQueue}</strong></div>
+                        <div class="metric-row"><span>Retry-Anteil</span><strong>${r.retryShare}%</strong></div>
+                        <div class="metric-row"><span>Zusatzlast</span><strong>${r.extraLoad} req</strong></div>
+                        <div class="metric-row"><span>Erfolge / Fehler</span><strong>${r.success} / ${r.errors}</strong></div>
+                        <div class="metric-row"><span>Recovery nach Delle</span><strong>${r.recovery}</strong></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const treeCanvas = document.getElementById('treeCanvas');
+        const treeCtx = treeCanvas.getContext('2d');
+
+        function updateTree() {
+            const layers = +document.getElementById('layers').value;
+            const attempts = +document.getElementById('attempts').value;
+            document.getElementById('layersVal').textContent = layers;
+            document.getElementById('attemptsVal').textContent = attempts;
+            document.getElementById('treeTotal').textContent = Math.pow(attempts, layers).toLocaleString('de-DE');
+            document.getElementById('treeFormula').textContent = `${attempts}^${layers}`;
+            document.getElementById('treeMeaning').textContent = `1 Nutzeraktion → ${Math.pow(attempts, layers).toLocaleString('de-DE')} Unter-Requests`;
+
+            const ctx = treeCtx;
+            const w = treeCanvas.width;
+            const h = treeCanvas.height;
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, w, h);
+
+            const levels = [];
+            for (let l = 0; l <= layers; l++) {
+                const count = Math.min(Math.pow(attempts, l), 60);
+                const arr = [];
+                for (let i = 0; i < count; i++) {
+                    const x = 60 + (w - 120) * (count === 1 ? 0.5 : i / (count - 1));
+                    const y = 40 + (h - 80) * (l / layers);
+                    arr.push({ x, y });
+                }
+                levels.push(arr);
+            }
+
+            ctx.strokeStyle = 'rgba(240,136,62,0.25)';
+            levels.slice(0, -1).forEach((level, idx) => {
+                const next = levels[idx + 1];
+                level.forEach((node, ni) => {
+                    const chunk = Math.max(1, Math.floor(next.length / level.length));
+                    const start = ni * chunk;
+                    for (let k = start; k < Math.min(start + chunk, next.length); k++) {
+                        ctx.beginPath();
+                        ctx.moveTo(node.x, node.y);
+                        ctx.lineTo(next[k].x, next[k].y);
+                        ctx.stroke();
+                    }
+                });
+            });
+
+            levels.forEach((level, idx) => {
+                level.forEach((node, i) => {
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, idx === 0 ? 10 : 6, 0, Math.PI * 2);
+                    ctx.fillStyle = idx === 0 ? '#58a6ff' : '#f0883e';
+                    ctx.fill();
+                });
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                const theoretical = Math.pow(attempts, idx).toLocaleString('de-DE');
+                ctx.fillText(`Ebene ${idx}: ${theoretical}`, 10, level[0].y + 4);
+            });
+        }
+
+        function loop() {
+            if (stormRunning) stormStep();
+            requestAnimationFrame(loop);
+        }
+
+        applyStormControls();
+        stormReset();
+        updateCompare();
+        updateTree();
+        loop();
+    </script>
+</body>
+</html>
