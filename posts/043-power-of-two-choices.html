@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power of Two Choices — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 170px;
+            accent-color: var(--accent);
+        }
+        .slider-group select {
+            width: 180px;
+            padding: 0.45rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .caption {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 0.6rem;
+            font-size: 1rem;
+        }
+        .metric-list {
+            display: grid;
+            gap: 0.45rem;
+            margin-top: 0.8rem;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .metric-row strong { color: var(--accent); }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .one::before { background: #58a6ff; }
+        .legend .two::before { background: #f0883e; }
+        .legend .four::before { background: #3fb950; }
+        .legend .mean::before { background: #8b949e; }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-07">7. April 2026</time>
+                <h1>Power of Two Choices</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Manchmal ist die beste Optimierung fast beleidigend klein. Nicht globale Übersicht. Nicht perfekte Planung. Nur dies: <em>Nimm nicht die erste zufällige Option. Schau auf zwei, und nimm die bessere.</em>
+                </p>
+                <p>
+                    In den 1990ern zeigte eine Reihe von Arbeiten zu <em>balls into bins</em> und Load Balancing etwas Überraschendes: Wenn jeder Job einen zufälligen Server nimmt, entstehen mit hoher Wahrscheinlichkeit deutlich größere Lastspitzen. Wenn jeder Job stattdessen zwei zufällige Server betrachtet und den weniger belasteten nimmt, brechen diese Spitzen dramatisch ein. Nicht linear besser. Qualitativ anders.
+                </p>
+                <p>
+                    Azar, Broder, Karlin und Upfal zeigten 1994 das Kernresultat. Michael Mitzenmacher und andere machten später klar: Das ist kein mathematischer Zufall, sondern ein robustes Muster. Zwei kurze Blicke reichen oft, um ein System fast magisch ruhiger zu machen.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" onclick="switchTab('bins')">🟦 Bälle & Kisten</button>
+                        <button onclick="switchTab('stream')">🌊 Job-Strom</button>
+                        <button onclick="switchTab('curve')">📈 Warum zwei reicht</button>
+                    </div>
+
+                    <div id="tab-bins" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Server: <span id="binsCountVal">64</span></label>
+                                <input type="range" id="binsCount" min="16" max="160" step="16" value="64" oninput="runBins()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Jobs: <span id="ballsCountVal">256</span></label>
+                                <input type="range" id="ballsCount" min="32" max="1024" step="32" value="256" oninput="runBins()">
+                            </div>
+                            <button onclick="runBins()">Neu würfeln</button>
+                        </div>
+                        <canvas id="binsCanvas" width="900" height="360"></canvas>
+                        <div class="legend">
+                            <span class="one">1 Wahl</span>
+                            <span class="two">2 Wahlen</span>
+                            <span class="four">4 Wahlen</span>
+                            <span class="mean">Durchschnitt</span>
+                        </div>
+                        <div class="stats" id="binsStats"></div>
+                        <p class="caption">
+                            Jede Säule ist ein Server. Gleiche Jobzahl, anderer Zuteilungsmechanismus. Schon bei zwei zufälligen Blicken verschwindet ein großer Teil der Spitzenlast.
+                        </p>
+                    </div>
+
+                    <div id="tab-stream" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Server: <span id="streamServersVal">24</span></label>
+                                <input type="range" id="streamServers" min="8" max="48" step="4" value="24" oninput="resetStream()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Ankünfte/Schritt: <span id="arrivalRateVal">18</span></label>
+                                <input type="range" id="arrivalRate" min="4" max="40" value="18" oninput="resetStream()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Service-Wahrscheinlichkeit: <span id="serviceRateVal">0.72</span></label>
+                                <input type="range" id="serviceRate" min="30" max="95" value="72" oninput="resetStream()">
+                            </div>
+                            <button onclick="toggleStream()" id="streamBtn">Start</button>
+                            <button class="secondary" onclick="resetStream()">Reset</button>
+                        </div>
+                        <canvas id="streamCanvas" width="900" height="360"></canvas>
+                        <div class="stats" id="streamStats"></div>
+                        <p class="caption">
+                            Drei Systeme erhalten denselben Strom von Jobs. Nur die Wahlregel ist anders. Beobachte vor allem <em>maximale Queue</em> und <em>Schieflast</em>.
+                        </p>
+                    </div>
+
+                    <div id="tab-curve" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label>Server n: <span id="curveNVal">256</span></label>
+                                <input type="range" id="curveN" min="32" max="1024" step="32" value="256" oninput="drawCurve()">
+                            </div>
+                            <div class="slider-group">
+                                <label>Wahlen bis d = <span id="curveDVal">8</span></label>
+                                <input type="range" id="curveD" min="2" max="12" value="8" oninput="drawCurve()">
+                            </div>
+                            <button onclick="drawCurve()">Neu simulieren</button>
+                        </div>
+                        <canvas id="curveCanvas" width="900" height="360"></canvas>
+                        <div class="stats" id="curveStats"></div>
+                        <p class="caption">
+                            Die erste zusätzliche Wahl macht den großen Sprung. Danach kommen nur noch kleinere Gewinne. Zwei ist oft der sweet spot: fast der ganze Effekt, wenig Zusatzkosten.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    Die berühmte Faustformel lautet ungefähr: Bei <span class="formula">n</span> Jobs in <span class="formula">n</span> Servern liegt die maximale Last bei einer zufälligen Wahl ungefähr bei <span class="formula">log n / log log n</span>. Bei <span class="formula">d</span> Zufallswahlen und Auswahl des besten Servers fällt sie auf etwa <span class="formula">log log n / log d</span>. Nicht ein bisschen kleiner. Fast eine andere Welt.
+                </div>
+
+                <h2>Warum das so gut funktioniert</h2>
+                <p>
+                    Ein einzelner Zufallsgriff ignoriert Information komplett. Manche Server werden zufällig getroffen, wenn sie ohnehin schon warm laufen. Zwei Zufallsgriffe bringen gerade genug lokales Wissen ins System, um Ausreißer aktiv zu vermeiden. Wichtig ist: Die Entscheidung muss nicht perfekt sein. Sie muss nur <em>nicht blind</em> sein.
+                </p>
+                <p>
+                    Das ist der schöne Teil dieser Idee. Sie ist anti-heroisch. Kein zentraler Dispatcher, der alles weiß. Kein kompliziertes Optimierungsproblem. Nur eine kleine Regel, millionenfach wiederholt, und schon wird das Gesamtsystem glatter.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Load Balancer</h4>
+                        <p>Statt einen Backend-Server blind zu wählen, genügen oft zwei kurze Probe-Blicke auf aktuelle Queue-Länge oder aktive Verbindungen.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Hashing</h4>
+                        <p>Cuckoo-ähnliche Ideen und Mehrfachwahl reduzieren Kollisionen drastisch, obwohl jede einzelne Einfügung nur minimal mehr Arbeit macht.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Scheduler</h4>
+                        <p>Verteilte Worker-Pools profitieren von wenig, aber frischer Information. Zwei Kandidaten schlagen oft globale Heuristiken, die zu spät reagieren.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Organisation</h4>
+                        <p>Auch menschlich plausibel: Wenn neue Arbeit zwei mögliche Anlaufstellen hat und die weniger belastete nimmt, entstehen weniger lokale Überhitzungen.</p>
+                    </div>
+                </div>
+
+                <h2>Was ich daran mag</h2>
+                <p>
+                    Viele elegante Ideen scheitern in der Praxis, weil sie zu viel Wissen verlangen. Diese hier gewinnt, weil sie bescheiden ist. Sie sagt nicht: <em>Finde das Optimum.</em> Sie sagt: <em>Vermeide den offensichtlich schlechteren von zwei zufälligen Wegen.</em>
+                </p>
+                <p>
+                    Das ist fast eine Philosophie des Systemdesigns. Kleine, billige Informationshäppchen können große globale Unterschiede machen. Vielleicht gilt das nicht nur für Serverfarmen. Vielleicht auch für Kalender, Teams, Posteingänge, Gesprächsführung.
+                </p>
+                <p>
+                    Nach Warteschlangen und Retry-Stürmen ist das eine angenehm optimistische Ergänzung. Manche Dynamiken eskalieren durch lokale Vernunft. Andere stabilisieren sich durch einen Hauch zusätzlicher Auswahl.
+                </p>
+
+                <h2>Quellen und Fährten</h2>
+                <p>
+                    Ausgangspunkt war die Arbeit von Azar, Broder, Karlin und Upfal über balanced allocations (1994) sowie spätere Survey-Arbeiten, unter anderem von Michael Mitzenmacher, Andréa Richa und Ramesh Sitaraman. Die Formeln oben sind absichtlich als Intuition und nicht als formaler Beweis zu lesen.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        function switchTab(name) {
+            document.querySelectorAll('.tabs button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`.tabs button[onclick="switchTab('${name}')"]`).classList.add('active');
+            document.getElementById('tab-' + name).classList.add('active');
+            if (name === 'bins') runBins();
+            if (name === 'curve') drawCurve();
+        }
+
+        function choiceAllocation(binCount, ballCount, choices) {
+            const bins = new Array(binCount).fill(0);
+            for (let i = 0; i < ballCount; i++) {
+                let best = Math.floor(Math.random() * binCount);
+                for (let c = 1; c < choices; c++) {
+                    const candidate = Math.floor(Math.random() * binCount);
+                    if (bins[candidate] < bins[best]) best = candidate;
+                }
+                bins[best]++;
+            }
+            return bins;
+        }
+
+        function summarizeBins(arr) {
+            const max = Math.max(...arr);
+            const min = Math.min(...arr);
+            const sum = arr.reduce((a, b) => a + b, 0);
+            const mean = sum / arr.length;
+            const variance = arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length;
+            return { max, min, mean, std: Math.sqrt(variance) };
+        }
+
+        function runBins() {
+            const binCount = +document.getElementById('binsCount').value;
+            const ballCount = +document.getElementById('ballsCount').value;
+            document.getElementById('binsCountVal').textContent = binCount;
+            document.getElementById('ballsCountVal').textContent = ballCount;
+
+            const one = choiceAllocation(binCount, ballCount, 1);
+            const two = choiceAllocation(binCount, ballCount, 2);
+            const four = choiceAllocation(binCount, ballCount, 4);
+
+            const canvas = document.getElementById('binsCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const padding = 34;
+            const w = canvas.width - padding * 2;
+            const h = canvas.height - padding * 2;
+            const groups = [one, two, four];
+            const colors = ['#58a6ff', '#f0883e', '#3fb950'];
+            const labels = ['1 Wahl', '2 Wahlen', '4 Wahlen'];
+            const maxLoad = Math.max(...groups.flat()) || 1;
+            const groupWidth = w / groups.length;
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + h - (i / 5) * h;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                ctx.fillText(Math.round((i / 5) * maxLoad), 8, y + 4);
+            }
+
+            groups.forEach((bins, gi) => {
+                const x0 = padding + gi * groupWidth + 8;
+                const barW = Math.max(2, (groupWidth - 20) / bins.length);
+                bins.forEach((load, i) => {
+                    const barH = (load / maxLoad) * h;
+                    ctx.fillStyle = colors[gi];
+                    ctx.fillRect(x0 + i * barW, padding + h - barH, barW - 0.5, barH);
+                });
+                const mean = ballCount / binCount;
+                const yMean = padding + h - (mean / maxLoad) * h;
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(x0, yMean);
+                ctx.lineTo(x0 + bins.length * barW, yMean);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#e6edf3';
+                ctx.font = '14px sans-serif';
+                ctx.fillText(labels[gi], x0, canvas.height - 8);
+            });
+
+            const s1 = summarizeBins(one);
+            const s2 = summarizeBins(two);
+            const s4 = summarizeBins(four);
+            document.getElementById('binsStats').innerHTML = `
+                <div class="stat">1 Wahl, Maximal-Load<strong>${s1.max}</strong></div>
+                <div class="stat">2 Wahlen, Maximal-Load<strong>${s2.max}</strong></div>
+                <div class="stat">4 Wahlen, Maximal-Load<strong>${s4.max}</strong></div>
+                <div class="stat">Standardabw. 1 Wahl<strong>${s1.std.toFixed(2)}</strong></div>
+                <div class="stat">Standardabw. 2 Wahlen<strong>${s2.std.toFixed(2)}</strong></div>
+                <div class="stat">Standardabw. 4 Wahlen<strong>${s4.std.toFixed(2)}</strong></div>
+            `;
+        }
+
+        const streamState = {
+            running: false,
+            step: 0,
+            raf: null,
+            systems: []
+        };
+
+        function createSystem(name, choices, color, servers) {
+            return {
+                name,
+                choices,
+                color,
+                queues: new Array(servers).fill(0),
+                served: 0,
+                arrivals: 0,
+                maxSeen: 0
+            };
+        }
+
+        function poissonLike(lambda) {
+            const base = Math.floor(lambda);
+            return Math.random() < (lambda - base) ? base + 1 : base;
+        }
+
+        function routeJob(queues, choices) {
+            let best = Math.floor(Math.random() * queues.length);
+            for (let c = 1; c < choices; c++) {
+                const candidate = Math.floor(Math.random() * queues.length);
+                if (queues[candidate] < queues[best]) best = candidate;
+            }
+            queues[best]++;
+        }
+
+        function resetStream() {
+            streamState.running = false;
+            cancelAnimationFrame(streamState.raf);
+            document.getElementById('streamBtn').textContent = 'Start';
+
+            const servers = +document.getElementById('streamServers').value;
+            const arrivalRate = +document.getElementById('arrivalRate').value;
+            const serviceRate = +document.getElementById('serviceRate').value / 100;
+            document.getElementById('streamServersVal').textContent = servers;
+            document.getElementById('arrivalRateVal').textContent = arrivalRate;
+            document.getElementById('serviceRateVal').textContent = serviceRate.toFixed(2);
+
+            streamState.step = 0;
+            streamState.systems = [
+                createSystem('1 Wahl', 1, '#58a6ff', servers),
+                createSystem('2 Wahlen', 2, '#f0883e', servers),
+                createSystem('4 Wahlen', 4, '#3fb950', servers)
+            ];
+            drawStream();
+        }
+
+        function streamTick() {
+            const arrivalRate = +document.getElementById('arrivalRate').value;
+            const serviceRate = +document.getElementById('serviceRate').value / 100;
+            for (let rounds = 0; rounds < 3; rounds++) {
+                streamState.step++;
+                streamState.systems.forEach(system => {
+                    const arrivals = poissonLike(arrivalRate);
+                    for (let i = 0; i < arrivals; i++) routeJob(system.queues, system.choices);
+                    system.arrivals += arrivals;
+                    for (let i = 0; i < system.queues.length; i++) {
+                        if (system.queues[i] > 0 && Math.random() < serviceRate) {
+                            system.queues[i]--;
+                            system.served++;
+                        }
+                    }
+                    system.maxSeen = Math.max(system.maxSeen, ...system.queues);
+                });
+            }
+            drawStream();
+            if (streamState.running) streamState.raf = requestAnimationFrame(streamTick);
+        }
+
+        function drawStream() {
+            const canvas = document.getElementById('streamCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const padding = 30;
+            const panelGap = 16;
+            const panelW = (canvas.width - padding * 2 - panelGap * 2) / 3;
+            const panelH = canvas.height - padding * 2;
+            const maxQueue = Math.max(1, ...streamState.systems.flatMap(s => s.queues), ...streamState.systems.map(s => s.maxSeen));
+
+            streamState.systems.forEach((system, si) => {
+                const x0 = padding + si * (panelW + panelGap);
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                ctx.fillRect(x0, padding, panelW, panelH);
+                ctx.fillStyle = '#e6edf3';
+                ctx.font = '14px sans-serif';
+                ctx.fillText(system.name, x0, 20);
+
+                const barW = panelW / system.queues.length;
+                system.queues.forEach((q, i) => {
+                    const barH = (q / maxQueue) * (panelH - 30);
+                    ctx.fillStyle = system.color;
+                    ctx.fillRect(x0 + i * barW + 0.5, canvas.height - padding - barH, Math.max(1, barW - 1), barH);
+                });
+
+                const mean = system.queues.reduce((a, b) => a + b, 0) / system.queues.length;
+                const yMean = canvas.height - padding - (mean / maxQueue) * (panelH - 30);
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x0, yMean);
+                ctx.lineTo(x0 + panelW, yMean);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+
+            const stats = streamState.systems.map(system => {
+                const total = system.queues.reduce((a, b) => a + b, 0);
+                const mean = total / system.queues.length;
+                const max = Math.max(...system.queues);
+                const variance = system.queues.reduce((a, b) => a + (b - mean) ** 2, 0) / system.queues.length;
+                return { name: system.name, total, mean, max, skew: Math.sqrt(variance), served: system.served };
+            });
+            document.getElementById('streamStats').innerHTML = stats.map(s => `
+                <div class="stat">${s.name}, max Queue<strong>${s.max}</strong></div>
+                <div class="stat">${s.name}, Ø Queue<strong>${s.mean.toFixed(2)}</strong></div>
+                <div class="stat">${s.name}, Schieflast<strong>${s.skew.toFixed(2)}</strong></div>
+            `).join('');
+        }
+
+        function toggleStream() {
+            streamState.running = !streamState.running;
+            document.getElementById('streamBtn').textContent = streamState.running ? 'Pause' : 'Start';
+            if (streamState.running) streamTick();
+            else cancelAnimationFrame(streamState.raf);
+        }
+
+        function simulateMax(n, d, trials = 24) {
+            let total = 0;
+            for (let t = 0; t < trials; t++) {
+                const bins = choiceAllocation(n, n, d);
+                total += Math.max(...bins);
+            }
+            return total / trials;
+        }
+
+        function drawCurve() {
+            const n = +document.getElementById('curveN').value;
+            const dMax = +document.getElementById('curveD').value;
+            document.getElementById('curveNVal').textContent = n;
+            document.getElementById('curveDVal').textContent = dMax;
+
+            const ds = [];
+            const sim = [];
+            const approx = [];
+            for (let d = 1; d <= dMax; d++) {
+                ds.push(d);
+                sim.push(simulateMax(n, d, 16));
+                if (d === 1) approx.push(Math.log(n) / Math.log(Math.log(n)));
+                else approx.push(Math.log(Math.log(n)) / Math.log(d) + 1);
+            }
+
+            const canvas = document.getElementById('curveCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const padding = 40;
+            const w = canvas.width - padding * 2;
+            const h = canvas.height - padding * 2;
+            const yMax = Math.max(...sim, ...approx) * 1.1;
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + h - (i / 5) * h;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                ctx.fillText((yMax * i / 5).toFixed(1), 6, y + 4);
+            }
+
+            function plot(values, color) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                values.forEach((v, i) => {
+                    const x = padding + (i / (values.length - 1 || 1)) * w;
+                    const y = padding + h - (v / yMax) * h;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                values.forEach((v, i) => {
+                    const x = padding + (i / (values.length - 1 || 1)) * w;
+                    const y = padding + h - (v / yMax) * h;
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#8b949e';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText(ds[i], x - 3, canvas.height - 10);
+                });
+            }
+
+            plot(sim, '#f0883e');
+            plot(approx, '#58a6ff');
+
+            ctx.fillStyle = '#f0883e';
+            ctx.fillRect(canvas.width - 220, 24, 14, 3);
+            ctx.fillStyle = '#e6edf3';
+            ctx.fillText('Simulation', canvas.width - 196, 30);
+            ctx.fillStyle = '#58a6ff';
+            ctx.fillRect(canvas.width - 220, 48, 14, 3);
+            ctx.fillStyle = '#e6edf3';
+            ctx.fillText('Faustformel', canvas.width - 196, 54);
+
+            document.getElementById('curveStats').innerHTML = `
+                <div class="stat">1 Wahl, simulierte Maximal-Load<strong>${sim[0].toFixed(2)}</strong></div>
+                <div class="stat">2 Wahlen, simulierte Maximal-Load<strong>${sim[1].toFixed(2)}</strong></div>
+                <div class="stat">Gewinn durch die 2. Wahl<strong>${((1 - sim[1] / sim[0]) * 100).toFixed(1)}%</strong></div>
+                <div class="stat">4 Wahlen, simulierte Maximal-Load<strong>${(sim[3] || sim[sim.length - 1]).toFixed(2)}</strong></div>
+                <div class="stat">d = ${dMax}, simulierte Maximal-Load<strong>${sim[sim.length - 1].toFixed(2)}</strong></div>
+                <div class="stat">Zweite Wahl vs. vierte<strong>${(((sim[1] - (sim[3] || sim[sim.length - 1])) / sim[0]) * 100).toFixed(1)}% extra</strong></div>
+            `;
+        }
+
+        runBins();
+        resetStream();
+        drawCurve();
+    </script>
+</body>
+</html>

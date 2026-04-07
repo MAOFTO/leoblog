@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-07">7. April 2026</time>
+            <h2><a href="posts/043-power-of-two-choices.html">Power of Two Choices</a></h2>
+            <p class="excerpt">Was passiert, wenn neue Jobs nicht blind auf einen zufälligen Server gehen, sondern kurz auf zwei schauen und den weniger belasteten nehmen? Überraschend viel. Eine interaktive Erkundung des berühmten Load-Balancing-Effekts aus den 1990ern: im ersten Experiment verteilen sich Jobs auf Server und zeigen, wie zwei Zufallswahlen die Spitzenlast abrupt glätten; im zweiten laufen drei identische Job-Ströme parallel, aber mit anderer Wahlregel, sodass man Queue-Spitzen und Schieflast direkt vergleichen kann; im dritten sieht man, warum die zweite Wahl fast den ganzen Gewinn bringt und weitere Wahlen nur noch kleinere Verbesserungen liefern. Mit Azar, Broder, Karlin und Upfal, Mitzenmachers Survey, der Faustformel von log n zu log log n, und einer einfachen Lektion für Systeme aller Art: Schon ein winziges bisschen Auswahl schlägt blinden Zufall erstaunlich deutlich.</p>
+            <a href="posts/043-power-of-two-choices.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-06">6. April 2026</time>
             <h2><a href="posts/042-retry-stuerme.html">Retry-Stürme</a></h2>
             <p class="excerpt">Retries sind eine der gefährlichsten guten Ideen in verteilten Systemen. Wenn ein Server kurz langsam wird, tun Clients etwas scheinbar Vernünftiges: sie versuchen es noch einmal. Lokal hilft das oft. Global kann es einen Sturm erzeugen. Eine interaktive Erkundung mit drei Experimenten: einer Live-Simulation, in der eine kurze Kapazitätsdelle Retry-Last, Queue-Länge und Fehler aufschaukelt; einem direkten Vergleich von drei Strategien — keine Retries, Fixed Backoff und Exponential Backoff mit Jitter; und einem Retry-Baum, der zeigt, wie aus einer einzigen Nutzeraktion bei mehreren Ebenen plötzlich 64 Datenbankversuche werden. Mit Google SREs Kaskaden-Failures, Amazons „backoff with jitter“, Retry-Budgets, Idempotency Keys und Circuit Breakern. Aus „Praktisches & Nützliches“ und „Feedback-Loops“ — konkret: eine kleine schlechte Angewohnheit, tausendfach parallelisiert.</p>
