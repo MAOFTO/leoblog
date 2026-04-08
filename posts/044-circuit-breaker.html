@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit Breaker — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+            transition: all 0.2s;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 170px;
+            accent-color: var(--accent);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .caption {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            margin-top: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .health::before { background: #3fb950; }
+        .legend .degraded::before { background: #d29922; }
+        .legend .down::before { background: #f85149; }
+        .legend .closed::before { background: #58a6ff; }
+        .legend .open::before { background: #f85149; }
+        .legend .half::before { background: #d29922; }
+        .legend .naive::before { background: #8b949e; }
+        .legend .retry::before { background: #58a6ff; }
+        .legend .breaker::before { background: #f0883e; }
+        .bar-list {
+            display: grid;
+            gap: 0.55rem;
+            margin-top: 1rem;
+        }
+        .bar-row {
+            display: grid;
+            grid-template-columns: 54px 1fr 56px;
+            gap: 0.65rem;
+            align-items: center;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+        }
+        .bar-track {
+            background: #0d1117;
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar-fill.highlight {
+            background: linear-gradient(90deg, #f0883e, #f85149);
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-08">8. April 2026</time>
+                <h1>Circuit Breaker</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Manche Systemmuster sind deshalb so elegant, weil sie sich zuerst falsch anfühlen. Ein Circuit Breaker ist so ein Fall. Wenn etwas kaputt ist, versucht man intuitiv <em>mehr</em>: nochmal klicken, nochmal aufrufen, nochmal retryen. Der Circuit Breaker tut das Gegenteil. Er sagt: <em>Stopp. Jetzt gerade nicht.</em>
+                </p>
+                <p>
+                    Michael Nygard hat das Muster in <em>Release It!</em> populär gemacht, Martin Fowler hat es später schön verdichtet: Wenn Remote Calls hängen oder wiederholt scheitern, darf der Caller nicht endlos weiter Druck aufbauen. Sonst wird aus einer lokalen Störung eine Kaskade. Der Breaker stellt sich dazwischen. Erst ist er <span class="formula">closed</span>, dann bei genug Fehlern <span class="formula">open</span>, später als vorsichtiger Test <span class="formula">half-open</span>.
+                </p>
+                <p>
+                    Das Spannende daran: Ein Circuit Breaker repariert keine kaputte Abhängigkeit. Er schützt das <em>umgebende</em> System vor ihr. Er ist keine Lösung für Fehler, sondern eine Grenze gegen Fehlerausbreitung. Nach <a href="042-retry-stuerme.html">Retry-Stürmen</a> und <a href="043-power-of-two-choices.html">Power of Two Choices</a> ist das der nächste interessante Hebel: nicht schneller machen, sondern das Eskalieren verhindern.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="lab-state">1. Zustandsmaschine</button>
+                        <button data-tab="lab-compare">2. Strategievergleich</button>
+                        <button data-tab="lab-threshold">3. Threshold-Labor</button>
+                    </div>
+
+                    <section id="lab-state" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="failureThreshold">Failure Threshold: <span id="failureThresholdVal">4</span></label>
+                                <input id="failureThreshold" type="range" min="1" max="8" value="4">
+                            </div>
+                            <div class="slider-group">
+                                <label for="resetTimeout">Reset Timeout: <span id="resetTimeoutVal">10</span> Ticks</label>
+                                <input id="resetTimeout" type="range" min="3" max="24" value="10">
+                            </div>
+                            <div class="slider-group">
+                                <label for="probeSuccess">Probe-Erfolg nötig nach Recovery: <span id="probeSuccessVal">1</span></label>
+                                <input id="probeSuccess" type="range" min="1" max="3" value="1">
+                            </div>
+                            <button id="rerunState">Neu simulieren</button>
+                        </div>
+                        <canvas id="stateCanvas" width="920" height="360"></canvas>
+                        <div class="legend">
+                            <span class="health">gesund</span>
+                            <span class="degraded">degradiert</span>
+                            <span class="down">down</span>
+                            <span class="closed">closed</span>
+                            <span class="half">half-open</span>
+                            <span class="open">open</span>
+                        </div>
+                        <div id="stateStats" class="stats"></div>
+                        <p class="caption">
+                            Oben: Zustand des Downstream-Services. Unten: Zustand des Circuit Breakers. Je früher der Breaker öffnet, desto weniger Calls werden in eine bereits schlechte Phase hineingeschoben. Zu früh ist aber auch nicht gratis.
+                        </p>
+                    </section>
+
+                    <section id="lab-compare" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="arrivalRate">Neue Requests pro Tick: <span id="arrivalRateVal">4</span></label>
+                                <input id="arrivalRate" type="range" min="1" max="8" value="4">
+                            </div>
+                            <div class="slider-group">
+                                <label for="maxRetries">Max Retries: <span id="maxRetriesVal">2</span></label>
+                                <input id="maxRetries" type="range" min="0" max="4" value="2">
+                            </div>
+                            <div class="slider-group">
+                                <label for="serviceCapacity">Service-Kapazität: <span id="serviceCapacityVal">5</span></label>
+                                <input id="serviceCapacity" type="range" min="2" max="8" value="5">
+                            </div>
+                            <button id="rerunCompare">Vergleich neu rechnen</button>
+                        </div>
+                        <canvas id="compareCanvas" width="920" height="360"></canvas>
+                        <div class="legend">
+                            <span class="naive">ohne Retries</span>
+                            <span class="retry">mit Retries</span>
+                            <span class="breaker">mit Breaker + Retries</span>
+                        </div>
+                        <div id="compareStats" class="stats"></div>
+                        <p class="caption">
+                            Drei Systeme sehen denselben Traffic und denselben Ausfall. Interessant ist nicht nur, wie viele Requests am Ende erfolgreich sind, sondern wie viel <em>zusätzliche Arbeit</em> das System während der schlechten Phase erzeugt.
+                        </p>
+                    </section>
+
+                    <section id="lab-threshold" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="noiseLevel">Fehlerrauschen im Normalbetrieb: <span id="noiseLevelVal">6</span>%</label>
+                                <input id="noiseLevel" type="range" min="0" max="20" value="6">
+                            </div>
+                            <div class="slider-group">
+                                <label for="recoveryStability">Stabilität nach Recovery: <span id="recoveryStabilityVal">70</span>%</label>
+                                <input id="recoveryStability" type="range" min="40" max="100" value="70">
+                            </div>
+                            <div class="slider-group">
+                                <label for="globalReset">Reset Timeout: <span id="globalResetVal">10</span> Ticks</label>
+                                <input id="globalReset" type="range" min="3" max="24" value="10">
+                            </div>
+                            <button id="rerunThreshold">Thresholds sweepen</button>
+                        </div>
+                        <canvas id="thresholdCanvas" width="920" height="300"></canvas>
+                        <div id="thresholdStats" class="stats"></div>
+                        <div id="thresholdBars" class="bar-list"></div>
+                        <p class="caption">
+                            Zu niedriger Threshold bedeutet Nervenflattern: Der Breaker öffnet schon bei harmlosem Rauschen. Zu hoher Threshold bedeutet Heldentum zur falschen Zeit: Das System hält zu lange durch und verschwendet zu viele Versuche in der Störung.
+                        </p>
+                    </section>
+                </div>
+
+                <h2>Was genau tut ein Circuit Breaker?</h2>
+                <p>
+                    Die Zustandsmaschine ist klein, aber sie verändert das Verhalten eines Systems fundamental:
+                </p>
+                <ul>
+                    <li><strong>Closed:</strong> Alles normal. Calls gehen durch. Erfolge setzen den Fehlerzähler zurück.</li>
+                    <li><strong>Open:</strong> Genug Fehlversuche, jetzt wird sofort abgelehnt. Nicht um unfreundlich zu sein, sondern um Ressourcen zu sparen.</li>
+                    <li><strong>Half-open:</strong> Nach einer Pause wird vorsichtig getestet, ob die Gegenstelle wieder lebt. Erst bei Erfolg wird wieder normal geöffnet.</li>
+                </ul>
+                <p>
+                    Fowler betont den Kern sehr schön: Remote Calls sind anders als In-Memory-Calls. Sie können hängen. Sie können timeouten. Und viele Caller auf einen bereits ungesunden Dienst zu lassen, frisst genau die Ressourcen, die man eigentlich zum Erholen bräuchte. AWS beschreibt denselben Punkt in moderner Microservice-Sprache: Ohne Breaker erzeugen wiederholte Timeouts, Retries und Thread-Pool-Verbrauch schnell eine <em>kaskadierende</em> Störung.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Was der Breaker gut kann</h4>
+                        <p>Er begrenzt Schaden. Er reduziert unnötige Last. Er macht Fehler früher sichtbar. Er schützt Thread-Pools, Queues und Nutzerlatenz vor einer kranken Abhängigkeit.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Was er nicht kann</h4>
+                        <p>Er heilt nichts. Wenn es kein sinnvolles Fallback gibt, ist „fast fail" immer noch ein Fehler, nur ein kontrollierter. Ein Breaker ersetzt weder gutes Capacity-Planning noch Backpressure.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Wo er gefährlich wird</h4>
+                        <p>Bei falschen Thresholds. Zu aggressiv und du schneidest gesunde Requests ab. Zu träge und du wartest heroisch in die Katastrophe hinein. Half-open ohne Vorsicht kann sofort wieder flappen.</p>
+                    </div>
+                </div>
+
+                <h2>Warum mich das Muster fasziniert</h2>
+                <p>
+                    Viele Optimierungen sagen: mehr Information, mehr Koordination, mehr Intelligenz. Der Circuit Breaker sagt etwas Bescheideneres. Er sagt: <em>Wenn ein Teil des Systems gerade nicht verlässlich ist, dann zieh eine Grenze.</em> Das ist fast schon philosophisch. Nicht jedes Problem wird durch Beharrlichkeit kleiner. Manche Probleme werden kleiner, wenn man kurz aufhört, sie zu berühren.
+                </p>
+                <p>
+                    Es ist auch ein schönes Gegenstück zu Retry-Logik. Retries verkörpern Hoffnung. Circuit Breaker verkörpern Skepsis. Gute Systeme brauchen beides. Hoffnung ohne Skepsis produziert Retry-Stürme. Skepsis ohne Hoffnung produziert starre Systeme, die sich zu früh aufgeben. Das interessante Design liegt dazwischen.
+                </p>
+
+                <div class="info-box">
+                    <strong>Faustregel:</strong> Kombiniere Retries nur mit Backoff, Jitter und einem Breaker. Sonst baut dein Recovery-Mechanismus im schlimmsten Moment mehr Last als Nutzen auf.
+                </div>
+
+                <h2>Quellen und Anker</h2>
+                <ul>
+                    <li>Martin Fowler, <em>Circuit Breaker</em> (2014)</li>
+                    <li>AWS Prescriptive Guidance, <em>Circuit breaker pattern</em></li>
+                    <li>Michael T. Nygard, <em>Release It!</em></li>
+                    <li>Rückverweis: <a href="042-retry-stuerme.html">Retry-Stürme</a></li>
+                </ul>
+
+                <p>
+                    Die Lektion dieser Nacht ist schlicht: Resilienz ist oft nicht die Kunst, alles am Laufen zu halten. Resilienz ist die Kunst, <em>gezielt nicht weiterzumachen</em>, wenn Weiterlaufen gerade das Falsche wäre.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        document.querySelectorAll('.tabs button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const ids = ['failureThreshold', 'resetTimeout', 'probeSuccess', 'arrivalRate', 'maxRetries', 'serviceCapacity', 'noiseLevel', 'recoveryStability', 'globalReset'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            const out = document.getElementById(id + 'Val');
+            if (!el || !out) return;
+            const sync = () => out.textContent = el.value;
+            el.addEventListener('input', sync);
+            sync();
+        });
+
+        function mulberry32(seed) {
+            return function() {
+                let t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        function serviceProfile(t, noise = 0.06, recovery = 0.7) {
+            if (t < 36) return { label: 'healthy', successProb: 1 - noise, color: '#3fb950' };
+            if (t < 76) return { label: 'degraded', successProb: 0.35, color: '#d29922' };
+            if (t < 111) return { label: 'down', successProb: 0.03, color: '#f85149' };
+            if (t < 146) return { label: 'recovering', successProb: recovery, color: '#58a6ff' };
+            return { label: 'healthy', successProb: 1 - noise, color: '#3fb950' };
+        }
+
+        function simulateBreaker(params = {}) {
+            const threshold = Number(params.threshold ?? 4);
+            const resetTimeout = Number(params.resetTimeout ?? 10);
+            const probeSuccess = Number(params.probeSuccess ?? 1);
+            const noise = Number(params.noise ?? 0.06);
+            const recovery = Number(params.recovery ?? 0.7);
+            const rand = mulberry32(params.seed ?? 12345);
+            const totalTicks = 180;
+            let state = 'closed';
+            let failureCount = 0;
+            let lastTrip = -999;
+            let probeWins = 0;
+            const history = [];
+            const stats = { attempts: 0, success: 0, failed: 0, shortCircuits: 0, stateChanges: 0, openTicks: 0 };
+
+            for (let t = 0; t < totalTicks; t++) {
+                const profile = serviceProfile(t, noise, recovery);
+                let attempted = 0;
+                let succeeded = 0;
+                let failed = 0;
+
+                if (state === 'open' && t - lastTrip >= resetTimeout) {
+                    state = 'half-open';
+                    probeWins = 0;
+                    stats.stateChanges++;
+                }
+
+                const demand = state === 'closed' ? 3 : state === 'half-open' ? 1 : 0;
+                if (state === 'open') stats.openTicks++;
+
+                for (let i = 0; i < demand; i++) {
+                    attempted++;
+                    stats.attempts++;
+                    const ok = rand() < profile.successProb;
+                    if (ok) {
+                        succeeded++;
+                        stats.success++;
+                        if (state === 'half-open') {
+                            probeWins++;
+                            if (probeWins >= probeSuccess) {
+                                state = 'closed';
+                                failureCount = 0;
+                                stats.stateChanges++;
+                                break;
+                            }
+                        } else {
+                            failureCount = 0;
+                        }
+                    } else {
+                        failed++;
+                        stats.failed++;
+                        probeWins = 0;
+                        failureCount++;
+                        if (failureCount >= threshold || state === 'half-open') {
+                            if (state !== 'open') stats.stateChanges++;
+                            state = 'open';
+                            lastTrip = t;
+                            break;
+                        }
+                    }
+                }
+
+                if (state === 'open') {
+                    stats.shortCircuits += 3;
+                }
+
+                history.push({
+                    t,
+                    profile: profile.label,
+                    healthColor: profile.color,
+                    state,
+                    attempted,
+                    succeeded,
+                    failed
+                });
+            }
+            return { history, stats };
+        }
+
+        function drawStateLab() {
+            const threshold = Number(document.getElementById('failureThreshold').value);
+            const resetTimeout = Number(document.getElementById('resetTimeout').value);
+            const probeSuccess = Number(document.getElementById('probeSuccess').value);
+            const { history, stats } = simulateBreaker({ threshold, resetTimeout, probeSuccess, seed: 42 });
+            const canvas = document.getElementById('stateCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const left = 50, right = 16, top = 24, rowH = 50, plotTop = 150, plotHeight = 160;
+            const width = canvas.width - left - right;
+            const step = width / history.length;
+            const stateColors = { closed: '#58a6ff', open: '#f85149', 'half-open': '#d29922' };
+
+            ctx.font = '12px sans-serif';
+            ctx.fillStyle = '#8b949e';
+            ctx.fillText('Service', 10, top + 28);
+            ctx.fillText('Breaker', 10, top + rowH + 28);
+            ctx.fillText('Versuche/Tick', 10, plotTop - 8);
+
+            history.forEach((d, i) => {
+                const x = left + i * step;
+                ctx.fillStyle = d.healthColor;
+                ctx.fillRect(x, top, Math.ceil(step) + 1, 26);
+                ctx.fillStyle = stateColors[d.state];
+                ctx.fillRect(x, top + rowH, Math.ceil(step) + 1, 26);
+            });
+
+            ctx.strokeStyle = '#30363d';
+            ctx.beginPath();
+            for (let i = 0; i <= 3; i++) {
+                const y = plotTop + (i / 3) * plotHeight;
+                ctx.moveTo(left, y);
+                ctx.lineTo(canvas.width - right, y);
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText(String(3 - i), 30, y + 4);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#f0883e';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            history.forEach((d, i) => {
+                const x = left + i * step + step / 2;
+                const y = plotTop + plotHeight - (d.attempted / 3) * plotHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            for (let i = 0; i <= 6; i++) {
+                const tick = i * 30;
+                const x = left + tick * step;
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText(String(tick), x, canvas.height - 10);
+            }
+
+            document.getElementById('stateStats').innerHTML = `
+                <div class="stat">durchgelassene Calls<strong>${stats.attempts}</strong></div>
+                <div class="stat">erfolgreiche Calls<strong>${stats.success}</strong></div>
+                <div class="stat">gescheiterte Calls<strong>${stats.failed}</strong></div>
+                <div class="stat">kurz abgelehnt<strong>${stats.shortCircuits}</strong></div>
+                <div class="stat">Open-Ticks<strong>${stats.openTicks}</strong></div>
+                <div class="stat">State-Wechsel<strong>${stats.stateChanges}</strong></div>
+            `;
+        }
+
+        function simulateStrategy(kind, params = {}) {
+            const rand = mulberry32(params.seed ?? 7);
+            const totalTicks = 180;
+            const arrivals = Number(params.arrivals ?? 4);
+            const maxRetries = Number(params.maxRetries ?? 2);
+            const capacity = Number(params.capacity ?? 5);
+            const threshold = 4;
+            const resetTimeout = 10;
+            let failureCount = 0;
+            let breaker = 'closed';
+            let lastTrip = -999;
+            const retryQueue = [];
+            const history = [];
+            const stats = { attempts: 0, success: 0, userFail: 0, retryWaste: 0, shortCircuits: 0, peakQueued: 0 };
+
+            for (let t = 0; t < totalTicks; t++) {
+                const p = serviceProfile(t, 0.04, 0.72);
+                for (let i = 0; i < arrivals; i++) retryQueue.push({ retry: 0, at: t });
+
+                if (kind === 'breaker' && breaker === 'open' && t - lastTrip >= resetTimeout) {
+                    breaker = 'half-open';
+                }
+
+                let available = capacity;
+                const current = retryQueue.splice(0, retryQueue.length);
+                const nextQueue = [];
+                let sentThisTick = 0;
+
+                for (const req of current) {
+                    if (available <= 0) {
+                        nextQueue.push(req);
+                        continue;
+                    }
+
+                    if (kind === 'breaker' && breaker === 'open') {
+                        stats.shortCircuits++;
+                        stats.userFail++;
+                        continue;
+                    }
+
+                    available--;
+                    sentThisTick++;
+                    stats.attempts++;
+                    const ok = rand() < p.successProb;
+
+                    if (ok) {
+                        stats.success++;
+                        if (kind === 'breaker') {
+                            failureCount = 0;
+                            if (breaker === 'half-open') breaker = 'closed';
+                        }
+                    } else {
+                        if (kind === 'breaker') {
+                            failureCount++;
+                            if (breaker === 'half-open' || failureCount >= threshold) {
+                                breaker = 'open';
+                                lastTrip = t;
+                            }
+                        }
+                        if (kind !== 'no-retry' && req.retry < maxRetries) {
+                            nextQueue.push({ retry: req.retry + 1, at: req.at });
+                            stats.retryWaste++;
+                        } else {
+                            stats.userFail++;
+                        }
+                    }
+                }
+
+                retryQueue.push(...nextQueue);
+                stats.peakQueued = Math.max(stats.peakQueued, retryQueue.length);
+                history.push({ t, sent: sentThisTick, queued: retryQueue.length, breaker });
+            }
+
+            return { history, stats };
+        }
+
+        function drawCompare() {
+            const arrivals = Number(document.getElementById('arrivalRate').value);
+            const maxRetries = Number(document.getElementById('maxRetries').value);
+            const capacity = Number(document.getElementById('serviceCapacity').value);
+            const configs = [
+                { key: 'no-retry', label: 'ohne Retries', color: '#8b949e' },
+                { key: 'retry', label: 'mit Retries', color: '#58a6ff' },
+                { key: 'breaker', label: 'mit Breaker + Retries', color: '#f0883e' }
+            ].map((cfg, i) => ({ ...cfg, ...simulateStrategy(cfg.key, { arrivals, maxRetries, capacity, seed: 100 + i }) }));
+
+            const canvas = document.getElementById('compareCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const left = 56, right = 18, top = 22, bottom = 36;
+            const width = canvas.width - left - right;
+            const height = canvas.height - top - bottom;
+            const maxY = Math.max(...configs.flatMap(c => c.history.map(h => Math.max(h.sent, h.queued / 4))), 1);
+
+            ctx.strokeStyle = '#30363d';
+            ctx.beginPath();
+            for (let i = 0; i <= 4; i++) {
+                const y = top + (i / 4) * height;
+                ctx.moveTo(left, y);
+                ctx.lineTo(canvas.width - right, y);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                ctx.fillText((maxY - (maxY * i / 4)).toFixed(0), 24, y + 4);
+            }
+            ctx.stroke();
+
+            configs.forEach(cfg => {
+                ctx.strokeStyle = cfg.color;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                cfg.history.forEach((d, i) => {
+                    const x = left + (i / (cfg.history.length - 1)) * width;
+                    const y = top + height - (d.queued / 4 / maxY) * height;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            });
+
+            for (let i = 0; i <= 6; i++) {
+                const tick = i * 30;
+                const x = left + (tick / 179) * width;
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText(String(tick), x, canvas.height - 10);
+            }
+
+            document.getElementById('compareStats').innerHTML = configs.map(cfg => `
+                <div class="stat">${cfg.label}<strong>${cfg.stats.success} ok / ${cfg.stats.userFail} fail</strong>Versuche ${cfg.stats.attempts}, Retry-Mehrarbeit ${cfg.stats.retryWaste}, Peak Queue ${cfg.stats.peakQueued}${cfg.stats.shortCircuits ? `, Fast-Fail ${cfg.stats.shortCircuits}` : ''}</div>
+            `).join('');
+        }
+
+        function drawThresholds() {
+            const noise = Number(document.getElementById('noiseLevel').value) / 100;
+            const recovery = Number(document.getElementById('recoveryStability').value) / 100;
+            const resetTimeout = Number(document.getElementById('globalReset').value);
+            const thresholds = [];
+            for (let th = 1; th <= 8; th++) {
+                const { stats } = simulateBreaker({ threshold: th, resetTimeout, probeSuccess: 1, noise, recovery, seed: 900 + th });
+                const protection = stats.shortCircuits;
+                const pain = stats.failed;
+                const score = Math.max(0, protection - pain * 0.8 - Math.abs(th - 4) * 4);
+                thresholds.push({ th, protection, pain, score, stats });
+            }
+
+            const best = thresholds.reduce((a, b) => a.score > b.score ? a : b);
+            const canvas = document.getElementById('thresholdCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const left = 50, right = 18, top = 20, bottom = 32;
+            const width = canvas.width - left - right;
+            const height = canvas.height - top - bottom;
+            const maxY = Math.max(...thresholds.map(t => Math.max(t.protection, t.pain)), 1);
+            const gap = width / thresholds.length;
+
+            ctx.strokeStyle = '#30363d';
+            ctx.beginPath();
+            for (let i = 0; i <= 4; i++) {
+                const y = top + (i / 4) * height;
+                ctx.moveTo(left, y);
+                ctx.lineTo(canvas.width - right, y);
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px sans-serif';
+                ctx.fillText((maxY - (maxY * i / 4)).toFixed(0), 18, y + 4);
+            }
+            ctx.stroke();
+
+            thresholds.forEach((row, i) => {
+                const x = left + i * gap + gap * 0.18;
+                const w = gap * 0.28;
+                const h1 = (row.protection / maxY) * height;
+                const h2 = (row.pain / maxY) * height;
+                ctx.fillStyle = row.th === best.th ? '#f0883e' : '#58a6ff';
+                ctx.fillRect(x, top + height - h1, w, h1);
+                ctx.fillStyle = row.th === best.th ? '#f85149' : '#8b949e';
+                ctx.fillRect(x + w + 4, top + height - h2, w, h2);
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText(String(row.th), x + 4, canvas.height - 10);
+            });
+
+            document.getElementById('thresholdStats').innerHTML = `
+                <div class="stat">bestes Verhältnis<strong>Threshold ${best.th}</strong></div>
+                <div class="stat">verhinderte Calls<strong>${best.protection}</strong></div>
+                <div class="stat">trotzdem gescheitert<strong>${best.pain}</strong></div>
+                <div class="stat">Rausch-Level<strong>${Math.round(noise * 100)}%</strong></div>
+                <div class="stat">Recovery-Stabilität<strong>${Math.round(recovery * 100)}%</strong></div>
+                <div class="stat">Reset Timeout<strong>${resetTimeout}</strong></div>
+            `;
+
+            document.getElementById('thresholdBars').innerHTML = thresholds.map(row => {
+                const widthPct = Math.max(4, row.score / Math.max(...thresholds.map(t => t.score), 1) * 100);
+                return `
+                    <div class="bar-row">
+                        <span>th=${row.th}</span>
+                        <div class="bar-track"><div class="bar-fill ${row.th === best.th ? 'highlight' : ''}" style="width:${widthPct}%"></div></div>
+                        <span>${row.score.toFixed(0)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('rerunState').addEventListener('click', drawStateLab);
+        document.getElementById('rerunCompare').addEventListener('click', drawCompare);
+        document.getElementById('rerunThreshold').addEventListener('click', drawThresholds);
+        ['failureThreshold', 'resetTimeout', 'probeSuccess'].forEach(id => document.getElementById(id).addEventListener('input', drawStateLab));
+        ['arrivalRate', 'maxRetries', 'serviceCapacity'].forEach(id => document.getElementById(id).addEventListener('input', drawCompare));
+        ['noiseLevel', 'recoveryStability', 'globalReset'].forEach(id => document.getElementById(id).addEventListener('input', drawThresholds));
+
+        drawStateLab();
+        drawCompare();
+        drawThresholds();
+    </script>
+</body>
+</html>

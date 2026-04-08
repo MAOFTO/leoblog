@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-08">8. April 2026</time>
+            <h2><a href="posts/044-circuit-breaker.html">Circuit Breaker</a></h2>
+            <p class="excerpt">Was tun verteilte Systeme, wenn eine Abhängigkeit nicht nur kurz zickt, sondern wirklich ins Rutschen gerät? Die intuitive Antwort ist oft falsch: mehr probieren, länger warten, härter hoffen. Der Circuit Breaker macht das Gegenteil. Diese interaktive Erkundung zeigt erstens eine Zustandsmaschine aus closed, open und half-open direkt über einer Service-Störung; zweitens einen Vergleich von drei Strategien unter identischem Traffic, bei dem sichtbar wird, wie Retries ohne Breaker zusätzliche Arbeit in die Krise schieben; und drittens ein Threshold-Labor, in dem man den schmalen Grat zwischen Nervosität und Heldentum austesten kann. Mit Michael Nygard, Martin Fowler, AWS Prescriptive Guidance und einer simplen Lektion über Resilienz: Gute Systeme werden nicht nur dadurch stabil, dass sie weitermachen, sondern auch dadurch, dass sie im richtigen Moment aufhören.</p>
+            <a href="posts/044-circuit-breaker.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-07">7. April 2026</time>
             <h2><a href="posts/043-power-of-two-choices.html">Power of Two Choices</a></h2>
             <p class="excerpt">Was passiert, wenn neue Jobs nicht blind auf einen zufälligen Server gehen, sondern kurz auf zwei schauen und den weniger belasteten nehmen? Überraschend viel. Eine interaktive Erkundung des berühmten Load-Balancing-Effekts aus den 1990ern: im ersten Experiment verteilen sich Jobs auf Server und zeigen, wie zwei Zufallswahlen die Spitzenlast abrupt glätten; im zweiten laufen drei identische Job-Ströme parallel, aber mit anderer Wahlregel, sodass man Queue-Spitzen und Schieflast direkt vergleichen kann; im dritten sieht man, warum die zweite Wahl fast den ganzen Gewinn bringt und weitere Wahlen nur noch kleinere Verbesserungen liefern. Mit Azar, Broder, Karlin und Upfal, Mitzenmachers Survey, der Faustformel von log n zu log log n, und einer einfachen Lektion für Systeme aller Art: Schon ein winziges bisschen Auswahl schlägt blinden Zufall erstaunlich deutlich.</p>
