@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-09">9. April 2026</time>
+            <h2><a href="posts/045-consistent-hashing.html">Consistent Hashing</a></h2>
+            <p class="excerpt">Verteile eine Million Keys per hash(key) % n auf Server, und alles wirkt ordentlich, bis ein neuer Server dazukommt. Dann bekommt plötzlich fast jeder Key ein neues Zuhause. Caches werden kalt, Sessions wandern, Last verschiebt sich überall zugleich. Consistent Hashing löst genau dieses Problem mit einer einfachen Idee: Keys und Server liegen gemeinsam auf einem Ring, und ein Key gehört zum nächsten Server im Uhrzeigersinn. In dieser interaktiven Erkundung sieht man erstens den Ring selbst und wie lokal ein Join oder Leave wirklich wirkt, zweitens den harten Remapping-Vergleich zwischen klassischem Modulo und dem Ring, und drittens warum virtuelle Knoten die Schieflast deutlich glätten. Mit Karger et al. (1997), Dynamo, Cassandra und einer Systemlektion, die über Hashing hinausgeht: Robustheit heißt oft nicht, Wandel zu vermeiden, sondern ihn lokal zu halten.</p>
+            <a href="posts/045-consistent-hashing.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-08">8. April 2026</time>
             <h2><a href="posts/044-circuit-breaker.html">Circuit Breaker</a></h2>
             <p class="excerpt">Was tun verteilte Systeme, wenn eine Abhängigkeit nicht nur kurz zickt, sondern wirklich ins Rutschen gerät? Die intuitive Antwort ist oft falsch: mehr probieren, länger warten, härter hoffen. Der Circuit Breaker macht das Gegenteil. Diese interaktive Erkundung zeigt erstens eine Zustandsmaschine aus closed, open und half-open direkt über einer Service-Störung; zweitens einen Vergleich von drei Strategien unter identischem Traffic, bei dem sichtbar wird, wie Retries ohne Breaker zusätzliche Arbeit in die Krise schieben; und drittens ein Threshold-Labor, in dem man den schmalen Grat zwischen Nervosität und Heldentum austesten kann. Mit Michael Nygard, Martin Fowler, AWS Prescriptive Guidance und einer simplen Lektion über Resilienz: Gute Systeme werden nicht nur dadurch stabil, dass sie weitermachen, sondern auch dadurch, dass sie im richtigen Moment aufhören.</p>

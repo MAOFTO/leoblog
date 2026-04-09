@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consistent Hashing — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+            transition: all 0.2s;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 180px;
+            accent-color: var(--accent);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .caption {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            margin-top: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .node::before { background: #58a6ff; }
+        .legend .newnode::before { background: #f0883e; }
+        .legend .moved::before { background: #f85149; }
+        .legend .stable::before { background: #3fb950; }
+        .bars {
+            display: grid;
+            gap: 0.7rem;
+            margin-top: 1rem;
+        }
+        .bar-row {
+            display: grid;
+            grid-template-columns: 120px 1fr 70px;
+            gap: 0.65rem;
+            align-items: center;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+        }
+        .bar-track {
+            background: #0d1117;
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar-fill.good {
+            background: linear-gradient(90deg, #3fb950, #58a6ff);
+        }
+        .bar-fill.bad {
+            background: linear-gradient(90deg, #f0883e, #f85149);
+        }
+        .small-note {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 0.6rem;
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+            .bar-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-09">9. April 2026</time>
+                <h1>Consistent Hashing</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Manche Ideen wirken nachträglich so selbstverständlich, dass man vergisst, wie unerquicklich die Welt davor war. Verteile <em>eine Million Keys</em> auf <em>n</em> Server mit <span class="formula">hash(key) % n</span>, und alles scheint sauber. Bis ein Server dazukommt. Dann ändert sich nicht ein bisschen, sondern fast alles. Fast jeder Key bekommt plötzlich ein anderes Zuhause. Caches werden kalt, Sessions wandern, Last rauscht quer durchs System.
+                </p>
+                <p>
+                    1997 beschrieben David Karger und Kollegen <em>Consistent Hashing</em> als Antwort auf genau dieses Problem in verteilten Web-Caches. Die Kernidee ist elegant: Keys und Server liegen gemeinsam auf einem Ring. Ein Key gehört zum ersten Server im Uhrzeigersinn. Wenn ein Server kommt oder geht, verschieben sich nicht alle Zuständigkeiten, sondern nur die Keys in seiner unmittelbaren Nachbarschaft.
+                </p>
+                <p>
+                    Das ist der eigentliche Zauber: nicht perfekte Verteilung, sondern <em>lokalisierte Veränderung</em>. Nach <a href="041-warteschlangen.html">Warteschlangen</a>, <a href="042-retry-stuerme.html">Retry-Stürmen</a>, <a href="043-power-of-two-choices.html">Power of Two Choices</a> und <a href="044-circuit-breaker.html">Circuit Breakern</a> ist das der nächste schöne Systemgedanke: Stabilität heißt oft nicht, dass nichts sich ändert, sondern dass sich Änderungen nicht überall zugleich ausbreiten.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="lab-ring">1. Der Ring</button>
+                        <button data-tab="lab-remap">2. Remapping-Vergleich</button>
+                        <button data-tab="lab-vnodes">3. Virtuelle Knoten</button>
+                    </div>
+
+                    <section id="lab-ring" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="ringNodes">Server: <span id="ringNodesVal">5</span></label>
+                                <input id="ringNodes" type="range" min="3" max="10" value="5">
+                            </div>
+                            <div class="slider-group">
+                                <label for="ringKeys">Keys: <span id="ringKeysVal">80</span></label>
+                                <input id="ringKeys" type="range" min="20" max="180" value="80">
+                            </div>
+                            <button id="rerollRing">Neu verteilen</button>
+                            <button id="addNodeRing">+ Server hinzufügen</button>
+                            <button id="removeNodeRing" class="secondary">− Server entfernen</button>
+                        </div>
+                        <canvas id="ringCanvas" width="920" height="520"></canvas>
+                        <div class="legend">
+                            <span class="node">bestehender Server</span>
+                            <span class="newnode">neuer Server</span>
+                            <span class="moved">umgezogene Keys</span>
+                            <span class="stable">stabile Keys</span>
+                        </div>
+                        <div id="ringStats" class="stats"></div>
+                        <p class="caption">
+                            Keys sind kleine Punkte auf dem Ring. Jeder geht im Uhrzeigersinn zum nächsten Server. Nach einem Join oder Leave sieht man direkt: Es wandert nur ein lokaler Abschnitt, nicht die ganze Welt.
+                        </p>
+                    </section>
+
+                    <section id="lab-remap" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="compareNodes">Ausgangs-Server: <span id="compareNodesVal">6</span></label>
+                                <input id="compareNodes" type="range" min="2" max="16" value="6">
+                            </div>
+                            <div class="slider-group">
+                                <label for="compareKeys">Keys: <span id="compareKeysVal">5000</span></label>
+                                <input id="compareKeys" type="range" min="500" max="20000" step="500" value="5000">
+                            </div>
+                            <button id="runCompare">Neu messen</button>
+                        </div>
+                        <div class="info-box">
+                            Wir vergleichen zwei Welten beim Hinzufügen <em>eines</em> neuen Servers: klassisches <span class="formula">mod n</span> gegen Consistent Hashing. Gemessen wird, wie viele Keys ihr Ziel wechseln müssen. Erwartung: mod hashing bewegt fast alles, consistent hashing ungefähr <span class="formula">1/(n+1)</span>.
+                        </div>
+                        <canvas id="compareCanvas" width="920" height="320"></canvas>
+                        <div id="compareStats" class="stats"></div>
+                        <div class="bars" id="compareBars"></div>
+                    </section>
+
+                    <section id="lab-vnodes" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="vnodeServers">Physische Server: <span id="vnodeServersVal">6</span></label>
+                                <input id="vnodeServers" type="range" min="3" max="12" value="6">
+                            </div>
+                            <div class="slider-group">
+                                <label for="vnodeCount">Virtuelle Knoten pro Server: <span id="vnodeCountVal">1</span></label>
+                                <input id="vnodeCount" type="range" min="1" max="64" value="1">
+                            </div>
+                            <div class="slider-group">
+                                <label for="vnodeKeys">Keys: <span id="vnodeKeysVal">12000</span></label>
+                                <input id="vnodeKeys" type="range" min="1000" max="30000" step="1000" value="12000">
+                            </div>
+                            <button id="rerollVnodes">Neu ziehen</button>
+                        </div>
+                        <canvas id="vnodeCanvas" width="920" height="360"></canvas>
+                        <div id="vnodeStats" class="stats"></div>
+                        <div class="small-note">
+                            Virtuelle Knoten zerlegen einen großen unregelmäßigen Ringabschnitt in viele kleine. Dadurch sinkt die Varianz. Der Ring bleibt derselbe Trick, aber er wird feinkörniger.
+                        </div>
+                    </section>
+                </div>
+
+                <h2>Was der Ring wirklich löst</h2>
+                <p>
+                    Consistent Hashing ist keine Magie gegen alle Verteilungsprobleme. Es garantiert nicht automatisch perfekte Balance, keine Replikation, keine Fehlertoleranz, keine schnelle Recovery. Was es löst, ist spezieller und enorm wertvoll: <em>dynamische Membership ohne globale Neuordnung</em>. Wenn Knoten kommen oder gehen, bleibt die Bewegung klein.
+                </p>
+                <p>
+                    Das macht es ideal für Caches, Shards, DHTs und Datenbanken wie Dynamo-artige Systeme, Cassandra oder Riak. Und es zeigt eine tiefere Systemlektion: Gute Architekturen minimieren nicht nur Last, sondern auch <em>Umbaukosten</em>. Der Übergang zählt. Nicht nur der statische Endzustand.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Lokale Störung statt globaler Migration</h4>
+                        <p>Wenn ein Server wechselt, wandert nur ein Abschnitt des Rings. Das schützt Caches, reduziert Warmup-Kosten und verhindert breitflächige Unruhe.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Virtuelle Knoten gegen Schieflast</h4>
+                        <p>Ein einzelner Punkt pro Server ist oft zu grob. Viele kleine Punkte glätten die Verteilung und machen auch heterogene Cluster besser handhabbar.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Verwandte Idee: Rendezvous Hashing</h4>
+                        <p>Der Ring ist nicht die einzige schöne Lösung. Highest Random Weight Hashing kommt ohne Ring aus und liefert oft dieselbe Kern-Eigenschaft: minimale Bewegung bei Membership-Änderung.</p>
+                    </div>
+                </div>
+
+                <h2>Die interessantere Lektion</h2>
+                <p>
+                    Ich mag an Consistent Hashing, dass es eine sehr allgemeine Wahrheit über Systeme zeigt. Es ist nicht immer schlimm, wenn sich etwas ändert. Schlimm ist oft, wenn <em>alles</em> sich auf einmal ändern muss. Gute Systeme kapseln Wandel. Sie erlauben Join und Leave, Wachstum und Ausfall, ohne jeden Zustand neu zu würfeln.
+                </p>
+                <p>
+                    Vielleicht ist das einer der unterschätzten Unterschiede zwischen fragilen und robusten Strukturen: Fragile Systeme koppeln alles an alles. Robuste Systeme organisieren Veränderung lokal. Nicht Stillstand, sondern begrenzte Erschütterung.
+                </p>
+
+                <p class="note">
+                    Quellen und Anker: Karger et al., <em>Consistent Hashing and Random Trees</em> (STOC 1997); Thaler & Ravishankar zu Rendezvous Hashing (1996); Amazon Dynamo (2007); Apache Cassandra Architektur-Notizen. Die Visualisierungen hier sind vereinfachte Modelle, aber die Kernintuition ist echt.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        const TAU = Math.PI * 2;
+
+        function mulberry32(seed) {
+            let t = seed >>> 0;
+            return function() {
+                t += 0x6D2B79F5;
+                let r = Math.imul(t ^ t >>> 15, 1 | t);
+                r ^= r + Math.imul(r ^ r >>> 7, 61 | r);
+                return ((r ^ r >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        function hashUnit(x) {
+            const s = Math.sin(x * 12.9898 + 78.233) * 43758.5453123;
+            return s - Math.floor(s);
+        }
+
+        function percentile(arr, p) {
+            if (!arr.length) return 0;
+            const sorted = [...arr].sort((a, b) => a - b);
+            const idx = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p));
+            return sorted[idx];
+        }
+
+        function assignRing(nodes, keyPos) {
+            for (const node of nodes) {
+                if (keyPos <= node.pos) return node.id;
+            }
+            return nodes[0].id;
+        }
+
+        function segmentLengths(nodes) {
+            const segs = [];
+            for (let i = 0; i < nodes.length; i++) {
+                const prev = nodes[(i - 1 + nodes.length) % nodes.length].pos;
+                const cur = nodes[i].pos;
+                segs.push((cur - prev + 1) % 1);
+            }
+            return segs;
+        }
+
+        const tabs = document.querySelectorAll('.tabs button');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const root = btn.closest('.sim-container');
+                root.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+                root.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+                btn.classList.add('active');
+                root.querySelector(`#${btn.dataset.tab}`).classList.add('active');
+            });
+        });
+
+        const ringState = {
+            seed: 45,
+            mode: 'steady',
+            previousNodes: [],
+            currentNodes: [],
+            keys: [],
+            movedCount: 0,
+            changedNodeId: null
+        };
+
+        const ringEls = {
+            canvas: document.getElementById('ringCanvas'),
+            stats: document.getElementById('ringStats'),
+            nodes: document.getElementById('ringNodes'),
+            nodesVal: document.getElementById('ringNodesVal'),
+            keys: document.getElementById('ringKeys'),
+            keysVal: document.getElementById('ringKeysVal')
+        };
+        const ringCtx = ringEls.canvas.getContext('2d');
+
+        function makeNodes(count, seed) {
+            const rand = mulberry32(seed);
+            const arr = [];
+            for (let i = 0; i < count; i++) {
+                arr.push({ id: i, pos: rand() });
+            }
+            arr.sort((a, b) => a.pos - b.pos);
+            return arr;
+        }
+
+        function makeKeys(count, seed) {
+            const rand = mulberry32(seed);
+            return Array.from({ length: count }, (_, i) => ({
+                id: i,
+                pos: rand(),
+                jitter: rand() * 0.8 + 0.2
+            }));
+        }
+
+        function recomputeRing(mode = 'steady') {
+            const nodeCount = +ringEls.nodes.value;
+            const keyCount = +ringEls.keys.value;
+            ringEls.nodesVal.textContent = nodeCount;
+            ringEls.keysVal.textContent = keyCount;
+
+            ringState.mode = mode;
+            ringState.previousNodes = makeNodes(nodeCount, ringState.seed);
+            ringState.keys = makeKeys(keyCount, ringState.seed + 999);
+            ringState.changedNodeId = null;
+
+            if (mode === 'steady') {
+                ringState.currentNodes = ringState.previousNodes.map(n => ({ ...n }));
+            } else if (mode === 'join') {
+                const pos = hashUnit(ringState.seed * 13 + 7);
+                ringState.currentNodes = [...ringState.previousNodes.map(n => ({ ...n })), { id: nodeCount, pos, isNew: true }].sort((a, b) => a.pos - b.pos);
+                ringState.changedNodeId = nodeCount;
+            } else if (mode === 'leave') {
+                const index = Math.floor(hashUnit(ringState.seed * 17 + 11) * ringState.previousNodes.length);
+                const removed = ringState.previousNodes[index];
+                ringState.changedNodeId = removed.id;
+                ringState.currentNodes = ringState.previousNodes.filter(n => n.id !== removed.id).map(n => ({ ...n }));
+            }
+
+            let moved = 0;
+            for (const key of ringState.keys) {
+                const before = assignRing(ringState.previousNodes, key.pos);
+                const after = assignRing(ringState.currentNodes, key.pos);
+                key.before = before;
+                key.after = after;
+                key.moved = before !== after;
+                if (key.moved) moved++;
+            }
+            ringState.movedCount = moved;
+            drawRing();
+        }
+
+        function drawRing() {
+            const { width, height } = ringEls.canvas;
+            const cx = width * 0.35;
+            const cy = height * 0.5;
+            const radius = 180;
+            ringCtx.clearRect(0, 0, width, height);
+
+            ringCtx.strokeStyle = '#30363d';
+            ringCtx.lineWidth = 2;
+            ringCtx.beginPath();
+            ringCtx.arc(cx, cy, radius, 0, TAU);
+            ringCtx.stroke();
+
+            for (const key of ringState.keys) {
+                const angle = key.pos * TAU - Math.PI / 2;
+                const r = radius + (key.moved ? 12 : 2) * key.jitter;
+                const x = cx + Math.cos(angle) * r;
+                const y = cy + Math.sin(angle) * r;
+                ringCtx.fillStyle = key.moved ? '#f85149' : '#3fb950';
+                ringCtx.beginPath();
+                ringCtx.arc(x, y, key.moved ? 3.2 : 2.2, 0, TAU);
+                ringCtx.fill();
+            }
+
+            for (const node of ringState.currentNodes) {
+                const angle = node.pos * TAU - Math.PI / 2;
+                const x = cx + Math.cos(angle) * radius;
+                const y = cy + Math.sin(angle) * radius;
+                ringCtx.fillStyle = node.isNew ? '#f0883e' : '#58a6ff';
+                ringCtx.beginPath();
+                ringCtx.arc(x, y, 10, 0, TAU);
+                ringCtx.fill();
+                ringCtx.fillStyle = '#0d1117';
+                ringCtx.font = 'bold 11px system-ui';
+                ringCtx.textAlign = 'center';
+                ringCtx.textBaseline = 'middle';
+                ringCtx.fillText(String(node.id + 1), x, y + 0.5);
+            }
+
+            ringCtx.fillStyle = '#e6edf3';
+            ringCtx.font = 'bold 22px system-ui';
+            ringCtx.textAlign = 'left';
+            ringCtx.fillText('Consistent Hashing Ring', width * 0.62, 74);
+            ringCtx.font = '15px system-ui';
+            ringCtx.fillStyle = '#8b949e';
+            const modeLabel = ringState.mode === 'join'
+                ? 'Neuer Server tritt bei'
+                : ringState.mode === 'leave'
+                    ? 'Ein Server fällt aus'
+                    : 'Stabiler Zustand';
+            ringCtx.fillText(modeLabel, width * 0.62, 102);
+
+            const beforeLoads = new Map();
+            const afterLoads = new Map();
+            for (const n of ringState.previousNodes) beforeLoads.set(n.id, 0);
+            for (const n of ringState.currentNodes) afterLoads.set(n.id, 0);
+            for (const key of ringState.keys) {
+                beforeLoads.set(key.before, (beforeLoads.get(key.before) || 0) + 1);
+                afterLoads.set(key.after, (afterLoads.get(key.after) || 0) + 1);
+            }
+
+            const lines = [];
+            if (ringState.mode === 'join') {
+                const newLoad = afterLoads.get(ringState.changedNodeId) || 0;
+                lines.push(`Neuer Server übernimmt ${newLoad} Keys.`);
+                lines.push(`Bewegte Keys: ${ringState.movedCount} von ${ringState.keys.length}.`);
+            } else if (ringState.mode === 'leave') {
+                const lostLoad = beforeLoads.get(ringState.changedNodeId) || 0;
+                lines.push(`Ausfallener Server hatte ${lostLoad} Keys.`);
+                lines.push(`Nur diese Region muss umziehen.`);
+            } else {
+                lines.push('Ohne Membership-Änderung bleibt alles lokal ruhig.');
+                lines.push('Der Ring macht Veränderung sichtbar, nicht unsichtbar.');
+            }
+            ringCtx.fillStyle = '#c9d1d9';
+            lines.forEach((line, i) => ringCtx.fillText(line, width * 0.62, 145 + i * 28));
+
+            ringCtx.fillStyle = '#8b949e';
+            ringCtx.fillText('Rechter Block: statische Erklärung, linker Ring: konkrete Umverteilung.', width * 0.62, 245);
+
+            const movedPct = ringState.keys.length ? (ringState.movedCount / ringState.keys.length) * 100 : 0;
+            const segs = segmentLengths(ringState.currentNodes);
+            const maxSeg = Math.max(...segs) * 100;
+            const minSeg = Math.min(...segs) * 100;
+            ringEls.stats.innerHTML = `
+                <div class="stat">Modus<strong>${modeLabel}</strong></div>
+                <div class="stat">Bewegte Keys<strong>${ringState.movedCount}</strong></div>
+                <div class="stat">Bewegter Anteil<strong>${movedPct.toFixed(1)}%</strong></div>
+                <div class="stat">Größtes Ring-Segment<strong>${maxSeg.toFixed(1)}%</strong></div>
+                <div class="stat">Kleinstes Ring-Segment<strong>${minSeg.toFixed(1)}%</strong></div>
+            `;
+        }
+
+        ringEls.nodes.addEventListener('input', () => recomputeRing(ringState.mode));
+        ringEls.keys.addEventListener('input', () => recomputeRing(ringState.mode));
+        document.getElementById('rerollRing').addEventListener('click', () => {
+            ringState.seed++;
+            recomputeRing('steady');
+        });
+        document.getElementById('addNodeRing').addEventListener('click', () => recomputeRing('join'));
+        document.getElementById('removeNodeRing').addEventListener('click', () => {
+            if (+ringEls.nodes.value > 3) recomputeRing('leave');
+        });
+
+        const compareEls = {
+            canvas: document.getElementById('compareCanvas'),
+            stats: document.getElementById('compareStats'),
+            bars: document.getElementById('compareBars'),
+            nodes: document.getElementById('compareNodes'),
+            nodesVal: document.getElementById('compareNodesVal'),
+            keys: document.getElementById('compareKeys'),
+            keysVal: document.getElementById('compareKeysVal')
+        };
+        const compareCtx = compareEls.canvas.getContext('2d');
+
+        function consistentAssignments(countKeys, countNodes) {
+            const nodes = makeNodes(countNodes, 2026 + countNodes * 7);
+            const keys = makeKeys(countKeys, 9000 + countKeys + countNodes);
+            return keys.map(k => assignRing(nodes, k.pos));
+        }
+
+        function compareRemap() {
+            const nodes = +compareEls.nodes.value;
+            const keys = +compareEls.keys.value;
+            compareEls.nodesVal.textContent = nodes;
+            compareEls.keysVal.textContent = keys;
+
+            let modMoved = 0;
+            for (let i = 0; i < keys; i++) {
+                if ((i % nodes) !== (i % (nodes + 1))) modMoved++;
+            }
+
+            const before = consistentAssignments(keys, nodes);
+            const after = consistentAssignments(keys, nodes + 1);
+            let consistentMoved = 0;
+            for (let i = 0; i < keys; i++) {
+                if (before[i] !== after[i]) consistentMoved++;
+            }
+
+            const modPct = modMoved / keys * 100;
+            const conPct = consistentMoved / keys * 100;
+            const expected = 100 / (nodes + 1);
+            drawCompare(modPct, conPct, expected);
+            compareEls.stats.innerHTML = `
+                <div class="stat">mod n<strong>${modMoved.toLocaleString()}</strong></div>
+                <div class="stat">consistent hashing<strong>${consistentMoved.toLocaleString()}</strong></div>
+                <div class="stat">Erwartung Ring<strong>${expected.toFixed(1)}%</strong></div>
+                <div class="stat">Reduktion<strong>${(modPct / Math.max(conPct, 0.0001)).toFixed(1)}×</strong></div>
+            `;
+            compareEls.bars.innerHTML = `
+                <div class="bar-row"><span>mod n</span><div class="bar-track"><div class="bar-fill bad" style="width:${modPct}%"></div></div><strong>${modPct.toFixed(1)}%</strong></div>
+                <div class="bar-row"><span>consistent</span><div class="bar-track"><div class="bar-fill good" style="width:${conPct}%"></div></div><strong>${conPct.toFixed(1)}%</strong></div>
+                <div class="bar-row"><span>Faustformel</span><div class="bar-track"><div class="bar-fill" style="width:${expected}%"></div></div><strong>${expected.toFixed(1)}%</strong></div>
+            `;
+        }
+
+        function drawCompare(modPct, conPct, expected) {
+            const { width, height } = compareEls.canvas;
+            compareCtx.clearRect(0, 0, width, height);
+            compareCtx.fillStyle = '#e6edf3';
+            compareCtx.font = 'bold 20px system-ui';
+            compareCtx.fillText('Wie viel muss beim Hinzufügen eines Servers umziehen?', 32, 42);
+            compareCtx.font = '14px system-ui';
+            compareCtx.fillStyle = '#8b949e';
+            compareCtx.fillText('mod hashing ändert fast alle Ziele, der Ring nur eine lokale Region.', 32, 66);
+
+            const baseX = 80;
+            const top = 120;
+            const gap = 70;
+            const maxWidth = 720;
+            const entries = [
+                { label: 'mod n', value: modPct, color: '#f85149' },
+                { label: 'consistent', value: conPct, color: '#58a6ff' },
+                { label: '1/(n+1)', value: expected, color: '#f0883e' }
+            ];
+            entries.forEach((entry, i) => {
+                const y = top + i * gap;
+                compareCtx.fillStyle = '#c9d1d9';
+                compareCtx.font = '16px system-ui';
+                compareCtx.fillText(entry.label, baseX, y - 8);
+                compareCtx.fillStyle = '#161b22';
+                compareCtx.fillRect(baseX + 140, y - 24, maxWidth, 28);
+                compareCtx.fillStyle = entry.color;
+                compareCtx.fillRect(baseX + 140, y - 24, maxWidth * (entry.value / 100), 28);
+                compareCtx.fillStyle = '#e6edf3';
+                compareCtx.fillText(`${entry.value.toFixed(1)}%`, baseX + 140 + maxWidth + 18, y - 2);
+            });
+        }
+
+        compareEls.nodes.addEventListener('input', compareRemap);
+        compareEls.keys.addEventListener('input', compareRemap);
+        document.getElementById('runCompare').addEventListener('click', compareRemap);
+
+        const vnodeEls = {
+            canvas: document.getElementById('vnodeCanvas'),
+            stats: document.getElementById('vnodeStats'),
+            servers: document.getElementById('vnodeServers'),
+            serversVal: document.getElementById('vnodeServersVal'),
+            count: document.getElementById('vnodeCount'),
+            countVal: document.getElementById('vnodeCountVal'),
+            keys: document.getElementById('vnodeKeys'),
+            keysVal: document.getElementById('vnodeKeysVal')
+        };
+        const vnodeCtx = vnodeEls.canvas.getContext('2d');
+        let vnodeSeed = 91;
+
+        function simulateVnodes() {
+            const servers = +vnodeEls.servers.value;
+            const vnodeCount = +vnodeEls.count.value;
+            const keys = +vnodeEls.keys.value;
+            vnodeEls.serversVal.textContent = servers;
+            vnodeEls.countVal.textContent = vnodeCount;
+            vnodeEls.keysVal.textContent = keys;
+
+            const rand = mulberry32(vnodeSeed + servers * 13 + vnodeCount * 17);
+            const points = [];
+            for (let s = 0; s < servers; s++) {
+                for (let v = 0; v < vnodeCount; v++) {
+                    points.push({ server: s, pos: rand() });
+                }
+            }
+            points.sort((a, b) => a.pos - b.pos);
+
+            const load = Array.from({ length: servers }, () => 0);
+            for (let i = 0; i < keys; i++) {
+                const kp = rand();
+                let owner = points[0].server;
+                for (const p of points) {
+                    if (kp <= p.pos) {
+                        owner = p.server;
+                        break;
+                    }
+                }
+                load[owner]++;
+            }
+
+            const avg = keys / servers;
+            const max = Math.max(...load);
+            const min = Math.min(...load);
+            const stdev = Math.sqrt(load.reduce((sum, x) => sum + Math.pow(x - avg, 2), 0) / load.length);
+            const p90 = percentile(load, 0.9);
+            drawVnodes(load, avg);
+            vnodeEls.stats.innerHTML = `
+                <div class="stat">Ø Load<strong>${avg.toFixed(0)}</strong></div>
+                <div class="stat">Min / Max<strong>${min} / ${max}</strong></div>
+                <div class="stat">Skew<strong>${(max / Math.max(avg, 1)).toFixed(2)}×</strong></div>
+                <div class="stat">Std-Abw.<strong>${stdev.toFixed(1)}</strong></div>
+                <div class="stat">90. Perzentil<strong>${p90.toFixed(0)}</strong></div>
+            `;
+        }
+
+        function drawVnodes(load, avg) {
+            const { width, height } = vnodeEls.canvas;
+            vnodeCtx.clearRect(0, 0, width, height);
+            vnodeCtx.fillStyle = '#e6edf3';
+            vnodeCtx.font = 'bold 20px system-ui';
+            vnodeCtx.fillText('Lastverteilung pro physischem Server', 28, 38);
+            vnodeCtx.font = '14px system-ui';
+            vnodeCtx.fillStyle = '#8b949e';
+            vnodeCtx.fillText('Mehr virtuelle Knoten glätten die Streuung und verkleinern die schlimmsten Ringsegmente.', 28, 60);
+
+            const left = 60;
+            const bottom = height - 50;
+            const chartH = 230;
+            const maxVal = Math.max(...load, avg * 1.1);
+            const barW = Math.min(70, (width - 120) / load.length - 10);
+            load.forEach((value, i) => {
+                const x = left + i * ((width - 120) / load.length);
+                const h = (value / maxVal) * chartH;
+                vnodeCtx.fillStyle = value > avg * 1.15 ? '#f85149' : value < avg * 0.85 ? '#d29922' : '#58a6ff';
+                vnodeCtx.fillRect(x, bottom - h, barW, h);
+                vnodeCtx.fillStyle = '#c9d1d9';
+                vnodeCtx.font = '13px system-ui';
+                vnodeCtx.fillText(String(i + 1), x + barW / 2 - 4, bottom + 18);
+            });
+
+            const avgY = bottom - (avg / maxVal) * chartH;
+            vnodeCtx.strokeStyle = '#3fb950';
+            vnodeCtx.setLineDash([6, 6]);
+            vnodeCtx.beginPath();
+            vnodeCtx.moveTo(left - 10, avgY);
+            vnodeCtx.lineTo(width - 40, avgY);
+            vnodeCtx.stroke();
+            vnodeCtx.setLineDash([]);
+            vnodeCtx.fillStyle = '#3fb950';
+            vnodeCtx.fillText(`Ø ${avg.toFixed(0)}`, width - 90, avgY - 8);
+        }
+
+        vnodeEls.servers.addEventListener('input', simulateVnodes);
+        vnodeEls.count.addEventListener('input', simulateVnodes);
+        vnodeEls.keys.addEventListener('input', simulateVnodes);
+        document.getElementById('rerollVnodes').addEventListener('click', () => {
+            vnodeSeed++;
+            simulateVnodes();
+        });
+
+        recomputeRing('steady');
+        compareRemap();
+        simulateVnodes();
+    </script>
+</body>
+</html>
