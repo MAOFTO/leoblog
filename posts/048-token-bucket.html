@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Bucket — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 180px;
+            accent-color: var(--accent);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        .caption, .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        table.scoreboard {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        table.scoreboard th,
+        table.scoreboard td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        table.scoreboard th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .winner td {
+            background: rgba(63,185,80,0.08);
+        }
+        .bar-track {
+            height: 12px;
+            border-radius: 999px;
+            background: #11161d;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar-fill.good {
+            background: linear-gradient(90deg, #3fb950, #58a6ff);
+        }
+        .bar-fill.bad {
+            background: linear-gradient(90deg, #f0883e, #f85149);
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .allow::before { background: #3fb950; }
+        .legend .wait::before { background: #f0883e; }
+        .legend .drop::before { background: #f85149; }
+        .legend .tokens::before { background: #58a6ff; }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-12">12. April 2026</time>
+                <h1>Token Bucket</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Rate Limiting klingt nach Verbot. In Wahrheit ist es oft eine Form von Höflichkeit. Ein <em>Token Bucket</em> sagt nicht einfach nur <em>nein</em>, sondern erlaubt kleine Bursts, solange davor Ruhe war. Das System spart gewissermaßen Geduld an und gibt sie bei Bedarf wieder aus. Genau deshalb fühlt sich Token Bucket in der Praxis viel menschlicher an als starre Fenster-Zähler.
+                </p>
+                <p>
+                    Die Regel ist simpel: Der Eimer hat eine Kapazität <span class="formula">B</span>, Tokens fließen mit Rate <span class="formula">r</span> hinein, und jede Anfrage kostet typischerweise ein Token. Solange genug Tokens da sind, darf die Anfrage sofort durch. Ist der Eimer leer, muss man warten oder wird abgewiesen. Das Schöne daran ist die Asymmetrie zwischen Durchschnitt und Spitze: Der Langzeitdurchsatz bleibt begrenzt, aber kurze Lastspitzen sind trotzdem erlaubt.
+                </p>
+                <p>
+                    Ich mag Token Bucket, weil hier eine kleine Einsicht steckt, die weit über APIs hinausgeht: Gute Systeme behandeln nicht jeden Moment isoliert. Sie erinnern sich daran, dass eben gerade nichts los war, und machen daraus eine faire Reserve für jetzt.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="bucket-live">1. Der Eimer</button>
+                        <button data-tab="bucket-compare">2. Gegen starre Fenster</button>
+                        <button data-tab="bucket-burst">3. Burst-Budget</button>
+                    </div>
+
+                    <section id="bucket-live" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="rateSlider">Token-Rate / Sekunde: <span id="rateVal">4</span></label>
+                                <input id="rateSlider" type="range" min="1" max="10" value="4">
+                            </div>
+                            <div class="slider-group">
+                                <label for="capacitySlider">Kapazität: <span id="capacityVal">12</span></label>
+                                <input id="capacitySlider" type="range" min="2" max="30" value="12">
+                            </div>
+                            <div class="slider-group">
+                                <label for="trafficSlider">Eingehende Requests / Sekunde: <span id="trafficVal">5</span></label>
+                                <input id="trafficSlider" type="range" min="0" max="20" value="5">
+                            </div>
+                            <button id="burstBtn">Kurzer Burst</button>
+                            <button id="pauseBtn" class="secondary">Pause</button>
+                            <button id="resetLive">Reset</button>
+                        </div>
+                        <canvas id="liveCanvas" width="920" height="360"></canvas>
+                        <div class="legend">
+                            <span class="tokens">Tokens im Eimer</span>
+                            <span class="allow">sofort erlaubt</span>
+                            <span class="wait">muss warten</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Tokens jetzt<strong id="statTokens">12.0</strong></div>
+                            <div class="stat">Erlaubte Requests<strong id="statAllowed">0</strong></div>
+                            <div class="stat">Wartende Requests<strong id="statWaiting">0</strong></div>
+                            <div class="stat">Ø Antwortzeit<strong id="statLatency">0 ms</strong></div>
+                        </div>
+                        <p class="caption">Ein Token Bucket ist kein starrer Türsteher, sondern ein Vorratsspeicher. Ruhe baut Kredit auf.</p>
+                    </section>
+
+                    <section id="bucket-compare" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="compareRateSlider">Zielrate / Sekunde: <span id="compareRateVal">5</span></label>
+                                <input id="compareRateSlider" type="range" min="1" max="12" value="5">
+                            </div>
+                            <div class="slider-group">
+                                <label for="compareBurstSlider">Burst-Größe: <span id="compareBurstVal">18</span></label>
+                                <input id="compareBurstSlider" type="range" min="4" max="40" value="18">
+                            </div>
+                            <button id="runCompare">Burst testen</button>
+                        </div>
+                        <canvas id="compareCanvas" width="920" height="320"></canvas>
+                        <table class="scoreboard">
+                            <thead>
+                                <tr>
+                                    <th>Strategie</th>
+                                    <th>Sofort durch</th>
+                                    <th>Geblockt / verzögert</th>
+                                    <th>Charakter</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compareTable"></tbody>
+                        </table>
+                        <p class="caption">Fixed Window vergisst, was kurz vor der Fenstergrenze passiert ist. Token Bucket trägt diese Geschichte mit.</p>
+                    </section>
+
+                    <section id="bucket-burst" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="idleSlider">Ruhe vor dem Burst: <span id="idleVal">3</span> s</label>
+                                <input id="idleSlider" type="range" min="0" max="10" value="3">
+                            </div>
+                            <div class="slider-group">
+                                <label for="burstSizeSlider">Burst-Anfragen: <span id="burstSizeVal">14</span></label>
+                                <input id="burstSizeSlider" type="range" min="1" max="40" value="14">
+                            </div>
+                            <div class="slider-group">
+                                <label for="bucketSizeSlider">Bucket-Kapazität: <span id="bucketSizeVal">12</span></label>
+                                <input id="bucketSizeSlider" type="range" min="2" max="30" value="12">
+                            </div>
+                            <button id="recalcBurst">Neu berechnen</button>
+                        </div>
+                        <div class="info-box">
+                            Der Eimer startet nach der Ruhephase mit <span class="formula" id="burstTokensFormula">min(B, r · idle)</span> verfügbaren Tokens. Diese Zahl ist die ganze Magie: Sie übersetzt vergangene Ruhe in gegenwärtige Elastizität.
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Verfügbare Tokens<strong id="burstTokens">12</strong></div>
+                            <div class="stat">Sofort erlaubt<strong id="burstPass">12</strong></div>
+                            <div class="stat">Müssen warten<strong id="burstWait">2</strong></div>
+                            <div class="stat">Restwartezeit<strong id="burstDelay">0.40 s</strong></div>
+                        </div>
+                        <div style="margin-top:1rem;">
+                            <div style="display:grid; gap:0.8rem;">
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-size:0.84rem; color:var(--text-muted); margin-bottom:0.35rem;"><span>Sofort durch</span><span id="passPct">86%</span></div>
+                                    <div class="bar-track"><div id="passBar" class="bar-fill good" style="width:86%"></div></div>
+                                </div>
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; font-size:0.84rem; color:var(--text-muted); margin-bottom:0.35rem;"><span>Muss warten</span><span id="waitPct">14%</span></div>
+                                    <div class="bar-track"><div id="waitBar" class="bar-fill bad" style="width:14%"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="small-note">Burst-Kapazität ist keine Extraleistung. Sie ist zuvor angesparte Untätigkeit.</p>
+                    </section>
+                </div>
+
+                <h2>Warum nicht einfach Fixed Window?</h2>
+                <p>
+                    Ein naiver Zähler pro Minute oder pro Sekunde ist leicht zu bauen, aber er hat eine unangenehme Kante: an der Fenstergrenze kann man doppelt profitieren. 100 Requests in der letzten Sekunde vor Mitternacht, 100 weitere direkt nach Mitternacht, und technisch war man <em>in beiden Fenstern brav</em>. Das System spürt aber 200 fast ohne Pause.
+                </p>
+                <p>
+                    Token Bucket glättet diese Kante. Es modelliert Zeit nicht als Kästchen, sondern als kontinuierlichen Zufluss von Erlaubnis. Das ist oft näher an dem, was man eigentlich will: Durchschnitt begrenzen, kleine Bursts erlauben, große Stöße dämpfen.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>API Gateways</h4>
+                        <p>Clients dürfen kurzzeitig mehr schicken als ihr Durchschnitt, ohne dass jede kleine Spitze sofort als Missbrauch gilt.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Netzwerke</h4>
+                        <p>In QoS und Traffic Shaping trennt Token Bucket die langfristige Rate von der erlaubten Burst-Größe. Genau das macht Leitungen fairer.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Menschliche Systeme</h4>
+                        <p>Auch Menschen arbeiten oft so: Ein ruhiger Vormittag erzeugt Spielraum für einen hektischen Nachmittag. Nicht unbegrenzt, aber spürbar.</p>
+                    </div>
+                </div>
+
+                <h2>Die kleine Systemlektion dahinter</h2>
+                <p>
+                    Gute Regelung unterscheidet zwischen <em>Missbrauch</em> und <em>Moment</em>. Wer zehn Minuten ruhig war und dann kurz Luft holt, ist etwas anderes als jemand, der dauerhaft drückt. Token Bucket codiert genau diesen Unterschied mathematisch. Darum ist er so verbreitet: nicht weil er kompliziert wäre, sondern weil er überraschend gut zur Wirklichkeit passt.
+                </p>
+                <p>
+                    Die Formel ist klein. Die Idee dahinter ist größer. Systeme müssen nicht nur zählen. Sie müssen auch erinnern, <em>wann</em> gezählt wurde.
+                </p>
+
+                <h2>Quellen und Spuren</h2>
+                <p>
+                    Der Token-Bucket-Ansatz stammt aus der Netzwerk- und Traffic-Shaping-Welt, eng verwandt mit Leaky Bucket, QoS und Policing in Routern. Wer tiefer graben will: klassische Networking-Literatur zu Traffic Shaping, Linux <em>tc</em>, API-Gateway-Implementierungen, und der Vergleich zu Sliding Window / Fixed Window / GCRA.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tabs button');
+        const sections = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const fmt = (n, digits = 1) => Number(n).toFixed(digits);
+
+        const liveCanvas = document.getElementById('liveCanvas');
+        const lctx = liveCanvas.getContext('2d');
+        const rateSlider = document.getElementById('rateSlider');
+        const capacitySlider = document.getElementById('capacitySlider');
+        const trafficSlider = document.getElementById('trafficSlider');
+        const rateVal = document.getElementById('rateVal');
+        const capacityVal = document.getElementById('capacityVal');
+        const trafficVal = document.getElementById('trafficVal');
+        const burstBtn = document.getElementById('burstBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resetLive = document.getElementById('resetLive');
+        const statTokens = document.getElementById('statTokens');
+        const statAllowed = document.getElementById('statAllowed');
+        const statWaiting = document.getElementById('statWaiting');
+        const statLatency = document.getElementById('statLatency');
+
+        const liveState = {
+            rate: 4,
+            capacity: 12,
+            traffic: 5,
+            tokens: 12,
+            queue: [],
+            allowed: 0,
+            waitingDone: 0,
+            waitLatencyTotal: 0,
+            incomingPool: 0,
+            running: true,
+            lastTs: performance.now(),
+            historyTokens: [],
+            historyAllowed: [],
+            historyWait: []
+        };
+
+        function syncLiveLabels() {
+            liveState.rate = +rateSlider.value;
+            liveState.capacity = +capacitySlider.value;
+            liveState.traffic = +trafficSlider.value;
+            liveState.tokens = Math.min(liveState.tokens, liveState.capacity);
+            rateVal.textContent = liveState.rate;
+            capacityVal.textContent = liveState.capacity;
+            trafficVal.textContent = liveState.traffic;
+        }
+
+        [rateSlider, capacitySlider, trafficSlider].forEach(el => el.addEventListener('input', syncLiveLabels));
+        syncLiveLabels();
+
+        function addRequests(count, nowSec) {
+            for (let i = 0; i < count; i++) {
+                if (liveState.tokens >= 1) {
+                    liveState.tokens -= 1;
+                    liveState.allowed += 1;
+                } else {
+                    liveState.queue.push({ created: nowSec });
+                }
+            }
+        }
+
+        burstBtn.addEventListener('click', () => {
+            addRequests(12, performance.now() / 1000);
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            liveState.running = !liveState.running;
+            pauseBtn.textContent = liveState.running ? 'Pause' : 'Weiter';
+            liveState.lastTs = performance.now();
+        });
+
+        resetLive.addEventListener('click', () => {
+            liveState.tokens = liveState.capacity;
+            liveState.queue = [];
+            liveState.allowed = 0;
+            liveState.waitingDone = 0;
+            liveState.waitLatencyTotal = 0;
+            liveState.incomingPool = 0;
+            liveState.historyTokens = [];
+            liveState.historyAllowed = [];
+            liveState.historyWait = [];
+        });
+
+        function tickLive(ts) {
+            const dt = Math.min(0.2, (ts - liveState.lastTs) / 1000);
+            liveState.lastTs = ts;
+            if (liveState.running) {
+                liveState.tokens = Math.min(liveState.capacity, liveState.tokens + liveState.rate * dt);
+                liveState.incomingPool += liveState.traffic * dt;
+                const nowSec = ts / 1000;
+                while (liveState.incomingPool >= 1) {
+                    liveState.incomingPool -= 1;
+                    addRequests(1, nowSec);
+                }
+                while (liveState.tokens >= 1 && liveState.queue.length > 0) {
+                    liveState.tokens -= 1;
+                    liveState.allowed += 1;
+                    const req = liveState.queue.shift();
+                    liveState.waitingDone += 1;
+                    liveState.waitLatencyTotal += nowSec - req.created;
+                }
+
+                liveState.historyTokens.push(liveState.tokens);
+                liveState.historyAllowed.push(Math.min(14, liveState.allowed % 15));
+                liveState.historyWait.push(Math.min(14, liveState.queue.length));
+                if (liveState.historyTokens.length > 120) {
+                    liveState.historyTokens.shift();
+                    liveState.historyAllowed.shift();
+                    liveState.historyWait.shift();
+                }
+            }
+            drawLive();
+            requestAnimationFrame(tickLive);
+        }
+
+        function drawSeries(ctx, series, color, maxY, x, y, w, h) {
+            if (series.length < 2) return;
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            series.forEach((value, i) => {
+                const px = x + (i / (series.length - 1)) * w;
+                const py = y + h - (value / maxY) * h;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            });
+            ctx.stroke();
+        }
+
+        function drawLive() {
+            const w = liveCanvas.width;
+            const h = liveCanvas.height;
+            lctx.clearRect(0, 0, w, h);
+            lctx.fillStyle = '#0d1117';
+            lctx.fillRect(0, 0, w, h);
+
+            lctx.fillStyle = '#e6edf3';
+            lctx.font = '16px system-ui';
+            lctx.fillText('Token Bucket über die Zeit', 28, 30);
+
+            const bx = 40;
+            const by = 70;
+            const bw = 140;
+            const bh = 220;
+            lctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            lctx.lineWidth = 2;
+            lctx.strokeRect(bx, by, bw, bh);
+            const fillH = (liveState.tokens / liveState.capacity) * bh;
+            lctx.fillStyle = 'rgba(88,166,255,0.3)';
+            lctx.fillRect(bx, by + bh - fillH, bw, fillH);
+            lctx.fillStyle = '#58a6ff';
+            for (let i = 1; i <= Math.floor(liveState.tokens); i++) {
+                const y = by + bh - (i / liveState.capacity) * bh;
+                lctx.fillRect(bx + 12, y - 3, bw - 24, 6);
+            }
+            lctx.fillStyle = '#7d8590';
+            lctx.font = '13px system-ui';
+            lctx.fillText('Kapazität', bx, by - 10);
+            lctx.fillText('Queue: ' + liveState.queue.length, bx, by + bh + 20);
+
+            const chartX = 240;
+            const chartY = 60;
+            const chartW = 640;
+            const chartH = 240;
+            lctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            lctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = chartY + (i / 4) * chartH;
+                lctx.beginPath();
+                lctx.moveTo(chartX, y);
+                lctx.lineTo(chartX + chartW, y);
+                lctx.stroke();
+            }
+            drawSeries(lctx, liveState.historyTokens, '#58a6ff', Math.max(1, liveState.capacity), chartX, chartY, chartW, chartH);
+            drawSeries(lctx, liveState.historyAllowed, '#3fb950', 14, chartX, chartY, chartW, chartH);
+            drawSeries(lctx, liveState.historyWait, '#f0883e', 14, chartX, chartY, chartW, chartH);
+
+            statTokens.textContent = fmt(liveState.tokens, 1);
+            statAllowed.textContent = liveState.allowed;
+            statWaiting.textContent = liveState.queue.length;
+            const avgLatency = liveState.waitingDone ? (liveState.waitLatencyTotal / liveState.waitingDone) * 1000 : 0;
+            statLatency.textContent = Math.round(avgLatency) + ' ms';
+        }
+
+        requestAnimationFrame(ts => { liveState.lastTs = ts; tickLive(ts); });
+
+        const compareRateSlider = document.getElementById('compareRateSlider');
+        const compareBurstSlider = document.getElementById('compareBurstSlider');
+        const compareRateVal = document.getElementById('compareRateVal');
+        const compareBurstVal = document.getElementById('compareBurstVal');
+        const compareCanvas = document.getElementById('compareCanvas');
+        const cctx = compareCanvas.getContext('2d');
+        const compareTable = document.getElementById('compareTable');
+        const runCompare = document.getElementById('runCompare');
+
+        function syncCompareLabels() {
+            compareRateVal.textContent = compareRateSlider.value;
+            compareBurstVal.textContent = compareBurstSlider.value;
+        }
+        [compareRateSlider, compareBurstSlider].forEach(el => el.addEventListener('input', syncCompareLabels));
+        syncCompareLabels();
+
+        function simulateCompare() {
+            const rate = +compareRateSlider.value;
+            const burst = +compareBurstSlider.value;
+            const capacity = Math.max(rate * 2, 8);
+
+            const tokenImmediate = Math.min(burst, capacity);
+            const tokenDelayed = Math.max(0, burst - tokenImmediate);
+
+            const fixedLimit = rate;
+            const fixedImmediate = Math.min(burst, fixedLimit);
+            const fixedDelayed = Math.max(0, burst - fixedImmediate);
+
+            const slidingImmediate = Math.min(burst, Math.round(rate * 1.2));
+            const slidingDelayed = Math.max(0, burst - slidingImmediate);
+
+            const rows = [
+                { name: 'Token Bucket', immediate: tokenImmediate, delayed: tokenDelayed, vibe: 'merkt sich Ruhe und erlaubt Burst-Kredit', winner: true },
+                { name: 'Sliding Window', immediate: slidingImmediate, delayed: slidingDelayed, vibe: 'weicher, aber noch fensterbasiert' },
+                { name: 'Fixed Window', immediate: fixedImmediate, delayed: fixedDelayed, vibe: 'einfach, aber kantig an Grenzen' }
+            ];
+
+            compareTable.innerHTML = rows.map(row => `
+                <tr class="${row.winner ? 'winner' : ''}">
+                    <td>${row.name}</td>
+                    <td>${row.immediate}</td>
+                    <td>${row.delayed}</td>
+                    <td>${row.vibe}</td>
+                </tr>
+            `).join('');
+
+            cctx.clearRect(0, 0, compareCanvas.width, compareCanvas.height);
+            cctx.fillStyle = '#0d1117';
+            cctx.fillRect(0, 0, compareCanvas.width, compareCanvas.height);
+            cctx.font = '15px system-ui';
+            cctx.fillStyle = '#e6edf3';
+            cctx.fillText('Wie viele Requests kommen im Burst sofort durch?', 30, 28);
+
+            const startX = 120;
+            const baseY = 260;
+            const barW = 170;
+            const gap = 80;
+            rows.forEach((row, i) => {
+                const x = startX + i * (barW + gap);
+                const totalH = 180;
+                const immediateH = (row.immediate / burst) * totalH;
+                const delayedH = (row.delayed / burst) * totalH;
+                cctx.fillStyle = '#3fb950';
+                cctx.fillRect(x, baseY - immediateH, barW, immediateH);
+                cctx.fillStyle = '#f85149';
+                cctx.fillRect(x, baseY - immediateH - delayedH, barW, delayedH);
+                cctx.strokeStyle = 'rgba(255,255,255,0.12)';
+                cctx.strokeRect(x, baseY - totalH, barW, totalH);
+                cctx.fillStyle = '#e6edf3';
+                cctx.fillText(row.name, x, baseY + 24);
+            });
+        }
+        runCompare.addEventListener('click', simulateCompare);
+        simulateCompare();
+
+        const idleSlider = document.getElementById('idleSlider');
+        const burstSizeSlider = document.getElementById('burstSizeSlider');
+        const bucketSizeSlider = document.getElementById('bucketSizeSlider');
+        const idleVal = document.getElementById('idleVal');
+        const burstSizeVal = document.getElementById('burstSizeVal');
+        const bucketSizeVal = document.getElementById('bucketSizeVal');
+        const burstTokens = document.getElementById('burstTokens');
+        const burstPass = document.getElementById('burstPass');
+        const burstWait = document.getElementById('burstWait');
+        const burstDelay = document.getElementById('burstDelay');
+        const passBar = document.getElementById('passBar');
+        const waitBar = document.getElementById('waitBar');
+        const passPct = document.getElementById('passPct');
+        const waitPct = document.getElementById('waitPct');
+        const burstTokensFormula = document.getElementById('burstTokensFormula');
+        const recalcBurst = document.getElementById('recalcBurst');
+
+        function updateBurstLab() {
+            const idle = +idleSlider.value;
+            const burst = +burstSizeSlider.value;
+            const bucket = +bucketSizeSlider.value;
+            const rate = +compareRateSlider.value;
+            idleVal.textContent = idle;
+            burstSizeVal.textContent = burst;
+            bucketSizeVal.textContent = bucket;
+
+            const tokens = Math.min(bucket, idle * rate);
+            const pass = Math.min(tokens, burst);
+            const wait = Math.max(0, burst - pass);
+            const delay = wait / rate;
+            const p1 = burst ? (pass / burst) * 100 : 0;
+            const p2 = burst ? (wait / burst) * 100 : 0;
+
+            burstTokens.textContent = Math.round(tokens);
+            burstPass.textContent = Math.round(pass);
+            burstWait.textContent = Math.round(wait);
+            burstDelay.textContent = fmt(delay, 2) + ' s';
+            passBar.style.width = p1 + '%';
+            waitBar.style.width = p2 + '%';
+            passPct.textContent = Math.round(p1) + '%';
+            waitPct.textContent = Math.round(p2) + '%';
+            burstTokensFormula.textContent = `min(${bucket}, ${rate} · ${idle}) = ${Math.round(tokens)}`;
+        }
+        [idleSlider, burstSizeSlider, bucketSizeSlider, compareRateSlider].forEach(el => el.addEventListener('input', updateBurstLab));
+        recalcBurst.addEventListener('click', updateBurstLab);
+        updateBurstLab();
+    </script>
+</body>
+</html>

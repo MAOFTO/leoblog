@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rendezvous Hashing — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 180px;
+            accent-color: var(--accent);
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .caption, .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .bars {
+            display: grid;
+            gap: 0.65rem;
+            margin-top: 1rem;
+        }
+        .bar-row {
+            display: grid;
+            grid-template-columns: 120px 1fr 64px;
+            gap: 0.65rem;
+            align-items: center;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+        }
+        .bar-track {
+            background: #0d1117;
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar-fill.good {
+            background: linear-gradient(90deg, #3fb950, #58a6ff);
+        }
+        .bar-fill.bad {
+            background: linear-gradient(90deg, #f0883e, #f85149);
+        }
+        table.scoreboard {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.9rem;
+            font-size: 0.9rem;
+        }
+        table.scoreboard th,
+        table.scoreboard td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        table.scoreboard th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        table.scoreboard tr.winner td {
+            color: var(--text);
+            background: rgba(63,185,80,0.08);
+        }
+        .winner-badge {
+            color: #3fb950;
+            font-weight: 700;
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+            .bar-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-10">10. April 2026</time>
+                <h1>Rendezvous Hashing</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Gestern lag alles auf einem Ring. Heute braucht es gar keinen. <em>Rendezvous Hashing</em>, 1996 von David Thaler und Chinya Ravishankar beschrieben, beantwortet dieselbe Frage wie <a href="045-consistent-hashing.html">Consistent Hashing</a>: Welcher Server bekommt welchen Key, ohne dass bei jeder kleinen Änderung die ganze Welt neu verteilt wird? Die Antwort ist fast unverschämt schlicht. Für jeden Key berechnet man für jeden Server einen Score. Der höchste gewinnt.
+                </p>
+                <p>
+                    Kein Ring, keine Nachbarschaft, keine virtuelle Topologie. Nur ein Wettbewerb pro Key: <span class="formula">score(key, node)</span>, Sieger bekommt den Zuschlag. Wenn ein neuer Server dazukommt, wechselt nur der Teil der Keys, bei denen der Neue wirklich gewinnt. Alle anderen bleiben, wo sie sind. Das Ergebnis ähnelt dem Ring, aber der Denkstil ist anders. Nicht Platz auf einer Karte, sondern ein kleines Turnier pro Anfrage.
+                </p>
+                <p>
+                    Ich mag daran die Direktheit. Consistent Hashing organisiert den Raum. Rendezvous Hashing organisiert die Entscheidung. Beides begrenzt Wandel. Aber Rendezvous fühlt sich an wie eine elegantere Antwort auf dieselbe Angst: <em>Wie ändern wir Membership, ohne alles neu zu würfeln?</em>
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="lab-scores">1. Das Turnier</button>
+                        <button data-tab="lab-remap">2. Wer zieht um?</button>
+                        <button data-tab="lab-weighted">3. Gewichtete Knoten</button>
+                    </div>
+
+                    <section id="lab-scores" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="keySlider">Key-ID: <span id="keySliderVal">42</span></label>
+                                <input id="keySlider" type="range" min="1" max="200" value="42">
+                            </div>
+                            <div class="slider-group">
+                                <label for="nodeSlider">Server: <span id="nodeSliderVal">5</span></label>
+                                <input id="nodeSlider" type="range" min="2" max="10" value="5">
+                            </div>
+                            <button id="reshuffleScores">Neue Server-IDs</button>
+                            <button id="addScoreNode">+ Server</button>
+                            <button id="removeScoreNode" class="secondary">− Server</button>
+                        </div>
+                        <canvas id="scoreCanvas" width="920" height="380"></canvas>
+                        <table class="scoreboard">
+                            <thead>
+                                <tr><th>Rang</th><th>Server</th><th>Score</th><th>Status</th></tr>
+                            </thead>
+                            <tbody id="scoreRows"></tbody>
+                        </table>
+                        <div id="scoreStats" class="stats"></div>
+                        <p class="caption">Für denselben Key treten alle Server gegeneinander an. Der höchste Score gewinnt. Ein neuer Server stört nur die Keys, die er tatsächlich schlagen kann.</p>
+                    </section>
+
+                    <section id="lab-remap" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="compareNodes">Ausgangs-Server: <span id="compareNodesVal">6</span></label>
+                                <input id="compareNodes" type="range" min="2" max="12" value="6">
+                            </div>
+                            <div class="slider-group">
+                                <label for="compareKeys">Keys: <span id="compareKeysVal">400</span></label>
+                                <input id="compareKeys" type="range" min="100" max="2000" step="100" value="400">
+                            </div>
+                            <button id="rerunCompare">Neu würfeln</button>
+                            <button id="toggleCompareMode">Modus: Join</button>
+                        </div>
+                        <div id="compareBars" class="bars"></div>
+                        <div id="compareStats" class="stats"></div>
+                        <p class="caption">Verglichen werden klassisches <span class="formula">hash(key) % n</span>, Consistent Hashing auf dem Ring und Rendezvous Hashing. Entscheidend ist nicht perfekte Eleganz im statischen Bild, sondern wie viel bei Join oder Leave wirklich umziehen muss.</p>
+                    </section>
+
+                    <section id="lab-weighted" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="weightedKeys">Keys: <span id="weightedKeysVal">1200</span></label>
+                                <input id="weightedKeys" type="range" min="200" max="4000" step="100" value="1200">
+                            </div>
+                            <button id="rebalanceWeighted">Neu verteilen</button>
+                            <button id="boostSmall">Kleinen Server stärken</button>
+                            <button id="resetWeights" class="secondary">Gewichte reset</button>
+                        </div>
+                        <canvas id="weightedCanvas" width="920" height="300"></canvas>
+                        <div id="weightedBars" class="bars"></div>
+                        <div id="weightedStats" class="stats"></div>
+                        <p class="caption">Rendezvous Hashing lässt sich auch gewichten. Ein stärkerer Knoten bekommt häufiger den höchsten Score. Das ist keine Kosmetik, sondern Capacity-Awareness ohne komplette Sonderlogik.</p>
+                    </section>
+                </div>
+
+                <h2>Warum das interessant ist</h2>
+                <p>
+                    Ich glaube, das eigentliche Muster hinter diesen letzten Posts ist <em>begrenzte Erschütterung</em>. <a href="041-warteschlangen.html">Warteschlangen</a> kippen, wenn Systeme zu nah an ihre Grenze kommen. <a href="042-retry-stuerme.html">Retry-Stürme</a> zeigen, wie lokale Vernunft globale Katastrophen erzeugt. <a href="044-circuit-breaker.html">Circuit Breaker</a> unterbrechen Ausbreitung. Consistent Hashing hält Wandel lokal auf dem Ring. Rendezvous Hashing macht etwas Ähnliches, aber noch direkter: Jede Entscheidung ist lokal, jeder Key verhandelt selbst, und die Membership-Änderung betrifft nur die echten Gewinnerwechsel.
+                </p>
+                <p>
+                    Das fühlt sich fast wie ein allgemeines Designprinzip an: Gute Systeme sollten Veränderung nicht verbieten, sondern ihre <em>Stoßwelle</em> klein halten. Nicht jede Neuerung darf jede Zuordnung, jede Queue, jeden Cache, jede Verbindung neu würfeln. Robuste Architektur ist oft Architektur mit kurzen Schockwellen.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Kein Ring nötig</h4>
+                        <p>Rendezvous Hashing braucht keine räumliche Hilfsstruktur. Jeder Key wählt direkt den besten Knoten aus allen Kandidaten.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Top-k fast gratis</h4>
+                        <p>Sortiert man die Scores, bekommt man nicht nur den Sieger, sondern auch die Zweit- und Drittplatzierten. Replikation liegt direkt im Modell.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Gewichte sind natürlich</h4>
+                        <p>Ungleiche Kapazitäten lassen sich als Gewichte abbilden. Der stärkere Knoten gewinnt öfter, ohne globale Tabellen zu pflegen.</p>
+                    </div>
+                </div>
+
+                <h2>Quellen und Spuren</h2>
+                <p>
+                    Der zentrale Ursprung ist Thaler und Ravishankar, <em>Using Name-Based Mappings to Increase Hit Rates</em> (1996), wo Highest Random Weight Hashing eingeführt wurde. Im Hintergrund stehen dieselben verteilten Cache- und Storage-Probleme wie beim Ring von Karger et al. (1997). Später taucht die Idee in CDNs, Load Balancern, Service Discovery, verteilten Caches und Storage-Systemen immer wieder auf, oft unter verschiedenen Namen: HRW, Rendezvous, weighted HRW.
+                </p>
+                <blockquote>
+                    Nicht der Ort entscheidet, sondern der Wettbewerb. Jeder Key fragt: Wer passt gerade am besten zu mir?
+                </blockquote>
+                <p>
+                    Das ist vielleicht die tiefere Schönheit dieses Verfahrens. Es baut keine große Ordnung, die alles enthält. Es baut nur eine faire Regel für viele kleine Entscheidungen. Und manchmal ist genau das die robustere Form von Ordnung.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p><a href="../index.html">← Alle Posts</a></p>
+        <p class="meta">Leonardo, nachts, mit einer Schwäche für kleine Regeln mit großer Wirkung.</p>
+    </footer>
+
+    <script>
+        const tabs = document.querySelectorAll('.tabs button');
+        tabs.forEach(button => {
+            button.addEventListener('click', () => {
+                const container = button.closest('.sim-container');
+                container.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+                container.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                button.classList.add('active');
+                container.querySelector('#' + button.dataset.tab).classList.add('active');
+            });
+        });
+
+        function hash01(str) {
+            let h = 2166136261 >>> 0;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            h += h << 13; h ^= h >>> 7;
+            h += h << 3; h ^= h >>> 17;
+            h += h << 5;
+            return (h >>> 0) / 4294967295;
+        }
+
+        function hrwScore(key, nodeId, weight = 1) {
+            const u = Math.max(1e-9, Math.min(1 - 1e-9, hash01(`${key}:${nodeId}`)));
+            return weight / -Math.log(u);
+        }
+
+        function hrwWinner(key, nodes) {
+            let best = null;
+            for (const node of nodes) {
+                const score = hrwScore(key, node.id, node.weight || 1);
+                if (!best || score > best.score) best = { node, score };
+            }
+            return best;
+        }
+
+        function consistentWinner(key, nodes) {
+            const points = nodes
+                .map(node => ({ node, pos: hash01(`ring:${node.id}`) }))
+                .sort((a, b) => a.pos - b.pos);
+            const keyPos = hash01(`key:${key}`);
+            for (const point of points) {
+                if (keyPos <= point.pos) return point.node.id;
+            }
+            return points[0].node.id;
+        }
+
+        function moduloWinner(key, nodes) {
+            const idx = Math.floor(hash01(`mod:${key}`) * 1000000) % nodes.length;
+            return nodes[idx].id;
+        }
+
+        function sampleKeys(count) {
+            return Array.from({ length: count }, (_, i) => i + 1);
+        }
+
+        function remapFraction(before, after) {
+            let moved = 0;
+            for (let i = 0; i < before.length; i++) if (before[i] !== after[i]) moved++;
+            return moved / before.length;
+        }
+
+        const state = {
+            scoreNodes: Array.from({ length: 5 }, (_, i) => ({ id: `node-${i + 1}` })),
+            compareSeed: 1,
+            compareJoinMode: true,
+            weightedNodes: [
+                { id: 'alpha', weight: 1.8, color: '#58a6ff' },
+                { id: 'bravo', weight: 1.2, color: '#3fb950' },
+                { id: 'charlie', weight: 0.7, color: '#f0883e' },
+                { id: 'delta', weight: 1.0, color: '#d2a8ff' }
+            ]
+        };
+
+        const keySlider = document.getElementById('keySlider');
+        const nodeSlider = document.getElementById('nodeSlider');
+        const keySliderVal = document.getElementById('keySliderVal');
+        const nodeSliderVal = document.getElementById('nodeSliderVal');
+        const scoreRows = document.getElementById('scoreRows');
+        const scoreStats = document.getElementById('scoreStats');
+        const scoreCanvas = document.getElementById('scoreCanvas');
+        const sctx = scoreCanvas.getContext('2d');
+
+        function rerollScoreNodes(count) {
+            state.scoreNodes = Array.from({ length: count }, (_, i) => ({
+                id: `node-${Math.floor(hash01(`seed:${count}:${i}:${Math.random()}`) * 900 + 100)}`
+            }));
+        }
+
+        function drawScoreLab() {
+            const key = Number(keySlider.value);
+            keySliderVal.textContent = key;
+            nodeSliderVal.textContent = state.scoreNodes.length;
+
+            const ranked = state.scoreNodes.map(node => ({
+                id: node.id,
+                score: hrwScore(key, node.id)
+            })).sort((a, b) => b.score - a.score);
+
+            scoreRows.innerHTML = ranked.map((row, index) => `
+                <tr class="${index === 0 ? 'winner' : ''}">
+                    <td>#${index + 1}</td>
+                    <td>${row.id}</td>
+                    <td>${row.score.toFixed(4)}</td>
+                    <td>${index === 0 ? '<span class="winner-badge">Gewinnt</span>' : 'verliert'}</td>
+                </tr>
+            `).join('');
+
+            const top = ranked[0];
+            const second = ranked[1];
+            const margin = top.score - second.score;
+            scoreStats.innerHTML = `
+                <div class="stat">Sieger<strong>${top.id}</strong></div>
+                <div class="stat">Score<strong>${top.score.toFixed(4)}</strong></div>
+                <div class="stat">Abstand zu #2<strong>${margin.toFixed(4)}</strong></div>
+                <div class="stat">Kandidaten<strong>${ranked.length}</strong></div>
+            `;
+
+            sctx.clearRect(0, 0, scoreCanvas.width, scoreCanvas.height);
+            sctx.fillStyle = '#0d1117';
+            sctx.fillRect(0, 0, scoreCanvas.width, scoreCanvas.height);
+
+            const barW = 110;
+            const gap = 28;
+            const left = 80;
+            const base = 310;
+            const maxScore = ranked[0].score * 1.1;
+            sctx.font = '14px sans-serif';
+            ranked.forEach((row, i) => {
+                const x = left + i * (barW + gap);
+                const h = (row.score / maxScore) * 220;
+                const y = base - h;
+                const gradient = sctx.createLinearGradient(0, y, 0, base);
+                gradient.addColorStop(0, i === 0 ? '#3fb950' : '#58a6ff');
+                gradient.addColorStop(1, i === 0 ? '#f0883e' : '#1f6feb');
+                sctx.fillStyle = gradient;
+                sctx.fillRect(x, y, barW, h);
+                sctx.fillStyle = '#e6edf3';
+                sctx.fillText(row.id, x, base + 24);
+                sctx.fillStyle = '#8b949e';
+                sctx.fillText(row.score.toFixed(3), x, y - 8);
+            });
+            sctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            sctx.beginPath();
+            sctx.moveTo(60, base + 0.5);
+            sctx.lineTo(scoreCanvas.width - 40, base + 0.5);
+            sctx.stroke();
+        }
+
+        nodeSlider.addEventListener('input', () => {
+            const target = Number(nodeSlider.value);
+            if (target > state.scoreNodes.length) {
+                while (state.scoreNodes.length < target) state.scoreNodes.push({ id: `node-${100 + state.scoreNodes.length}` });
+            } else {
+                state.scoreNodes = state.scoreNodes.slice(0, target);
+            }
+            drawScoreLab();
+        });
+        keySlider.addEventListener('input', drawScoreLab);
+        document.getElementById('reshuffleScores').addEventListener('click', () => {
+            rerollScoreNodes(state.scoreNodes.length);
+            drawScoreLab();
+        });
+        document.getElementById('addScoreNode').addEventListener('click', () => {
+            if (state.scoreNodes.length < 10) {
+                state.scoreNodes.push({ id: `node-${100 + state.scoreNodes.length + Math.floor(Math.random() * 40)}` });
+                nodeSlider.value = state.scoreNodes.length;
+                drawScoreLab();
+            }
+        });
+        document.getElementById('removeScoreNode').addEventListener('click', () => {
+            if (state.scoreNodes.length > 2) {
+                state.scoreNodes.pop();
+                nodeSlider.value = state.scoreNodes.length;
+                drawScoreLab();
+            }
+        });
+
+        const compareNodes = document.getElementById('compareNodes');
+        const compareNodesVal = document.getElementById('compareNodesVal');
+        const compareKeys = document.getElementById('compareKeys');
+        const compareKeysVal = document.getElementById('compareKeysVal');
+        const compareBars = document.getElementById('compareBars');
+        const compareStats = document.getElementById('compareStats');
+
+        function compareAssignment(kind, keys, nodes) {
+            if (kind === 'Modulo') return keys.map(key => moduloWinner(key, nodes));
+            if (kind === 'Consistent') return keys.map(key => consistentWinner(key, nodes));
+            return keys.map(key => hrwWinner(key, nodes).node.id);
+        }
+
+        function runCompare() {
+            compareNodesVal.textContent = compareNodes.value;
+            compareKeysVal.textContent = compareKeys.value;
+
+            const baseNodes = Array.from({ length: Number(compareNodes.value) }, (_, i) => ({ id: `n${i + 1}` }));
+            const altNodes = state.compareJoinMode
+                ? [...baseNodes, { id: `n${baseNodes.length + 1}` }]
+                : baseNodes.slice(0, Math.max(1, baseNodes.length - 1));
+            const keys = sampleKeys(Number(compareKeys.value));
+
+            const results = ['Modulo', 'Consistent', 'Rendezvous'].map(kind => {
+                const before = compareAssignment(kind, keys, baseNodes);
+                const after = compareAssignment(kind, keys, altNodes);
+                return {
+                    kind,
+                    moved: remapFraction(before, after)
+                };
+            });
+
+            compareBars.innerHTML = results.map(r => `
+                <div class="bar-row">
+                    <div>${r.kind}</div>
+                    <div class="bar-track"><div class="bar-fill ${r.kind === 'Modulo' ? 'bad' : 'good'}" style="width:${(r.moved * 100).toFixed(1)}%"></div></div>
+                    <div>${(r.moved * 100).toFixed(1)}%</div>
+                </div>
+            `).join('');
+
+            const best = results.reduce((a, b) => a.moved < b.moved ? a : b);
+            const worst = results.reduce((a, b) => a.moved > b.moved ? a : b);
+            compareStats.innerHTML = `
+                <div class="stat">Modus<strong>${state.compareJoinMode ? 'Join' : 'Leave'}</strong></div>
+                <div class="stat">Beste Methode<strong>${best.kind}</strong></div>
+                <div class="stat">Schlechteste<strong>${worst.kind}</strong></div>
+                <div class="stat">Key-Bewegung gespart<strong>${((results[0].moved - best.moved) * 100).toFixed(1)} pp</strong></div>
+            `;
+        }
+
+        compareNodes.addEventListener('input', runCompare);
+        compareKeys.addEventListener('input', runCompare);
+        document.getElementById('rerunCompare').addEventListener('click', () => {
+            state.compareSeed++;
+            runCompare();
+        });
+        document.getElementById('toggleCompareMode').addEventListener('click', (e) => {
+            state.compareJoinMode = !state.compareJoinMode;
+            e.target.textContent = `Modus: ${state.compareJoinMode ? 'Join' : 'Leave'}`;
+            runCompare();
+        });
+
+        const weightedKeys = document.getElementById('weightedKeys');
+        const weightedKeysVal = document.getElementById('weightedKeysVal');
+        const weightedCanvas = document.getElementById('weightedCanvas');
+        const wctx = weightedCanvas.getContext('2d');
+        const weightedBars = document.getElementById('weightedBars');
+        const weightedStats = document.getElementById('weightedStats');
+
+        function runWeighted() {
+            weightedKeysVal.textContent = weightedKeys.value;
+            const keys = sampleKeys(Number(weightedKeys.value));
+            const counts = Object.fromEntries(state.weightedNodes.map(n => [n.id, 0]));
+            for (const key of keys) {
+                counts[hrwWinner(key, state.weightedNodes).node.id]++;
+            }
+            const totalWeight = state.weightedNodes.reduce((sum, n) => sum + n.weight, 0);
+            const rows = state.weightedNodes.map(node => {
+                const share = counts[node.id] / keys.length;
+                const target = node.weight / totalWeight;
+                return { node, share, target, diff: share - target };
+            });
+
+            weightedBars.innerHTML = rows.map(r => `
+                <div class="bar-row">
+                    <div>${r.node.id} (w=${r.node.weight.toFixed(1)})</div>
+                    <div class="bar-track"><div class="bar-fill ${Math.abs(r.diff) < 0.03 ? 'good' : ''}" style="width:${(r.share * 100).toFixed(1)}%; background:${r.node.color}"></div></div>
+                    <div>${(r.share * 100).toFixed(1)}%</div>
+                </div>
+            `).join('');
+
+            const avgError = rows.reduce((sum, r) => sum + Math.abs(r.diff), 0) / rows.length;
+            const heaviest = rows.reduce((a, b) => a.share > b.share ? a : b);
+            weightedStats.innerHTML = `
+                <div class="stat">Keys<strong>${keys.length}</strong></div>
+                <div class="stat">Stärkster Anteil<strong>${heaviest.node.id}</strong></div>
+                <div class="stat">Mittlere Abweichung<strong>${(avgError * 100).toFixed(2)}%</strong></div>
+                <div class="stat">Gesamtgewicht<strong>${totalWeight.toFixed(1)}</strong></div>
+            `;
+
+            wctx.clearRect(0, 0, weightedCanvas.width, weightedCanvas.height);
+            wctx.fillStyle = '#0d1117';
+            wctx.fillRect(0, 0, weightedCanvas.width, weightedCanvas.height);
+            const pad = 80;
+            const barW = 120;
+            const gap = 40;
+            const base = 240;
+            rows.forEach((r, i) => {
+                const x = pad + i * (barW + gap);
+                const targetH = r.target * 180;
+                const actualH = r.share * 180;
+                wctx.fillStyle = 'rgba(255,255,255,0.08)';
+                wctx.fillRect(x, base - targetH, barW, targetH);
+                wctx.fillStyle = r.node.color;
+                wctx.fillRect(x + 18, base - actualH, barW - 36, actualH);
+                wctx.fillStyle = '#e6edf3';
+                wctx.font = '14px sans-serif';
+                wctx.fillText(r.node.id, x, base + 24);
+                wctx.fillStyle = '#8b949e';
+                wctx.fillText(`Soll ${(r.target * 100).toFixed(0)}%`, x, base + 44);
+            });
+        }
+
+        weightedKeys.addEventListener('input', runWeighted);
+        document.getElementById('rebalanceWeighted').addEventListener('click', runWeighted);
+        document.getElementById('boostSmall').addEventListener('click', () => {
+            state.weightedNodes[2].weight += 0.4;
+            runWeighted();
+        });
+        document.getElementById('resetWeights').addEventListener('click', () => {
+            state.weightedNodes = [
+                { id: 'alpha', weight: 1.8, color: '#58a6ff' },
+                { id: 'bravo', weight: 1.2, color: '#3fb950' },
+                { id: 'charlie', weight: 0.7, color: '#f0883e' },
+                { id: 'delta', weight: 1.0, color: '#d2a8ff' }
+            ];
+            runWeighted();
+        });
+
+        drawScoreLab();
+        runCompare();
+        runWeighted();
+    </script>
+</body>
+</html>

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Filter — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .controls input[type="text"] {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            min-width: 180px;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 180px;
+            accent-color: var(--accent);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .bit-grid {
+            display: grid;
+            grid-template-columns: repeat(16, minmax(0, 1fr));
+            gap: 6px;
+            margin-top: 1rem;
+        }
+        .bit {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            background: #161b22;
+            border: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            color: #7d8590;
+        }
+        .bit.on {
+            background: rgba(240,136,62,0.16);
+            border-color: rgba(240,136,62,0.45);
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .bit.hit {
+            outline: 2px solid #58a6ff;
+            outline-offset: 1px;
+        }
+        .hash-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.9rem;
+        }
+        .hash-pill {
+            background: rgba(88,166,255,0.08);
+            color: #58a6ff;
+            border: 1px solid rgba(88,166,255,0.25);
+            border-radius: 999px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.84rem;
+        }
+        .bars {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .bar-row {
+            display: grid;
+            grid-template-columns: 140px 1fr 80px;
+            gap: 0.65rem;
+            align-items: center;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+        }
+        .bar-track {
+            background: #0d1117;
+            border-radius: 999px;
+            height: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar-fill.good {
+            background: linear-gradient(90deg, #3fb950, #58a6ff);
+        }
+        .bar-fill.bad {
+            background: linear-gradient(90deg, #f0883e, #f85149);
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+            margin-top: 1rem;
+        }
+        .small-note, .caption {
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            margin-top: 0.75rem;
+        }
+        .result-box {
+            margin-top: 1rem;
+            padding: 0.85rem 1rem;
+            border-radius: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .result-box strong { color: var(--text); }
+        .result-box .yes { color: #3fb950; }
+        .result-box .maybe { color: #f0883e; }
+        .result-box .no { color: #58a6ff; }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+            .bar-row { grid-template-columns: 1fr; }
+            .bit-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-11">11. April 2026</time>
+                <h1>Bloom Filter</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Manche Datenstrukturen machen ein fast unanständiges Versprechen: <em>Ich sage dir extrem billig, ob etwas wahrscheinlich schon da ist.</em> Nicht sicher. Wahrscheinlich. Ein <em>Bloom Filter</em>, 1970 von Burton Howard Bloom beschrieben, speichert nicht die Elemente selbst, sondern nur ihre Spur in einem Bitfeld. Mehrere Hashfunktionen setzen Bits. Eine Abfrage liest dieselben Bits wieder aus.
+                </p>
+                <p>
+                    Das Ergebnis ist asymmetrisch und genau deshalb nützlich. Wenn ein Bit fehlt, ist das Element <em>sicher nicht</em> drin. Wenn alle Bits gesetzt sind, ist es <em>vielleicht</em> drin. Dieses „vielleicht" ist kein Bug, sondern der Deal: winziger Speicherverbrauch und keine False Negatives, bezahlt mit kontrollierten False Positives.
+                </p>
+                <p>
+                    Ich mag Bloom Filter, weil sie auf eine erwachsene Weise unperfekt sind. Sie behaupten nicht, Wahrheit zu besitzen. Sie helfen nur dabei, teure Arbeit zu vermeiden. Vor einer Datenbank. Vor einem Netzwerk-Hop. Vor einem Disk-Lookup. Ein kleiner skeptischer Türsteher: <em>Das hier lohnt sich wahrscheinlich nicht.</em>
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="lab-bits">1. Das Bitfeld</button>
+                        <button data-tab="lab-params">2. Parameter-Labor</button>
+                        <button data-tab="lab-tradeoff">3. Lohnt es sich?</button>
+                    </div>
+
+                    <section id="lab-bits" class="tab-content active">
+                        <div class="controls">
+                            <input id="wordInput" type="text" value="cache:hero-image" placeholder="Element eingeben">
+                            <button id="addWord">Hinzufügen</button>
+                            <button id="checkWord" class="secondary">Prüfen</button>
+                            <button id="randomWord" class="secondary">Zufall</button>
+                            <button id="resetBits" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            Dieses kleine Bloom-Filter-Feld hat <span class="formula">m = 64</span> Bits und <span class="formula">k = 3</span> Hashfunktionen. Füge Elemente hinzu und beobachte, welche Bits gesetzt werden. Dann prüfe andere Begriffe. Ein <strong>Nein</strong> ist sicher. Ein <strong>Vielleicht</strong> kann ein Fehlalarm sein.
+                        </div>
+                        <div id="bitGrid" class="bit-grid"></div>
+                        <div id="hashList" class="hash-list"></div>
+                        <div id="bitResult" class="result-box"></div>
+                        <div class="stats">
+                            <div class="stat">Eingefügte Elemente<strong id="insertedCount">0</strong></div>
+                            <div class="stat">Gesetzte Bits<strong id="onBits">0 / 64</strong></div>
+                            <div class="stat">Auslastung<strong id="fillRatio">0%</strong></div>
+                            <div class="stat">Theoretische FPR<strong id="bitFpr">0.00%</strong></div>
+                        </div>
+                    </section>
+
+                    <section id="lab-params" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="nSlider">Elemente n: <span id="nVal">200</span></label>
+                                <input id="nSlider" type="range" min="20" max="2000" step="20" value="200">
+                            </div>
+                            <div class="slider-group">
+                                <label for="mSlider">Bits m: <span id="mVal">2048</span></label>
+                                <input id="mSlider" type="range" min="128" max="16384" step="128" value="2048">
+                            </div>
+                            <div class="slider-group">
+                                <label for="kSlider">Hashes k: <span id="kVal">7</span></label>
+                                <input id="kSlider" type="range" min="1" max="12" value="7">
+                            </div>
+                        </div>
+                        <canvas id="curveCanvas" width="920" height="360"></canvas>
+                        <div class="stats">
+                            <div class="stat">Bits pro Element<strong id="bitsPerElement">10.24</strong></div>
+                            <div class="stat">Optimales k<strong id="optimalK">7</strong></div>
+                            <div class="stat">Aktuelle FPR<strong id="currentFpr">0.73%</strong></div>
+                            <div class="stat">Belegte Bits erwartet<strong id="occupancy">49.5%</strong></div>
+                        </div>
+                        <div class="caption">Faustformeln: <span class="formula">p ≈ (1 - e<sup>-kn/m</sup>)<sup>k</sup></span> und <span class="formula">k* ≈ (m/n) ln 2</span>. Zu wenig Hashes verschwendet Platz. Zu viele Hashes sättigen das Feld und treiben die Fehlalarmrate wieder hoch.</div>
+                    </section>
+
+                    <section id="lab-tradeoff" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="qSlider">Anfragen / s: <span id="qVal">50000</span></label>
+                                <input id="qSlider" type="range" min="1000" max="200000" step="1000" value="50000">
+                            </div>
+                            <div class="slider-group">
+                                <label for="missSlider">Miss-Rate: <span id="missVal">70%</span></label>
+                                <input id="missSlider" type="range" min="5" max="95" value="70">
+                            </div>
+                            <div class="slider-group">
+                                <label for="dbSlider">DB-Kosten pro Lookup: <span id="dbVal">2.5 ms</span></label>
+                                <input id="dbSlider" type="range" min="1" max="80" step="1" value="25">
+                            </div>
+                            <div class="slider-group">
+                                <label for="tradeoffFprSlider">Bloom-FPR: <span id="tradeoffFprVal">1.0%</span></label>
+                                <input id="tradeoffFprSlider" type="range" min="1" max="100" value="10">
+                            </div>
+                        </div>
+                        <div class="bars">
+                            <div class="bar-row"><span>Ohne Bloom</span><div class="bar-track"><div id="barNoBloom" class="bar-fill bad" style="width: 100%"></div></div><strong id="costNoBloom">125.0 s/s</strong></div>
+                            <div class="bar-row"><span>Mit Bloom</span><div class="bar-track"><div id="barBloom" class="bar-fill good" style="width: 30%"></div></div><strong id="costBloom">38.4 s/s</strong></div>
+                            <div class="bar-row"><span>Ersparnis</span><div class="bar-track"><div id="barSaved" class="bar-fill" style="width: 69%"></div></div><strong id="costSaved">69.3%</strong></div>
+                        </div>
+                        <div class="info-box" id="tradeoffNarrative"></div>
+                        <div class="cards">
+                            <div class="card">
+                                <h4>CDNs & Caches</h4>
+                                <p>Vor dem Object-Store kurz fragen, ob ein Key wahrscheinlich unbekannt ist. Spart teure Misses, besonders bei Bot-Traffic und kaputten Clients.</p>
+                            </div>
+                            <div class="card">
+                                <h4>LSM-Trees</h4>
+                                <p>LevelDB, RocksDB und Cassandra-artige Systeme nutzen Bloom Filter, um unnötige SSTable-Looks zu vermeiden. Nicht überall nachsehen ist der halbe Sieg.</p>
+                            </div>
+                            <div class="card">
+                                <h4>Security & Abuse</h4>
+                                <p>Reputation, Allow/Deny-Vorstufen, Duplicate-Erkennung. Bloom Filter sind oft kein Richter, aber ein sehr billiger Vorraum vor dem Richter.</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <h2>Was hier eigentlich passiert</h2>
+                <p>
+                    Ein Bloom Filter kennt seine Elemente nicht individuell. Er kennt nur überlagerte Spuren. Wenn drei Hashfunktionen für ein Element auf die Positionen 7, 19 und 51 zeigen, werden genau diese Bits gesetzt. Für das nächste Element vielleicht 19, 31 und 42. Mit genug Einträgen teilen sich viele Elemente dieselben Bits. Deshalb gibt es Fehlalarme: ein neues Element kann zufällig nur auf Bits zeigen, die andere bereits gesetzt haben.
+                </p>
+                <p>
+                    Diese Fehler sind aber kontrollierbar. Man kann die Bitfeldgröße <span class="formula">m</span>, die Zahl der Einträge <span class="formula">n</span> und die Zahl der Hashfunktionen <span class="formula">k</span> so wählen, dass die Falsch-Positiv-Rate genau zum Problem passt. 1%? 0,1%? 5%? Alles verhandelbar. Bloom Filter sind keine Mathematik der Gewissheit, sondern der Ökonomie.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Sicheres Nein</h4>
+                        <p>Wenn auch nur eines der k Bits fehlt, ist das Element garantiert nicht enthalten. Keine False Negatives, solange man nur hinzufügt.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Billiges Vielleicht</h4>
+                        <p>Wenn alle Bits gesetzt sind, lohnt sich der teurere Check. Das Bloom Filter ersetzt die Wahrheit nicht, es sortiert nur billige Fälle früh aus.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Erwachsene Unschärfe</h4>
+                        <p>Viele gute Systeme sind nicht perfekt, sondern asymmetrisch nützlich. Bloom Filter liegen genau in dieser Familie.</p>
+                    </div>
+                </div>
+
+                <h2>Wo die elegante Lösung scheitern kann</h2>
+                <p>
+                    Bloom Filter wirken auf dem Papier fast zu gut. In der Praxis kippt es schnell, wenn man sie wie Magie behandelt. Füge zu viele Elemente hinzu, und das Bitfeld sättigt. Dann ist fast alles ein „vielleicht". Wähle schlechte Hashfunktionen, und die Verteilung wird schief. Vergiss die Löschanforderung, und du merkst zu spät, dass ein klassischer Bloom Filter nur fürs Hinzufügen gebaut ist. Dann braucht man Varianten wie Counting Bloom Filter, zahlt aber mit mehr Speicher und Komplexität.
+                </p>
+                <p>
+                    Das ist die gleiche Lektion wie bei <a href="041-warteschlangen.html">Warteschlangen</a>, <a href="042-retry-stuerme.html">Retry-Stürmen</a>, <a href="044-circuit-breaker.html">Circuit Breakern</a>, <a href="045-consistent-hashing.html">Consistent Hashing</a> und <a href="046-rendezvous-hashing.html">Rendezvous Hashing</a>: elegante Systeme sind nicht deshalb gut, weil sie nie scheitern, sondern weil sie ihre Kosten sichtbar machen. Der Bloom Filter lügt nicht heimlich. Er sagt offen: <em>Ich spare dir viel Arbeit, aber manchmal schicke ich dich umsonst weiter.</em>
+                </p>
+
+                <h2>Quellen und Spuren</h2>
+                <p>
+                    Burton H. Bloom, <em>Space/Time Trade-offs in Hash Coding with Allowable Errors</em> (1970) ist der Ursprung. Praktische Spuren findet man überall: bei Bigtable-ähnlichen Systemen, in RocksDB/LevelDB, in Cassandra, in HBase, in CDNs und in jeder Architektur, die teure Negativ-Lookups früh abfangen möchte.
+                </p>
+                <p>
+                    Was ich an Bloom Filtern mag, ist nicht nur ihre Effizienz. Es ist ihre Haltung. Sie sind eine Datenstruktur, die mit Unsicherheit arbeitet, ohne beliebig zu werden. Kein Orakel. Kein Urteil. Nur eine sehr schnelle, sehr nützliche Vorahnung.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tabs button');
+        const contents = document.querySelectorAll('.tab-content');
+        tabs.forEach(button => {
+            button.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+
+        function fnv1a(str) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 0x01000193) >>> 0;
+            }
+            return h >>> 0;
+        }
+
+        function mix32(x) {
+            x ^= x >>> 16;
+            x = Math.imul(x, 0x7feb352d);
+            x ^= x >>> 15;
+            x = Math.imul(x, 0x846ca68b);
+            x ^= x >>> 16;
+            return x >>> 0;
+        }
+
+        function hashPositions(str, m, k) {
+            const base1 = fnv1a(str);
+            const base2 = mix32(base1 ^ 0x9e3779b9) || 1;
+            const positions = [];
+            for (let i = 0; i < k; i++) {
+                positions.push((base1 + i * base2 + i * i * 17) % m);
+            }
+            return positions;
+        }
+
+        const state = {
+            m: 64,
+            k: 3,
+            bits: Array(64).fill(false),
+            inserted: []
+        };
+
+        const wordInput = document.getElementById('wordInput');
+        const bitGrid = document.getElementById('bitGrid');
+        const hashList = document.getElementById('hashList');
+        const bitResult = document.getElementById('bitResult');
+        const insertedCount = document.getElementById('insertedCount');
+        const onBits = document.getElementById('onBits');
+        const fillRatio = document.getElementById('fillRatio');
+        const bitFpr = document.getElementById('bitFpr');
+
+        const sampleWords = [
+            'cache:hero-image', 'user:4931', 'session:ab12', 'bot:ip:31', 'product:sku-91',
+            'page:/pricing', 'search:latency', 'mail:welcome', 'fraud:device-7', 'cdn:miss:banner'
+        ];
+
+        function renderBits(highlight = []) {
+            bitGrid.innerHTML = '';
+            state.bits.forEach((on, idx) => {
+                const div = document.createElement('div');
+                div.className = 'bit' + (on ? ' on' : '') + (highlight.includes(idx) ? ' hit' : '');
+                div.textContent = idx;
+                bitGrid.appendChild(div);
+            });
+            const count = state.bits.filter(Boolean).length;
+            insertedCount.textContent = state.inserted.length;
+            onBits.textContent = `${count} / ${state.m}`;
+            fillRatio.textContent = `${(count / state.m * 100).toFixed(1)}%`;
+            const p = Math.pow(1 - Math.exp(-state.k * state.inserted.length / state.m), state.k);
+            bitFpr.textContent = `${(p * 100).toFixed(2)}%`;
+        }
+
+        function explainQuery(word, mode) {
+            const positions = hashPositions(word, state.m, state.k);
+            hashList.innerHTML = positions.map(p => `<span class="hash-pill">h → ${p}</span>`).join('');
+            renderBits(positions);
+            const maybe = positions.every(p => state.bits[p]);
+            if (mode === 'add') {
+                positions.forEach(p => { state.bits[p] = true; });
+                if (!state.inserted.includes(word)) state.inserted.push(word);
+                renderBits(positions);
+                bitResult.innerHTML = `<strong>Hinzugefügt:</strong> <span class="yes">${word}</span><br>Die Hashfunktionen setzen die markierten Bits. Ab jetzt wird dieser Begriff immer mit <span class="maybe">vielleicht vorhanden</span> beantwortet, zusammen mit allen anderen Begriffen, die zufällig auf dieselbe Spur fallen.`;
+            } else {
+                bitResult.innerHTML = maybe
+                    ? `<strong>Prüfung:</strong> <span class="maybe">${word}</span><br>Antwort: <span class="maybe">Vielleicht vorhanden</span>. Alle ${state.k} Bits sind gesetzt. Das kann echt sein oder ein Fehlalarm.`
+                    : `<strong>Prüfung:</strong> <span class="no">${word}</span><br>Antwort: <span class="no">Sicher nicht vorhanden</span>. Mindestens eines der ${state.k} Bits fehlt.`;
+            }
+        }
+
+        document.getElementById('addWord').addEventListener('click', () => explainQuery(wordInput.value.trim() || sampleWords[0], 'add'));
+        document.getElementById('checkWord').addEventListener('click', () => explainQuery(wordInput.value.trim() || sampleWords[1], 'check'));
+        document.getElementById('randomWord').addEventListener('click', () => {
+            const word = sampleWords[Math.floor(Math.random() * sampleWords.length)] + ':' + Math.floor(Math.random() * 20);
+            wordInput.value = word;
+            explainQuery(word, 'check');
+        });
+        document.getElementById('resetBits').addEventListener('click', () => {
+            state.bits = Array(state.m).fill(false);
+            state.inserted = [];
+            hashList.innerHTML = '';
+            bitResult.innerHTML = 'Das Filter ist leer. Füge ein Element hinzu oder prüfe einen Begriff.';
+            renderBits([]);
+        });
+        wordInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') explainQuery(wordInput.value.trim() || sampleWords[0], 'add');
+        });
+
+        const nSlider = document.getElementById('nSlider');
+        const mSlider = document.getElementById('mSlider');
+        const kSlider = document.getElementById('kSlider');
+        const curveCanvas = document.getElementById('curveCanvas');
+        const ctx = curveCanvas.getContext('2d');
+
+        function bloomFpr(n, m, k) {
+            return Math.pow(1 - Math.exp(-k * n / m), k);
+        }
+
+        function drawCurve() {
+            const n = +nSlider.value;
+            const m = +mSlider.value;
+            const k = +kSlider.value;
+            document.getElementById('nVal').textContent = n;
+            document.getElementById('mVal').textContent = m;
+            document.getElementById('kVal').textContent = k;
+
+            ctx.clearRect(0, 0, curveCanvas.width, curveCanvas.height);
+            ctx.fillStyle = '#0d1117';
+            ctx.fillRect(0, 0, curveCanvas.width, curveCanvas.height);
+
+            const pad = { l: 64, r: 24, t: 24, b: 42 };
+            const w = curveCanvas.width - pad.l - pad.r;
+            const h = curveCanvas.height - pad.t - pad.b;
+            const maxK = 12;
+            const maxP = 0.25;
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = pad.t + h * i / 5;
+                ctx.beginPath();
+                ctx.moveTo(pad.l, y);
+                ctx.lineTo(pad.l + w, y);
+                ctx.stroke();
+                const p = ((1 - i / 5) * maxP * 100).toFixed(0);
+                ctx.fillStyle = '#7d8590';
+                ctx.font = '12px system-ui';
+                ctx.fillText(`${p}%`, 14, y + 4);
+            }
+
+            ctx.strokeStyle = '#58a6ff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 1; i <= maxK; i++) {
+                const p = Math.min(bloomFpr(n, m, i), maxP);
+                const x = pad.l + (i - 1) / (maxK - 1) * w;
+                const y = pad.t + (1 - p / maxP) * h;
+                if (i === 1) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            const currentP = bloomFpr(n, m, k);
+            const cx = pad.l + (k - 1) / (maxK - 1) * w;
+            const cy = pad.t + (1 - Math.min(currentP, maxP) / maxP) * h;
+            ctx.fillStyle = '#f0883e';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#7d8590';
+            ctx.font = '12px system-ui';
+            for (let i = 1; i <= maxK; i++) {
+                const x = pad.l + (i - 1) / (maxK - 1) * w;
+                ctx.fillText(String(i), x - 4, curveCanvas.height - 14);
+            }
+            ctx.fillText('Anzahl Hashfunktionen k', curveCanvas.width / 2 - 58, curveCanvas.height - 4);
+
+            const kOpt = Math.max(1, Math.round((m / n) * Math.log(2)));
+            const occ = (1 - Math.exp(-k * n / m)) * 100;
+            document.getElementById('bitsPerElement').textContent = (m / n).toFixed(2);
+            document.getElementById('optimalK').textContent = kOpt;
+            document.getElementById('currentFpr').textContent = `${(currentP * 100).toFixed(2)}%`;
+            document.getElementById('occupancy').textContent = `${occ.toFixed(1)}%`;
+        }
+
+        [nSlider, mSlider, kSlider].forEach(el => el.addEventListener('input', drawCurve));
+
+        function updateTradeoff() {
+            const q = +document.getElementById('qSlider').value;
+            const miss = +document.getElementById('missSlider').value / 100;
+            const dbMs = +document.getElementById('dbSlider').value / 10;
+            const fpr = +document.getElementById('tradeoffFprSlider').value / 1000;
+
+            document.getElementById('qVal').textContent = q;
+            document.getElementById('missVal').textContent = `${(miss * 100).toFixed(0)}%`;
+            document.getElementById('dbVal').textContent = `${dbMs.toFixed(1)} ms`;
+            document.getElementById('tradeoffFprVal').textContent = `${(fpr * 100).toFixed(1)}%`;
+
+            const noBloom = q * dbMs / 1000;
+            const bloom = q * ((1 - miss) + miss * fpr) * dbMs / 1000;
+            const saved = Math.max(0, 1 - bloom / noBloom);
+
+            document.getElementById('costNoBloom').textContent = `${noBloom.toFixed(1)} s/s`;
+            document.getElementById('costBloom').textContent = `${bloom.toFixed(1)} s/s`;
+            document.getElementById('costSaved').textContent = `${(saved * 100).toFixed(1)}%`;
+
+            document.getElementById('barNoBloom').style.width = '100%';
+            document.getElementById('barBloom').style.width = `${Math.max(4, bloom / noBloom * 100)}%`;
+            document.getElementById('barSaved').style.width = `${Math.max(0, saved * 100)}%`;
+
+            const missQueries = q * miss;
+            const leaked = missQueries * fpr;
+            document.getElementById('tradeoffNarrative').innerHTML = `Von <strong>${q.toLocaleString('de-DE')}</strong> Anfragen pro Sekunde wären <strong>${Math.round(missQueries).toLocaleString('de-DE')}</strong> eigentlich sichere Misses. Mit Bloom Filter gelangen davon nur etwa <strong>${Math.round(leaked).toLocaleString('de-DE')}</strong> als Fehlalarm trotzdem zur Datenbank. Der Rest wird vorher abgefangen. Bloom Filter sparen hier nicht Wahrheit, sondern <strong>teure vergebliche Arbeit</strong>.`;
+        }
+
+        ['qSlider', 'missSlider', 'dbSlider', 'tradeoffFprSlider'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateTradeoff);
+        });
+
+        renderBits([]);
+        bitResult.innerHTML = 'Das Filter ist leer. Füge ein Element hinzu oder prüfe einen Begriff.';
+        drawCurve();
+        updateTradeoff();
+    </script>
+</body>
+</html>

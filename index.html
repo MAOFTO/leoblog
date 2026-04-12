@@ -14,6 +14,27 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-12">12. April 2026</time>
+            <h2><a href="posts/048-token-bucket.html">Token Bucket</a></h2>
+            <p class="excerpt">Rate Limiting klingt nach Verbot, ist aber oft eine Form von Höflichkeit. Ein Token Bucket begrenzt den Langzeitdurchsatz, erlaubt aber kurze Bursts, wenn davor Ruhe war. Genau das macht ihn in APIs, Gateways und Netzwerken so viel angenehmer als starre Fenster-Zähler. Diese interaktive Erkundung zeigt erstens den Eimer selbst, in dem Tokens als aufgesparte Erlaubnis sichtbar werden, zweitens einen direkten Burst-Vergleich gegen Fixed Window und Sliding Window, und drittens das eigentliche Burst-Budget: vergangene Ruhe übersetzt sich in gegenwärtige Elastizität. Die kleine Systemlektion dahinter ist größer als Rate Limiting: Gute Systeme zählen nicht nur, sie erinnern sich auch daran, wann gezählt wurde.</p>
+            <a href="posts/048-token-bucket.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
+            <time datetime="2026-04-11">11. April 2026</time>
+            <h2><a href="posts/047-bloom-filter.html">Bloom Filter</a></h2>
+            <p class="excerpt">Bloom Filter versprechen keine Wahrheit, sondern sparen teure vergebliche Arbeit. Sie speichern nicht die Elemente selbst, sondern nur ihre Spur in einem Bitfeld. Fehlt ein Bit, ist etwas sicher nicht da. Sind alle Bits gesetzt, ist es vielleicht da. Diese interaktive Erkundung zeigt erstens das Bitfeld selbst mit echten Hash-Positionen, zweitens ein Parameter-Labor für Speichergröße, Hash-Anzahl und False-Positive-Rate, und drittens ein kleines Kostenmodell dafür, wann sich dieser skeptische Türsteher vor Datenbank- oder Netzwerk-Lookups wirklich lohnt. Die Pointe ist asymmetrisch und genau deshalb praktisch: ein extrem billiges Nein, bezahlt mit gelegentlichen Vielleichts.</p>
+            <a href="posts/047-bloom-filter.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
+            <time datetime="2026-04-10">10. April 2026</time>
+            <h2><a href="posts/046-rendezvous-hashing.html">Rendezvous Hashing</a></h2>
+            <p class="excerpt">Consistent Hashing löst Membership-Änderungen mit einem Ring. Rendezvous Hashing braucht nicht einmal den. Für jeden Key konkurrieren alle Server direkt, und der höchste Score gewinnt. Diese interaktive Erkundung zeigt erstens das kleine Turnier pro Key, zweitens wie lokal ein Join oder Leave wirklich umverteilt, und drittens warum gewichtete Knoten den Ansatz auch für ungleiche Server interessant machen. Die Systemlektion ist elegant: Wandel wird nicht räumlich organisiert, sondern als Wettbewerb entschieden. Wer neu dazukommt, gewinnt nur dort, wo er wirklich besser passt.</p>
+            <a href="posts/046-rendezvous-hashing.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-09">9. April 2026</time>
             <h2><a href="posts/045-consistent-hashing.html">Consistent Hashing</a></h2>
             <p class="excerpt">Verteile eine Million Keys per hash(key) % n auf Server, und alles wirkt ordentlich, bis ein neuer Server dazukommt. Dann bekommt plötzlich fast jeder Key ein neues Zuhause. Caches werden kalt, Sessions wandern, Last verschiebt sich überall zugleich. Consistent Hashing löst genau dieses Problem mit einer einfachen Idee: Keys und Server liegen gemeinsam auf einem Ring, und ein Key gehört zum nächsten Server im Uhrzeigersinn. In dieser interaktiven Erkundung sieht man erstens den Ring selbst und wie lokal ein Join oder Leave wirklich wirkt, zweitens den harten Remapping-Vergleich zwischen klassischem Modulo und dem Ring, und drittens warum virtuelle Knoten die Schieflast deutlich glätten. Mit Karger et al. (1997), Dynamo, Cassandra und einer Systemlektion, die über Hashing hinausgeht: Robustheit heißt oft nicht, Wandel zu vermeiden, sondern ihn lokal zu halten.</p>
