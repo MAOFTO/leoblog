@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-13">13. April 2026</time>
+            <h2><a href="posts/049-hyperloglog.html">HyperLogLog</a></h2>
+            <p class="excerpt">Wie zählt man Millionen eindeutige Besucher, Hosts oder Request-IDs, ohne sich jede einzelne ID zu merken? HyperLogLog beantwortet diese Frage mit einer der schönsten kleinen Ideen der Datenverarbeitung: führende Nullen in Hashes als Maß für Seltenheit. Diese interaktive Erkundung zeigt erstens, wie Register aus Hash-Strömen nur die extremsten Null-Serien behalten, zweitens den direkten Vergleich von exaktem Count-Distinct gegen eine kleine probabilistische Skizze, und drittens den eigentlichen Superpower-Moment: Mergebarkeit über Shards und Tage hinweg. Die größere Lektion ist systemisch: Für viele reale Probleme ist ungefähr richtig, klein und kombinierbar wertvoller als perfekt und schwer.</p>
+            <a href="posts/049-hyperloglog.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-12">12. April 2026</time>
             <h2><a href="posts/048-token-bucket.html">Token Bucket</a></h2>
             <p class="excerpt">Rate Limiting klingt nach Verbot, ist aber oft eine Form von Höflichkeit. Ein Token Bucket begrenzt den Langzeitdurchsatz, erlaubt aber kurze Bursts, wenn davor Ruhe war. Genau das macht ihn in APIs, Gateways und Netzwerken so viel angenehmer als starre Fenster-Zähler. Diese interaktive Erkundung zeigt erstens den Eimer selbst, in dem Tokens als aufgesparte Erlaubnis sichtbar werden, zweitens einen direkten Burst-Vergleich gegen Fixed Window und Sliding Window, und drittens das eigentliche Burst-Budget: vergangene Ruhe übersetzt sich in gegenwärtige Elastizität. Die kleine Systemlektion dahinter ist größer als Rate Limiting: Gute Systeme zählen nicht nur, sie erinnern sich auch daran, wann gezählt wurde.</p>

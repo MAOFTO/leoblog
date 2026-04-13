@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperLogLog — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 180px;
+            accent-color: var(--accent);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        .caption, .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .hash::before { background: #58a6ff; }
+        .legend .register::before { background: #f0883e; }
+        .legend .exact::before { background: #3fb950; }
+        .legend .estimate::before { background: #d2a8ff; }
+        .legend .overlap::before { background: #79c0ff; }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .table th, .table td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        .table th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .pill {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            background: rgba(88,166,255,0.12);
+            color: #79c0ff;
+            font-size: 0.78rem;
+            margin-right: 0.4rem;
+            margin-bottom: 0.3rem;
+        }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-13">13. April 2026</time>
+                <h1>HyperLogLog</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    Manche Fragen wirken harmlos, bis sie groß werden. <em>Wie viele eindeutige Besucher hatten wir heute?</em> Klingt nach einem simplen Zähler, aber bei Millionen Events ist die exakte Antwort plötzlich teuer: Man muss jedes bisher gesehene Element irgendwie erinnern. <em>HyperLogLog</em> macht etwas Freches. Es verzichtet auf die perfekte Antwort und kauft sich dafür fast unglaubliche Speicher-Effizienz.
+                </p>
+                <p>
+                    Die Kernidee ist seltsam schön: Wenn Hashes wirklich zufällig aussehen, dann ist eine Zahl mit vielen führenden Nullen selten. Sehr selten. Wer in einem Strom von IDs irgendwann einen Hash sieht, der mit acht oder neun Nullen beginnt, hat wahrscheinlich schon ziemlich viele unterschiedliche Elemente gesehen. HyperLogLog speichert also nicht die Elemente selbst, sondern nur, wie extrem seltene Hash-Muster in kleinen Registern auftauchen.
+                </p>
+                <p>
+                    Ich mag diesen Algorithmus, weil er eine größere Lektion zeigt: Für viele reale Systeme ist <em>ungefähr richtig und billig</em> viel wertvoller als <em>perfekt und schwer</em>. Datenbanken, Analytics, Observability, Netzwerk-Telemetrie, Feature-Flags, Fraud-Signale, Caches, Unique Visitors, API-Schlüssel, IoT-Geräte, Count-Distinct in SQL, Redis, BigQuery, Postgres-Erweiterungen, Kafka-Streams, Elasticsearch. Überall dieselbe Frage. Überall derselbe kleine Trick mit den führenden Nullen.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="hll-intuition">1. Führende Nullen</button>
+                        <button data-tab="hll-stream">2. Exakt vs. ungefähr</button>
+                        <button data-tab="hll-merge">3. Merge statt Merken</button>
+                    </div>
+
+                    <section id="hll-intuition" class="tab-content active">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="precisionSlider">Präzision p: <span id="precisionVal">5</span> Bits</label>
+                                <input id="precisionSlider" type="range" min="4" max="8" value="5">
+                            </div>
+                            <button id="addSampleBtn">Nächstes Element</button>
+                            <button id="burstSampleBtn">10 Elemente</button>
+                            <button id="resetIntuition">Reset</button>
+                        </div>
+                        <canvas id="intuitionCanvas" width="920" height="360"></canvas>
+                        <div class="legend">
+                            <span class="hash">aktueller Hash</span>
+                            <span class="register">Registerhöhe = längste Null-Serie</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Register<strong id="intuitionRegisters">32</strong></div>
+                            <div class="stat">Letzter Bucket<strong id="intuitionBucket">–</strong></div>
+                            <div class="stat">Letzte Null-Serie<strong id="intuitionZeros">–</strong></div>
+                            <div class="stat">HLL-Schätzung<strong id="intuitionEstimate">0</strong></div>
+                        </div>
+                        <p class="caption">Die ersten <span class="formula">p</span> Bits wählen das Register. Der Rest fragt nur: Wie viele Nullen kommen am Anfang, bevor die erste Eins auftaucht?</p>
+                    </section>
+
+                    <section id="hll-stream" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="streamRateSlider">Events pro Tick: <span id="streamRateVal">12</span></label>
+                                <input id="streamRateSlider" type="range" min="1" max="40" value="12">
+                            </div>
+                            <div class="slider-group">
+                                <label for="noveltySlider">Chance auf neues Element: <span id="noveltyVal">70</span>%</label>
+                                <input id="noveltySlider" type="range" min="10" max="100" value="70">
+                            </div>
+                            <div class="slider-group">
+                                <label for="streamPrecisionSlider">Registerzahl: <span id="streamPrecisionVal">64</span></label>
+                                <input id="streamPrecisionSlider" type="range" min="4" max="8" value="6">
+                            </div>
+                            <button id="toggleStreamBtn">Pause</button>
+                            <button id="resetStreamBtn">Reset</button>
+                        </div>
+                        <canvas id="streamCanvas" width="920" height="360"></canvas>
+                        <div class="legend">
+                            <span class="exact">exakte Distinct-Zahl</span>
+                            <span class="estimate">HyperLogLog-Schätzung</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Exakt distinct<strong id="streamExact">0</strong></div>
+                            <div class="stat">HLL estimate<strong id="streamEstimate">0</strong></div>
+                            <div class="stat">Fehler<strong id="streamError">0.0%</strong></div>
+                            <div class="stat">Speicher exakt vs. HLL<strong id="streamMemory">0 B / 64 B</strong></div>
+                        </div>
+                        <p class="caption">Exakt zählen braucht Gedächtnis für jedes gesehene Element. HyperLogLog merkt sich nur wenige Register und bleibt fast konstant klein.</p>
+                    </section>
+
+                    <section id="hll-merge" class="tab-content">
+                        <div class="controls">
+                            <div class="slider-group">
+                                <label for="mergeOverlapSlider">Überlappung A↔B: <span id="mergeOverlapVal">40</span>%</label>
+                                <input id="mergeOverlapSlider" type="range" min="0" max="100" value="40">
+                            </div>
+                            <div class="slider-group">
+                                <label for="mergeSizeSlider">Größe je Tag: <span id="mergeSizeVal">4000</span></label>
+                                <input id="mergeSizeSlider" type="range" min="500" max="10000" step="500" value="4000">
+                            </div>
+                            <button id="rerunMergeBtn">Neu würfeln</button>
+                        </div>
+                        <canvas id="mergeCanvas" width="920" height="320"></canvas>
+                        <table class="table">
+                            <thead>
+                                <tr><th>Menge</th><th>Exakt</th><th>HLL</th><th>Kommentar</th></tr>
+                            </thead>
+                            <tbody id="mergeTableBody"></tbody>
+                        </table>
+                        <p class="caption">Das Magische an HyperLogLog ist nicht nur die Schätzung. Es ist die Mergebarkeit: zwei Skizzen zusammenführen heißt einfach registerweise das Maximum nehmen.</p>
+                    </section>
+                </div>
+
+                <div class="info-box">
+                    <strong>Die Formel in kurz:</strong><br>
+                    Teile den Hash-Strom in <span class="formula">m = 2^p</span> Register. Jedes Register speichert den größten beobachteten Wert <span class="formula">M[i]</span> einer Null-Serie. Dann ergibt sich grob<br>
+                    <span class="formula">E = αₘ · m² / Σ 2<sup>-M[i]</sup></span>.<br>
+                    Für kleine Mengen wird zusätzlich korrigiert, wenn noch viele Register leer sind. Genau dort liegt viel Ingenieurskunst: nicht nur die Idee, sondern die Bias-Korrektur macht HyperLogLog praktisch brauchbar.
+                </div>
+
+                <h2>Warum führende Nullen?</h2>
+                <p>
+                    Wenn ein fairer 32-Bit-Hash zufällig ist, beginnt ungefähr jeder zweite Hash mit einer Null, jeder vierte mit zwei Nullen, jeder achte mit drei, und so weiter. Eine Null-Serie der Länge <span class="formula">k</span> tritt also ungefähr mit Wahrscheinlichkeit <span class="formula">2<sup>-k</sup></span> auf. Wer in einem Datenstrom irgendwo neun führende Nullen sieht, hat ziemlich sicher schon mehr gesehen als jemand, dessen extremstes Ereignis nur fünf Nullen hatte.
+                </p>
+                <p>
+                    Ein einzelner Extremwert wäre aber zu wackelig. Deshalb teilt HyperLogLog die Daten in viele kleine Teilströme auf. Jedes Register bekommt seine eigene Mini-Stichprobe, und am Ende werden die Perspektiven harmonisch gemittelt. Das Ergebnis ist überraschend stabil. Die Standardabweichung ist näherungsweise <span class="formula">1.04 / √m</span>. Mehr Register kosten also etwas mehr Speicher, drücken den Fehler aber mit der Wurzel.
+                </p>
+
+                <h2>Wofür man das wirklich benutzt</h2>
+                <div class="cards">
+                    <div class="card">
+                        <h4>Unique Visitors</h4>
+                        <p>Tägliche, wöchentliche oder kampagnenbezogene Distinct Counts, ohne Milliarden Cookies oder User-IDs im RAM zu halten.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Observability</h4>
+                        <p>Wie viele unterschiedliche Fehlerschlüssel, Hosts, IPs oder Request-IDs tauchen pro Zeitfenster auf? Cardinality ist teuer, HLL macht sie billig.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Verteilte Systeme</h4>
+                        <p>Shards oder Regionen können ihre Skizzen lokal führen und später mergen, statt rohe Daten zentral zusammenzukippen.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Approximate SQL</h4>
+                        <p>COUNT(DISTINCT ...) ist berüchtigt teuer. Viele Systeme bieten HLL-Funktionen an, weil ein Prozent Fehler oft völlig genügt.</p>
+                    </div>
+                </div>
+
+                <h2>Was ich daran mag</h2>
+                <p>
+                    Bloom Filter waren der billige Skeptiker: sehr günstige <em>Nein</em>-Antworten gegen gelegentliche <em>Vielleicht</em>s. HyperLogLog ist der billige Zähler: keine Elemente merken, nur die Härte des Zufalls beobachten. Beide Algorithmen gehören in dieselbe Familie. Sie opfern Perfektion nicht aus Schlampigkeit, sondern aus Präzision darüber, <em>welche</em> Art von Fehler in der Praxis akzeptabel ist.
+                </p>
+                <p>
+                    Vielleicht ist das die größere Systemlektion dieser letzten Posts über Queues, Retries, Circuit Breaker, Hashing, Bloom Filter und jetzt HyperLogLog: Gute Systeme sind selten maximal. Sie sind gezielt unvollkommen. Sie entscheiden sehr bewusst, wo Genauigkeit wichtig ist und wo Struktur wichtiger ist als Detail.
+                </p>
+
+                <div class="info-box">
+                    <span class="pill">Philippe Flajolet</span>
+                    <span class="pill">Éric Fusy</span>
+                    <span class="pill">Olivier Gandouet</span>
+                    <span class="pill">Frédéric Meunier</span>
+                    2007 veröffentlichten Flajolet und Kollegen HyperLogLog als Nachfolger früherer Probabilistic-Counting-Ideen. Wie so oft wirkt die Grundidee fast zu einfach. Der eigentliche Zauber liegt in den Korrekturen, den Konstanten und der Robustheit unter echten Datenströmen.
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tabs button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(button => {
+            button.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+
+        function fnv1a(str) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 0x01000193);
+            }
+            return h >>> 0;
+        }
+
+        function leadingZerosInSuffix(hash, p) {
+            const bits = 32 - p;
+            const suffix = hash & ((1 << bits) - 1);
+            if (suffix === 0) return bits + 1;
+            let count = 1;
+            for (let pos = bits - 1; pos >= 0; pos--) {
+                if (((suffix >>> pos) & 1) === 0) count++;
+                else break;
+            }
+            return count;
+        }
+
+        function alphaFor(m) {
+            if (m === 16) return 0.673;
+            if (m === 32) return 0.697;
+            if (m === 64) return 0.709;
+            return 0.7213 / (1 + 1.079 / m);
+        }
+
+        class HLL {
+            constructor(p = 6) {
+                this.reset(p);
+            }
+            reset(p = this.p) {
+                this.p = p;
+                this.m = 1 << p;
+                this.registers = new Uint8Array(this.m);
+            }
+            add(value) {
+                const hash = fnv1a(String(value));
+                const idx = hash >>> (32 - this.p);
+                const rho = leadingZerosInSuffix(hash, this.p);
+                if (rho > this.registers[idx]) this.registers[idx] = rho;
+                return { hash, idx, rho };
+            }
+            merge(other) {
+                const merged = new HLL(this.p);
+                for (let i = 0; i < this.m; i++) {
+                    merged.registers[i] = Math.max(this.registers[i], other.registers[i]);
+                }
+                return merged;
+            }
+            estimate() {
+                let sum = 0;
+                let zeros = 0;
+                for (let i = 0; i < this.m; i++) {
+                    const v = this.registers[i];
+                    sum += Math.pow(2, -v);
+                    if (v === 0) zeros++;
+                }
+                let estimate = alphaFor(this.m) * this.m * this.m / sum;
+                if (estimate <= 2.5 * this.m && zeros > 0) {
+                    estimate = this.m * Math.log(this.m / zeros);
+                }
+                return estimate;
+            }
+        }
+
+        function formatInt(n) {
+            return Math.round(n).toLocaleString('de-DE');
+        }
+
+        function makeBitString(num) {
+            return num.toString(2).padStart(32, '0');
+        }
+
+        const intuitionCanvas = document.getElementById('intuitionCanvas');
+        const iCtx = intuitionCanvas.getContext('2d');
+        const precisionSlider = document.getElementById('precisionSlider');
+        const precisionVal = document.getElementById('precisionVal');
+        const intuitionRegisters = document.getElementById('intuitionRegisters');
+        const intuitionBucket = document.getElementById('intuitionBucket');
+        const intuitionZeros = document.getElementById('intuitionZeros');
+        const intuitionEstimate = document.getElementById('intuitionEstimate');
+        let intuitionCounter = 0;
+        let intuitionLast = null;
+        let intuitionHLL = new HLL(Number(precisionSlider.value));
+
+        function resetIntuition() {
+            intuitionCounter = 0;
+            intuitionLast = null;
+            intuitionHLL = new HLL(Number(precisionSlider.value));
+            drawIntuition();
+        }
+
+        function addIntuitionSample(times = 1) {
+            for (let t = 0; t < times; t++) {
+                intuitionCounter++;
+                const label = `visitor-${intuitionCounter}`;
+                intuitionLast = intuitionHLL.add(label);
+            }
+            drawIntuition();
+        }
+
+        function drawIntuition() {
+            const { width, height } = intuitionCanvas;
+            iCtx.clearRect(0, 0, width, height);
+            iCtx.fillStyle = '#0d1117';
+            iCtx.fillRect(0, 0, width, height);
+
+            const regs = intuitionHLL.registers;
+            const maxVal = Math.max(6, ...regs) + 1;
+            const chartX = 40;
+            const chartY = 130;
+            const chartW = width - 80;
+            const chartH = 190;
+            const barW = chartW / regs.length;
+
+            iCtx.fillStyle = '#c9d1d9';
+            iCtx.font = '14px system-ui';
+            iCtx.fillText('Registerzustand', chartX, chartY - 18);
+
+            for (let y = 0; y <= maxVal; y++) {
+                const py = chartY + chartH - (y / maxVal) * chartH;
+                iCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+                iCtx.beginPath();
+                iCtx.moveTo(chartX, py);
+                iCtx.lineTo(chartX + chartW, py);
+                iCtx.stroke();
+                iCtx.fillStyle = '#8b949e';
+                iCtx.fillText(String(y), 12, py + 4);
+            }
+
+            regs.forEach((v, i) => {
+                const x = chartX + i * barW + 1;
+                const h = (v / maxVal) * chartH;
+                iCtx.fillStyle = intuitionLast && i === intuitionLast.idx ? '#f0883e' : '#58a6ff';
+                iCtx.fillRect(x, chartY + chartH - h, Math.max(2, barW - 2), h);
+                if (barW > 14) {
+                    iCtx.fillStyle = '#8b949e';
+                    iCtx.font = '11px system-ui';
+                    iCtx.fillText(String(i), x + 1, chartY + chartH + 14);
+                }
+            });
+
+            iCtx.fillStyle = '#c9d1d9';
+            iCtx.font = '14px ui-monospace, monospace';
+            const hashText = intuitionLast ? makeBitString(intuitionLast.hash) : '................................';
+            iCtx.fillText('Hash:', 40, 36);
+            iCtx.fillText(hashText, 90, 36);
+            if (intuitionLast) {
+                const split = intuitionHLL.p;
+                const bitW = 9.2;
+                iCtx.fillStyle = 'rgba(88,166,255,0.18)';
+                iCtx.fillRect(89, 21, bitW * split + 6, 20);
+                iCtx.fillStyle = 'rgba(240,136,62,0.18)';
+                iCtx.fillRect(95 + bitW * split, 21, bitW * (32 - split), 20);
+                iCtx.fillStyle = '#79c0ff';
+                iCtx.fillText('Bucket-Bits', 90, 64);
+                iCtx.fillStyle = '#f2cc60';
+                iCtx.fillText('Null-Serie im Rest', 210, 64);
+            }
+
+            intuitionRegisters.textContent = String(intuitionHLL.m);
+            intuitionBucket.textContent = intuitionLast ? String(intuitionLast.idx) : '–';
+            intuitionZeros.textContent = intuitionLast ? String(intuitionLast.rho) : '–';
+            intuitionEstimate.textContent = formatInt(intuitionHLL.estimate());
+        }
+
+        precisionSlider.addEventListener('input', () => {
+            precisionVal.textContent = precisionSlider.value;
+            resetIntuition();
+        });
+        document.getElementById('addSampleBtn').addEventListener('click', () => addIntuitionSample(1));
+        document.getElementById('burstSampleBtn').addEventListener('click', () => addIntuitionSample(10));
+        document.getElementById('resetIntuition').addEventListener('click', resetIntuition);
+
+        const streamCanvas = document.getElementById('streamCanvas');
+        const sCtx = streamCanvas.getContext('2d');
+        const streamRateSlider = document.getElementById('streamRateSlider');
+        const noveltySlider = document.getElementById('noveltySlider');
+        const streamPrecisionSlider = document.getElementById('streamPrecisionSlider');
+        const streamRateVal = document.getElementById('streamRateVal');
+        const noveltyVal = document.getElementById('noveltyVal');
+        const streamPrecisionVal = document.getElementById('streamPrecisionVal');
+        const streamExactEl = document.getElementById('streamExact');
+        const streamEstimateEl = document.getElementById('streamEstimate');
+        const streamErrorEl = document.getElementById('streamError');
+        const streamMemoryEl = document.getElementById('streamMemory');
+        const toggleStreamBtn = document.getElementById('toggleStreamBtn');
+
+        let streamRunning = true;
+        let streamTick = 0;
+        let streamUniverse = 0;
+        let streamSeen = new Set();
+        let streamPool = [];
+        let streamHLL = new HLL(Number(streamPrecisionSlider.value));
+        let streamExactHistory = [];
+        let streamEstimateHistory = [];
+
+        function resetStream() {
+            streamTick = 0;
+            streamUniverse = 0;
+            streamSeen = new Set();
+            streamPool = [];
+            streamHLL = new HLL(Number(streamPrecisionSlider.value));
+            streamExactHistory = [];
+            streamEstimateHistory = [];
+            drawStream();
+        }
+
+        function streamStep() {
+            const events = Number(streamRateSlider.value);
+            const novelty = Number(noveltySlider.value) / 100;
+            for (let i = 0; i < events; i++) {
+                let id;
+                if (streamPool.length === 0 || Math.random() < novelty) {
+                    streamUniverse++;
+                    id = `user-${streamUniverse}`;
+                    streamPool.push(id);
+                } else {
+                    id = streamPool[Math.floor(Math.random() * streamPool.length)];
+                }
+                streamSeen.add(id);
+                streamHLL.add(id);
+            }
+            streamTick++;
+            streamExactHistory.push(streamSeen.size);
+            streamEstimateHistory.push(streamHLL.estimate());
+            if (streamExactHistory.length > 120) {
+                streamExactHistory.shift();
+                streamEstimateHistory.shift();
+            }
+        }
+
+        function drawLine(ctx, data, color, maxY, rect) {
+            if (data.length < 2) return;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            data.forEach((v, i) => {
+                const x = rect.x + (i / (data.length - 1)) * rect.w;
+                const y = rect.y + rect.h - (v / maxY) * rect.h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        function drawStream() {
+            const { width, height } = streamCanvas;
+            sCtx.clearRect(0, 0, width, height);
+            sCtx.fillStyle = '#0d1117';
+            sCtx.fillRect(0, 0, width, height);
+
+            const rect = { x: 48, y: 22, w: width - 72, h: 260 };
+            const maxY = Math.max(100, ...streamExactHistory, ...streamEstimateHistory);
+            for (let i = 0; i <= 5; i++) {
+                const y = rect.y + (i / 5) * rect.h;
+                sCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+                sCtx.beginPath();
+                sCtx.moveTo(rect.x, y);
+                sCtx.lineTo(rect.x + rect.w, y);
+                sCtx.stroke();
+                const val = Math.round(maxY - (i / 5) * maxY);
+                sCtx.fillStyle = '#8b949e';
+                sCtx.font = '12px system-ui';
+                sCtx.fillText(formatInt(val), 6, y + 4);
+            }
+            drawLine(sCtx, streamExactHistory, '#3fb950', maxY, rect);
+            drawLine(sCtx, streamEstimateHistory, '#d2a8ff', maxY, rect);
+
+            streamExactEl.textContent = formatInt(streamSeen.size);
+            const estimate = streamHLL.estimate();
+            streamEstimateEl.textContent = formatInt(estimate);
+            const err = streamSeen.size === 0 ? 0 : ((estimate - streamSeen.size) / streamSeen.size) * 100;
+            streamErrorEl.textContent = `${err >= 0 ? '+' : ''}${err.toFixed(1)}%`;
+            const exactBytes = Math.max(1, streamSeen.size) * 24;
+            const hllBytes = streamHLL.m;
+            streamMemoryEl.textContent = `${formatInt(exactBytes)} B / ${formatInt(hllBytes)} B`;
+        }
+
+        streamRateSlider.addEventListener('input', () => streamRateVal.textContent = streamRateSlider.value);
+        noveltySlider.addEventListener('input', () => noveltyVal.textContent = noveltySlider.value);
+        streamPrecisionSlider.addEventListener('input', () => {
+            streamPrecisionVal.textContent = String(1 << Number(streamPrecisionSlider.value));
+            resetStream();
+        });
+        toggleStreamBtn.addEventListener('click', () => {
+            streamRunning = !streamRunning;
+            toggleStreamBtn.textContent = streamRunning ? 'Pause' : 'Weiter';
+        });
+        document.getElementById('resetStreamBtn').addEventListener('click', resetStream);
+
+        function makeDataset(size, prefix) {
+            const arr = [];
+            for (let i = 0; i < size; i++) arr.push(`${prefix}-${i}`);
+            return arr;
+        }
+
+        const mergeCanvas = document.getElementById('mergeCanvas');
+        const mCtx = mergeCanvas.getContext('2d');
+        const mergeOverlapSlider = document.getElementById('mergeOverlapSlider');
+        const mergeSizeSlider = document.getElementById('mergeSizeSlider');
+        const mergeOverlapVal = document.getElementById('mergeOverlapVal');
+        const mergeSizeVal = document.getElementById('mergeSizeVal');
+        const mergeTableBody = document.getElementById('mergeTableBody');
+
+        function runMergeDemo() {
+            const size = Number(mergeSizeSlider.value);
+            const overlapRatio = Number(mergeOverlapSlider.value) / 100;
+            const overlap = Math.round(size * overlapRatio);
+            const uniqueA = size - overlap;
+            const uniqueB = size - overlap;
+
+            const common = makeDataset(overlap, 'shared');
+            const aOnly = makeDataset(uniqueA, 'A');
+            const bOnly = makeDataset(uniqueB, 'B');
+            const setA = [...common, ...aOnly];
+            const setB = [...common, ...bOnly];
+            const union = new Set([...setA, ...setB]);
+
+            const hllA = new HLL(7);
+            const hllB = new HLL(7);
+            setA.forEach(v => hllA.add(v));
+            setB.forEach(v => hllB.add(v));
+            const hllUnion = hllA.merge(hllB);
+
+            const rows = [
+                ['Tag A', setA.length, Math.round(hllA.estimate()), 'lokale Sketch'],
+                ['Tag B', setB.length, Math.round(hllB.estimate()), 'lokale Sketch'],
+                ['A ∪ B', union.size, Math.round(hllUnion.estimate()), 'registerweise max() statt Raw Data'],
+            ];
+            mergeTableBody.innerHTML = rows.map(([name, exact, hll, note]) => `
+                <tr>
+                    <td>${name}</td>
+                    <td>${formatInt(exact)}</td>
+                    <td>${formatInt(hll)}</td>
+                    <td>${note}</td>
+                </tr>
+            `).join('');
+
+            drawMerge(size, overlap, union.size, hllUnion.estimate());
+        }
+
+        function drawMerge(size, overlap, unionExact, unionEstimate) {
+            const { width, height } = mergeCanvas;
+            mCtx.clearRect(0, 0, width, height);
+            mCtx.fillStyle = '#0d1117';
+            mCtx.fillRect(0, 0, width, height);
+
+            const leftX = width * 0.36;
+            const rightX = width * 0.64;
+            const y = height * 0.5;
+            const r = 95;
+            mCtx.globalAlpha = 0.9;
+            mCtx.fillStyle = 'rgba(88,166,255,0.35)';
+            mCtx.beginPath();
+            mCtx.arc(leftX, y, r, 0, Math.PI * 2);
+            mCtx.fill();
+            mCtx.fillStyle = 'rgba(242,204,96,0.35)';
+            mCtx.beginPath();
+            mCtx.arc(rightX, y, r, 0, Math.PI * 2);
+            mCtx.fill();
+            mCtx.globalAlpha = 1;
+
+            mCtx.fillStyle = '#c9d1d9';
+            mCtx.font = '16px system-ui';
+            mCtx.fillText('Tag A', leftX - 22, y - r - 18);
+            mCtx.fillText('Tag B', rightX - 22, y - r - 18);
+            mCtx.font = '14px system-ui';
+            mCtx.fillText(`shared ${formatInt(overlap)}`, width * 0.47, y + 6);
+            mCtx.fillText(`Union exakt: ${formatInt(unionExact)}`, 30, 34);
+            mCtx.fillStyle = '#d2a8ff';
+            mCtx.fillText(`Union HLL: ${formatInt(unionEstimate)}`, 30, 56);
+            mCtx.fillStyle = '#8b949e';
+            mCtx.fillText(`A/B Größe je ${formatInt(size)} · Merge = max(Register[i])`, 30, 82);
+        }
+
+        mergeOverlapSlider.addEventListener('input', () => {
+            mergeOverlapVal.textContent = mergeOverlapSlider.value;
+            runMergeDemo();
+        });
+        mergeSizeSlider.addEventListener('input', () => {
+            mergeSizeVal.textContent = mergeSizeSlider.value;
+            runMergeDemo();
+        });
+        document.getElementById('rerunMergeBtn').addEventListener('click', runMergeDemo);
+
+        function animate() {
+            if (streamRunning) {
+                streamStep();
+                drawStream();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        precisionVal.textContent = precisionSlider.value;
+        streamRateVal.textContent = streamRateSlider.value;
+        noveltyVal.textContent = noveltySlider.value;
+        streamPrecisionVal.textContent = String(1 << Number(streamPrecisionSlider.value));
+        mergeOverlapVal.textContent = mergeOverlapSlider.value;
+        mergeSizeVal.textContent = mergeSizeSlider.value;
+        resetIntuition();
+        resetStream();
+        runMergeDemo();
+        animate();
+    </script>
+</body>
+</html>
