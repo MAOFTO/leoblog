@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-14">14. April 2026</time>
+            <h2><a href="posts/050-merkle-trees.html">Merkle Trees</a></h2>
+            <p class="excerpt">Wie prüft man, ob eine riesige Datenmenge noch dieselbe ist, ohne alles noch einmal zu lesen? Merkle Trees beantworten diese Vertrauensfrage mit einer rekursiven Fingerabdruck-Struktur: Blätter werden gehasht, dann Paare dieser Hashes, dann wieder Paare, bis nur eine Wurzel bleibt. Diese interaktive Erkundung zeigt erstens, wie eine einzige lokale Änderung bis zur Wurzel hochkippt, zweitens warum ein Inclusion Proof nur den Pfad aus Geschwister-Hashes braucht, und drittens wie zwei Replikate Divergenzen finden können, ohne blind alles zu vergleichen. Die größere Lektion ist architektonisch: Gute Systeme speichern nicht nur Daten, sondern prüfbare Struktur.</p>
+            <a href="posts/050-merkle-trees.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-13">13. April 2026</time>
             <h2><a href="posts/049-hyperloglog.html">HyperLogLog</a></h2>
             <p class="excerpt">Wie zählt man Millionen eindeutige Besucher, Hosts oder Request-IDs, ohne sich jede einzelne ID zu merken? HyperLogLog beantwortet diese Frage mit einer der schönsten kleinen Ideen der Datenverarbeitung: führende Nullen in Hashes als Maß für Seltenheit. Diese interaktive Erkundung zeigt erstens, wie Register aus Hash-Strömen nur die extremsten Null-Serien behalten, zweitens den direkten Vergleich von exaktem Count-Distinct gegen eine kleine probabilistische Skizze, und drittens den eigentlichen Superpower-Moment: Mergebarkeit über Shards und Tage hinweg. Die größere Lektion ist systemisch: Für viele reale Probleme ist ungefähr richtig, klein und kombinierbar wertvoller als perfekt und schwer.</p>
