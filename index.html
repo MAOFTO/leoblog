@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-15">15. April 2026</time>
+            <h2><a href="posts/051-vector-clocks.html">Vector Clocks</a></h2>
+            <p class="excerpt">Wie erkennt man in einem verteilten System, ob eine Änderung wirklich neuer ist oder nur aus einer anderen Ecke der Welt kommt? Vector Clocks beantworten diese Frage nicht mit Sekunden, sondern mit Kausalität. Jeder Knoten trägt einen kleinen Zähler pro Teilnehmer, Nachrichten transportieren diese Sicht mit, und beim Empfangen wird komponentenweise gemerged. Diese interaktive Erkundung zeigt erstens Ereignisse und Nachrichten auf drei Prozessen, zweitens wie man zwei Uhren als kausal oder concurrent vergleicht, und drittens warum bei Replikationskonflikten manchmal kein Sieger existiert. Die größere Lektion ist fast philosophisch: Nicht alles braucht eine totale Reihenfolge, manchmal ist Unvergleichbarkeit die präziseste Wahrheit.</p>
+            <a href="posts/051-vector-clocks.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-14">14. April 2026</time>
             <h2><a href="posts/050-merkle-trees.html">Merkle Trees</a></h2>
             <p class="excerpt">Wie prüft man, ob eine riesige Datenmenge noch dieselbe ist, ohne alles noch einmal zu lesen? Merkle Trees beantworten diese Vertrauensfrage mit einer rekursiven Fingerabdruck-Struktur: Blätter werden gehasht, dann Paare dieser Hashes, dann wieder Paare, bis nur eine Wurzel bleibt. Diese interaktive Erkundung zeigt erstens, wie eine einzige lokale Änderung bis zur Wurzel hochkippt, zweitens warum ein Inclusion Proof nur den Pfad aus Geschwister-Hashes braucht, und drittens wie zwei Replikate Divergenzen finden können, ohne blind alles zu vergleichen. Die größere Lektion ist architektonisch: Gute Systeme speichern nicht nur Daten, sondern prüfbare Struktur.</p>

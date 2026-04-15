@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vector Clocks — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls select, .controls input {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .slider-group, .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label, .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .slider-group input[type="range"] {
+            width: 180px;
+            accent-color: var(--accent);
+        }
+        .input-group select, .input-group input {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.55rem 0.7rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        canvas {
+            width: 100%;
+            display: block;
+            border-radius: 8px;
+            background: #0d1117;
+        }
+        .caption, .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .local::before { background: #58a6ff; }
+        .legend .send::before { background: #f0883e; }
+        .legend .receive::before { background: #3fb950; }
+        .legend .concurrent::before { background: #d2a8ff; }
+        .legend .causal::before { background: #79c0ff; }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .clock-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .clock-box h4 {
+            margin: 0 0 0.6rem 0;
+            color: var(--text);
+        }
+        .clock-value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 1.15rem;
+            color: var(--accent);
+        }
+        .component-list {
+            margin-top: 0.9rem;
+            display: grid;
+            gap: 0.45rem;
+        }
+        .component-row {
+            display: grid;
+            grid-template-columns: 28px 1fr 42px 42px;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.86rem;
+            color: var(--text-muted);
+        }
+        .bar {
+            position: relative;
+            height: 10px;
+            background: #1f2630;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .bar-fill-a, .bar-fill-b {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-radius: 999px;
+        }
+        .bar-fill-a { background: rgba(88,166,255,0.8); left: 0; }
+        .bar-fill-b { background: rgba(240,136,62,0.65); left: 0; }
+        .relation-box {
+            margin-top: 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .relation-box strong {
+            color: var(--accent);
+            display: block;
+            margin-bottom: 0.4rem;
+        }
+        .version-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .replica {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .replica h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text);
+        }
+        .version-list {
+            display: grid;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+        }
+        .version-item {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 0.7rem 0.8rem;
+        }
+        .version-item strong {
+            color: var(--accent);
+        }
+        .version-item .meta {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .table th, .table td {
+            padding: 0.6rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+        .table th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .pill {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            background: rgba(88,166,255,0.12);
+            color: #79c0ff;
+            font-size: 0.78rem;
+            margin-right: 0.4rem;
+            margin-bottom: 0.3rem;
+        }
+        @media (max-width: 700px) {
+            .controls { align-items: stretch; }
+            .component-row { grid-template-columns: 24px 1fr 34px 34px; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-15">15. April 2026</time>
+                <h1>Vector Clocks</h1>
+            </header>
+
+            <div class="content">
+                <p>
+                    In verteilten Systemen ist die eigentlich schwierige Frage oft nicht <em>was</em> passiert ist, sondern <em>vor was</em>. Welche Änderung kannte welche andere schon? Welche Antwort ist nur spät angekommen und welche ist wirklich neuer? Wanduhrzeit hilft dabei erstaunlich wenig. Uhren gehen auseinander, Netzwerke verzögern Nachrichten, und zwei Maschinen können ehrlich gleichzeitig verschiedene Dinge tun.
+                </p>
+                <p>
+                    <em>Vector Clocks</em> beantworten diese Frage nicht mit einer globalen Uhr, sondern mit Erinnerung. Jeder Knoten trägt einen kleinen Zähler pro Teilnehmer. Bei jedem lokalen Ereignis steigt der eigene Eintrag. Beim Senden reist die ganze Sicht auf die Welt mit. Beim Empfangen wird komponentenweise das Maximum gebildet und dann lokal weitergezählt. So entsteht keine totale Ordnung, sondern etwas Wertvolleres: eine <em>partielle</em>. Man weiß, was kausal vor etwas lag, und man sieht, was wirklich gleichzeitig entstanden ist.
+                </p>
+                <p>
+                    Ich mag Vector Clocks, weil sie eine wichtige Systemlektion verkörpern: Nicht jede Unklarheit muss erzwungen auf eine Linie gebracht werden. Manchmal ist die richtige Antwort nicht <em>welches Event ist neuer?</em>, sondern <em>diese beiden sind unvergleichbar</em>. Colin Fidge und Friedemann Mattern beschrieben die Idee Ende der 1980er unabhängig voneinander. Später tauchte sie in Version Vectors, Dynamo-artigen Konflikterkennungen, CRDT-Umgebungen und causally consistent Datastores wieder auf.
+                </p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="active" data-tab="vc-events">1. Ereignisse</button>
+                        <button data-tab="vc-compare">2. Vergleichen</button>
+                        <button data-tab="vc-versions">3. Konflikte</button>
+                    </div>
+
+                    <section id="vc-events" class="tab-content active">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="actorSelect">Prozess</label>
+                                <select id="actorSelect">
+                                    <option value="0">A</option>
+                                    <option value="1">B</option>
+                                    <option value="2">C</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="receiverSelect">Empfänger</label>
+                                <select id="receiverSelect">
+                                    <option value="1">B</option>
+                                    <option value="2">C</option>
+                                    <option value="0">A</option>
+                                </select>
+                            </div>
+                            <button id="localEventBtn">Lokales Event</button>
+                            <button id="sendEventBtn">Nachricht senden</button>
+                            <button id="deliverEventBtn">Nächste Nachricht zustellen</button>
+                            <button id="resetEventBtn" class="secondary">Reset</button>
+                        </div>
+                        <canvas id="eventsCanvas" width="920" height="420"></canvas>
+                        <div class="legend">
+                            <span class="local">lokales Event</span>
+                            <span class="send">Senden</span>
+                            <span class="receive">Empfangen</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Queue<strong id="queueSize">0</strong></div>
+                            <div class="stat">A<strong id="clockA">[0,0,0]</strong></div>
+                            <div class="stat">B<strong id="clockB">[0,0,0]</strong></div>
+                            <div class="stat">C<strong id="clockC">[0,0,0]</strong></div>
+                        </div>
+                        <p class="caption">Senden erhöht den lokalen Zähler und legt die ganze Sicht <span class="formula">[a,b,c]</span> in die Nachricht. Empfangen macht <span class="formula">max(lokal, nachricht)</span> und zählt dann den eigenen Eintrag hoch.</p>
+                    </section>
+
+                    <section id="vc-compare" class="tab-content">
+                        <div class="controls">
+                            <button id="randomCausalBtn">Kausales Paar</button>
+                            <button id="randomConcurrentBtn">Nebenläufiges Paar</button>
+                            <button id="randomEqualBtn">Gleiches Paar</button>
+                        </div>
+                        <div class="compare-grid">
+                            <div class="clock-box">
+                                <h4>Clock A</h4>
+                                <div class="clock-value" id="compareA">[2,1,0]</div>
+                            </div>
+                            <div class="clock-box">
+                                <h4>Clock B</h4>
+                                <div class="clock-value" id="compareB">[2,3,1]</div>
+                            </div>
+                        </div>
+                        <div class="component-list" id="componentList"></div>
+                        <div class="relation-box">
+                            <strong id="relationTitle">A passiert vor B</strong>
+                            <div id="relationText">Alle Komponenten von A sind kleiner oder gleich, und mindestens eine ist echt kleiner. Also ist A kausal vor B.</div>
+                        </div>
+                        <p class="caption">Vector Clocks liefern keine totale Reihenfolge. Wenn A in manchen Komponenten kleiner und in anderen größer ist, dann sind die Ereignisse <em>concurrent</em>, also kausal unvergleichbar.</p>
+                    </section>
+
+                    <section id="vc-versions" class="tab-content">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="writeAInput">A schreibt</label>
+                                <input id="writeAInput" type="text" value="milch">
+                            </div>
+                            <button id="writeABtn">Auf A speichern</button>
+                            <div class="input-group">
+                                <label for="writeBInput">B schreibt</label>
+                                <input id="writeBInput" type="text" value="brot">
+                            </div>
+                            <button id="writeBBtn">Auf B speichern</button>
+                            <button id="syncBtn">A ↔ B sync</button>
+                            <button id="resolveBtn">Konflikt vereinen</button>
+                            <button id="resetVersionBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Status<strong id="versionStatus">eine gemeinsame Version</strong></div>
+                            <div class="stat">A sieht<strong id="replicaAState">1 Version</strong></div>
+                            <div class="stat">B sieht<strong id="replicaBState">1 Version</strong></div>
+                            <div class="stat">Konflikte<strong id="conflictCount">0</strong></div>
+                        </div>
+                        <div class="version-layout">
+                            <div class="replica">
+                                <h4>Replica A</h4>
+                                <div id="replicaAList" class="version-list"></div>
+                            </div>
+                            <div class="replica">
+                                <h4>Replica B</h4>
+                                <div id="replicaBList" class="version-list"></div>
+                            </div>
+                        </div>
+                        <p class="caption">Wenn eine Version die andere dominiert, ist sie wirklich neuer. Wenn keine die andere dominiert, hat man keinen Sieger, sondern einen echten Konflikt. Genau dort kommen Version Vectors, manuelle Merge-Logik oder CRDTs ins Spiel.</p>
+                    </section>
+                </div>
+
+                <div class="info-box">
+                    Lamport-Timestamps reichen, um <em>happened-before</em> zu respektieren, aber sie können Gleichzeitigkeit nicht sicher erkennen. Vector Clocks können genau das, zahlen dafür aber mit mehr Platz: bei <span class="formula">n</span> Teilnehmern braucht jede Uhr im einfachsten Fall <span class="formula">n</span> Komponenten. Deshalb entstanden später kompaktere oder dynamischere Varianten wie Version Vectors, Dotted Version Vectors oder Interval Tree Clocks.
+                </div>
+
+                <h2>Warum mich das fasziniert</h2>
+                <p>
+                    Ich finde schön, dass Vector Clocks keine göttliche Perspektive vortäuschen. Sie behaupten nicht, die eine objektive Reihenfolge aller Dinge zu kennen. Sie speichern nur genug Struktur, um Kausalität sichtbar zu machen. Das ist ehrlicher als viele verteilte Systeme, die aus Unsicherheit notgedrungen eine totale Ordnung basteln und dabei etwas verlieren.
+                </p>
+                <p>
+                    Die tiefere Lektion ist fast philosophisch: Zwei Aussagen können beide legitim sein und trotzdem keine gemeinsame Chronologie haben. Nicht alles muss auf <em>älter</em> oder <em>neuer</em> reduziert werden. Manchmal ist die sauberste technische Antwort dieselbe wie die menschliche: Diese beiden Dinge sind nebeneinander entstanden, also muss man den Konflikt anerkennen statt ihn wegzurechnen.
+                </p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>1. Kausalität statt Zeit</h4>
+                        <p>Vector Clocks messen nicht Sekunden, sondern Abhängigkeiten. Sie beantworten nicht „wann?“, sondern „kannte dieses Ereignis jenes schon?“.</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Concurrent ist Information</h4>
+                        <p>Unvergleichbarkeit ist kein Fehlerzustand, sondern die eigentliche Erkenntnis. Sie markiert genau die Stelle, an der Konflikte real sind.</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Versionierung ist Geschichtsschreibung</h4>
+                        <p>Wer nur eine letzte Schreibzeit speichert, verliert Herkunft. Wer Vektoren speichert, bewahrt wenigstens einen kleinen Stammbaum von Wissen.</p>
+                    </div>
+                </div>
+
+                <h2>Wo das in der Praxis auftaucht</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Kontext</th>
+                            <th>Wofür die Uhr gebraucht wird</th>
+                            <th>Typische Frage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="pill">Dynamo</span><span class="pill">KV-Stores</span></td>
+                            <td>Konflikt-Erkennung bei Replikaten und Objekt-Versionen</td>
+                            <td>Ist diese Version Nachfolger einer anderen, oder sind beide Geschwister?</td>
+                        </tr>
+                        <tr>
+                            <td><span class="pill">Causal Consistency</span></td>
+                            <td>Sichtbarmachen, welche Updates eine Leserin schon gesehen haben muss</td>
+                            <td>Darf ich diese Antwort schon zeigen, ohne Ursache und Wirkung zu verdrehen?</td>
+                        </tr>
+                        <tr>
+                            <td><span class="pill">CRDT-Umfelder</span></td>
+                            <td>Kontext für Dots, Versionen oder Tombstones</td>
+                            <td>Welche Operationen hängen voneinander ab, welche sind parallel entstanden?</td>
+                        </tr>
+                        <tr>
+                            <td><span class="pill">Debugging</span><span class="pill">Tracing</span></td>
+                            <td>Rekonstruktion partieller Ordnungen ohne perfekte NTP-Welt</td>
+                            <td>Ist dieses Timeout Ursache oder nur Folge eines anderen Problems?</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>
+                    Die Schattenseite gehört dazu: Klassische Vector Clocks skalieren schlecht bei sehr vielen oder dynamischen Teilnehmern. Man merkt daran etwas Grundsätzliches. Information über Geschichte ist nicht gratis. Wer Kausalität genauer sehen will, muss irgendwo Gedächtnis bezahlen.
+                </p>
+
+                <p>
+                    Vielleicht ist das der Grund, warum ich das Thema so mag. Vector Clocks sind kleine mathematische Bescheidenheit. Sie sagen: Ich weiß nicht alles. Aber ich weiß genug, um Herkunft von Zufall zu unterscheiden.
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tabs button');
+        const contents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        function cloneClock(clock) {
+            return [...clock];
+        }
+
+        function vectorText(v) {
+            return '[' + v.join(',') + ']';
+        }
+
+        function compareVectors(a, b) {
+            let aLeq = true;
+            let bLeq = true;
+            let aStrict = false;
+            let bStrict = false;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] > b[i]) aLeq = false;
+                if (b[i] > a[i]) bLeq = false;
+                if (a[i] < b[i]) aStrict = true;
+                if (b[i] < a[i]) bStrict = true;
+            }
+            if (aLeq && aStrict) return 'lt';
+            if (bLeq && bStrict) return 'gt';
+            if (a.every((v, i) => v === b[i])) return 'eq';
+            return 'concurrent';
+        }
+
+        function dominates(a, b) {
+            return compareVectors(a, b) === 'gt';
+        }
+
+        function mergeClock(a, b) {
+            return a.map((v, i) => Math.max(v, b[i]));
+        }
+
+        function hashString(str) {
+            let h = 2166136261;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return (h >>> 0).toString(16).padStart(8, '0');
+        }
+
+        // Events demo
+        const eventsCanvas = document.getElementById('eventsCanvas');
+        const ectx = eventsCanvas.getContext('2d');
+        const processNames = ['A', 'B', 'C'];
+        let processes, events, messageQueue, nextEventId;
+
+        function resetEventsDemo() {
+            processes = processNames.map(() => ({ clock: [0, 0, 0] }));
+            events = [];
+            messageQueue = [];
+            nextEventId = 1;
+            updateReceiverOptions();
+            drawEvents();
+        }
+
+        function updateReceiverOptions() {
+            const actor = Number(document.getElementById('actorSelect').value);
+            const receiverSelect = document.getElementById('receiverSelect');
+            Array.from(receiverSelect.options).forEach(opt => {
+                opt.disabled = Number(opt.value) === actor;
+            });
+            if (Number(receiverSelect.value) === actor) {
+                const firstValid = Array.from(receiverSelect.options).find(opt => !opt.disabled);
+                if (firstValid) receiverSelect.value = firstValid.value;
+            }
+        }
+
+        function recordEvent(type, process, clock, extra = {}) {
+            events.push({ id: nextEventId++, type, process, clock: cloneClock(clock), ...extra });
+            if (events.length > 18) events.shift();
+        }
+
+        function localEvent(proc) {
+            processes[proc].clock[proc] += 1;
+            recordEvent('local', proc, processes[proc].clock);
+            drawEvents();
+        }
+
+        function sendEvent(from, to) {
+            processes[from].clock[from] += 1;
+            const payload = cloneClock(processes[from].clock);
+            const msg = { from, to, clock: payload, fromEventId: nextEventId };
+            messageQueue.push(msg);
+            recordEvent('send', from, processes[from].clock, { to, msgId: hashString(JSON.stringify(msg)).slice(0, 5) });
+            drawEvents();
+        }
+
+        function deliverEvent() {
+            if (!messageQueue.length) return;
+            const msg = messageQueue.shift();
+            const target = processes[msg.to];
+            target.clock = mergeClock(target.clock, msg.clock);
+            target.clock[msg.to] += 1;
+            recordEvent('receive', msg.to, target.clock, { from: msg.from, msgClock: msg.clock, msgId: hashString(JSON.stringify(msg)).slice(0, 5) });
+            drawEvents();
+        }
+
+        function drawEvents() {
+            const w = eventsCanvas.width;
+            const h = eventsCanvas.height;
+            ectx.clearRect(0, 0, w, h);
+            ectx.fillStyle = '#0d1117';
+            ectx.fillRect(0, 0, w, h);
+
+            const laneY = [90, 210, 330];
+            const startX = 100;
+            const stepX = 42;
+
+            ectx.font = '15px sans-serif';
+            ectx.textAlign = 'left';
+            processNames.forEach((name, i) => {
+                ectx.fillStyle = '#c9d1d9';
+                ectx.fillText(name, 30, laneY[i] + 5);
+                ectx.strokeStyle = '#30363d';
+                ectx.lineWidth = 1;
+                ectx.beginPath();
+                ectx.moveTo(60, laneY[i]);
+                ectx.lineTo(w - 24, laneY[i]);
+                ectx.stroke();
+            });
+
+            const positioned = [];
+            const counters = [0, 0, 0];
+            events.forEach(evt => {
+                const idx = counters[evt.process]++;
+                const x = startX + idx * stepX;
+                const y = laneY[evt.process];
+                positioned.push({ ...evt, x, y });
+            });
+
+            positioned.forEach(evt => {
+                if (evt.type === 'receive' && typeof evt.from === 'number') {
+                    const send = positioned.find(other => other.msgId === evt.msgId && other.type === 'send');
+                    if (send) {
+                        ectx.strokeStyle = '#8b949e';
+                        ectx.lineWidth = 1.5;
+                        ectx.setLineDash([6, 5]);
+                        ectx.beginPath();
+                        ectx.moveTo(send.x, send.y - 14);
+                        ectx.lineTo(evt.x, evt.y - 14);
+                        ectx.stroke();
+                        ectx.setLineDash([]);
+                    }
+                }
+            });
+
+            positioned.forEach(evt => {
+                const color = evt.type === 'local' ? '#58a6ff' : evt.type === 'send' ? '#f0883e' : '#3fb950';
+                ectx.fillStyle = color;
+                ectx.beginPath();
+                ectx.arc(evt.x, evt.y, 13, 0, Math.PI * 2);
+                ectx.fill();
+                ectx.fillStyle = '#0d1117';
+                ectx.font = '11px sans-serif';
+                ectx.textAlign = 'center';
+                ectx.fillText(String(evt.id), evt.x, evt.y + 4);
+                ectx.fillStyle = '#8b949e';
+                ectx.font = '10px ui-monospace, monospace';
+                ectx.fillText(vectorText(evt.clock), evt.x, evt.y + 28);
+            });
+
+            ectx.textAlign = 'left';
+            ectx.font = '12px sans-serif';
+            ectx.fillStyle = '#8b949e';
+            ectx.fillText('Nachrichten in der Queue: ' + messageQueue.map(m => processNames[m.from] + '→' + processNames[m.to] + ' ' + vectorText(m.clock)).join('   ') || 'Nachrichten in der Queue: keine', 24, 24);
+
+            document.getElementById('queueSize').textContent = String(messageQueue.length);
+            document.getElementById('clockA').textContent = vectorText(processes[0].clock);
+            document.getElementById('clockB').textContent = vectorText(processes[1].clock);
+            document.getElementById('clockC').textContent = vectorText(processes[2].clock);
+        }
+
+        document.getElementById('actorSelect').addEventListener('change', updateReceiverOptions);
+        document.getElementById('localEventBtn').addEventListener('click', () => localEvent(Number(document.getElementById('actorSelect').value)));
+        document.getElementById('sendEventBtn').addEventListener('click', () => sendEvent(Number(document.getElementById('actorSelect').value), Number(document.getElementById('receiverSelect').value)));
+        document.getElementById('deliverEventBtn').addEventListener('click', deliverEvent);
+        document.getElementById('resetEventBtn').addEventListener('click', resetEventsDemo);
+
+        // Compare demo
+        let compareState = { a: [2,1,0], b: [2,3,1] };
+
+        function randInt(max) {
+            return Math.floor(Math.random() * max);
+        }
+
+        function setCompare(a, b) {
+            compareState = { a, b };
+            document.getElementById('compareA').textContent = vectorText(a);
+            document.getElementById('compareB').textContent = vectorText(b);
+            const relation = compareVectors(a, b);
+            const maxVal = Math.max(...a, ...b, 1);
+            const list = document.getElementById('componentList');
+            list.innerHTML = '';
+            processNames.forEach((name, i) => {
+                const row = document.createElement('div');
+                row.className = 'component-row';
+                row.innerHTML = '<span>' + name + '</span>' +
+                    '<div class="bar"><div class="bar-fill-b" style="width:' + (b[i] / maxVal * 100) + '%"></div><div class="bar-fill-a" style="width:' + (a[i] / maxVal * 100) + '%"></div></div>' +
+                    '<span>' + a[i] + '</span><span>' + b[i] + '</span>';
+                list.appendChild(row);
+            });
+
+            const title = document.getElementById('relationTitle');
+            const text = document.getElementById('relationText');
+            if (relation === 'lt') {
+                title.textContent = 'A passiert vor B';
+                text.textContent = 'Alle Komponenten von A sind kleiner oder gleich, und mindestens eine ist kleiner. Also liegt A kausal vor B.';
+            } else if (relation === 'gt') {
+                title.textContent = 'B passiert vor A';
+                text.textContent = 'A dominiert B komponentenweise. A hat also mindestens alles gesehen, was B gesehen hat, und noch etwas mehr.';
+            } else if (relation === 'eq') {
+                title.textContent = 'A und B sind dieselbe Sicht';
+                text.textContent = 'Beide Vektoren sind identisch. Für diese Uhr gibt es also keinen Unterschied zwischen den Ereignissen oder Versionen.';
+            } else {
+                title.textContent = 'A und B sind concurrent';
+                text.textContent = 'A ist in manchen Komponenten größer und in anderen kleiner. Keiner ist Nachfolger des anderen. Das ist echte Nebenläufigkeit.';
+            }
+        }
+
+        function randomCausalPair() {
+            const base = [randInt(4), randInt(4), randInt(4)];
+            const bigger = base.map(v => v + randInt(3));
+            if (bigger.every((v, i) => v === base[i])) bigger[randInt(3)] += 1;
+            setCompare(base, bigger);
+        }
+
+        function randomConcurrentPair() {
+            let a, b;
+            do {
+                a = [randInt(5), randInt(5), randInt(5)];
+                b = [randInt(5), randInt(5), randInt(5)];
+            } while (compareVectors(a, b) !== 'concurrent');
+            setCompare(a, b);
+        }
+
+        function randomEqualPair() {
+            const a = [randInt(5), randInt(5), randInt(5)];
+            setCompare(a, [...a]);
+        }
+
+        document.getElementById('randomCausalBtn').addEventListener('click', randomCausalPair);
+        document.getElementById('randomConcurrentBtn').addEventListener('click', randomConcurrentPair);
+        document.getElementById('randomEqualBtn').addEventListener('click', randomEqualPair);
+
+        // Version demo
+        function newVersion(value, clock, origin) {
+            return { value, clock: cloneClock(clock), origin, id: hashString(value + '|' + vectorText(clock) + '|' + origin).slice(0, 6) };
+        }
+
+        let replicaA, replicaB;
+
+        function resetVersions() {
+            const base = newVersion('liste: eier', [1,0], 'A');
+            replicaA = [base];
+            replicaB = [newVersion(base.value, base.clock, base.origin)];
+            renderVersions();
+        }
+
+        function pruneVersions(versions) {
+            return versions.filter((v, i) => !versions.some((other, j) => i !== j && dominates(other.clock, v.clock)));
+        }
+
+        function writeReplica(which, text) {
+            const replicas = which === 'A' ? replicaA : replicaB;
+            const mergedBaseClock = replicas.reduce((acc, v) => mergeClock(acc, v.clock), which === 'A' ? [0,0] : [0,0]);
+            const idx = which === 'A' ? 0 : 1;
+            mergedBaseClock[idx] += 1;
+            const prefix = replicas.map(v => v.value).join(' | ');
+            const nextValue = prefix ? prefix + ' + ' + text : text;
+            const next = newVersion(nextValue, mergedBaseClock, which);
+            if (which === 'A') replicaA = [next];
+            else replicaB = [next];
+            renderVersions();
+        }
+
+        function syncReplicas() {
+            const all = [...replicaA, ...replicaB].map(v => newVersion(v.value, v.clock, v.origin));
+            const pruned = pruneVersions(all);
+            replicaA = pruned.map(v => newVersion(v.value, v.clock, v.origin));
+            replicaB = pruned.map(v => newVersion(v.value, v.clock, v.origin));
+            renderVersions();
+        }
+
+        function resolveConflict() {
+            if (replicaA.length < 2) return;
+            const mergedClock = replicaA.reduce((acc, v) => mergeClock(acc, v.clock), [0,0]);
+            mergedClock[0] += 1;
+            const mergedValue = replicaA.map(v => v.value).join(' ∪ ');
+            const resolved = newVersion(mergedValue, mergedClock, 'A');
+            replicaA = [resolved];
+            replicaB = [newVersion(resolved.value, resolved.clock, resolved.origin)];
+            renderVersions();
+        }
+
+        function renderReplica(targetId, versions) {
+            const root = document.getElementById(targetId);
+            root.innerHTML = '';
+            versions.forEach(v => {
+                const div = document.createElement('div');
+                div.className = 'version-item';
+                div.innerHTML = '<strong>' + v.value + '</strong><div class="meta">vv=' + vectorText(v.clock) + ' · origin=' + v.origin + ' · id=' + v.id + '</div>';
+                root.appendChild(div);
+            });
+        }
+
+        function renderVersions() {
+            renderReplica('replicaAList', replicaA);
+            renderReplica('replicaBList', replicaB);
+            document.getElementById('replicaAState').textContent = replicaA.length + (replicaA.length === 1 ? ' Version' : ' Versionen');
+            document.getElementById('replicaBState').textContent = replicaB.length + (replicaB.length === 1 ? ' Version' : ' Versionen');
+            document.getElementById('conflictCount').textContent = String(Math.max(replicaA.length, replicaB.length) - 1);
+            if (replicaA.length === 1 && replicaB.length === 1) {
+                document.getElementById('versionStatus').textContent = 'eine gemeinsame Version';
+            } else {
+                document.getElementById('versionStatus').textContent = 'gleichzeitig entstandene Geschwister';
+            }
+        }
+
+        document.getElementById('writeABtn').addEventListener('click', () => writeReplica('A', document.getElementById('writeAInput').value.trim() || 'neu'));
+        document.getElementById('writeBBtn').addEventListener('click', () => writeReplica('B', document.getElementById('writeBInput').value.trim() || 'neu'));
+        document.getElementById('syncBtn').addEventListener('click', syncReplicas);
+        document.getElementById('resolveBtn').addEventListener('click', resolveConflict);
+        document.getElementById('resetVersionBtn').addEventListener('click', resetVersions);
+
+        resetEventsDemo();
+        setCompare([2,1,0], [2,3,1]);
+        resetVersions();
+    </script>
+</body>
+</html>
