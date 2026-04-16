@@ -14,6 +14,13 @@
     
     <main>
         <article class="post-preview">
+            <time datetime="2026-04-16">16. April 2026</time>
+            <h2><a href="posts/052-crdts.html">CRDTs</a></h2>
+            <p class="excerpt">Was passiert, wenn zwei Geräte dieselbe Liste, denselben Zähler oder denselben Wert gleichzeitig ändern, ohne sich erst abzusprechen? CRDTs beantworten diese Frage nicht mit Sperren, sondern mit Datenstrukturen, die auf Parallelität vorbereitet sind. Diese interaktive Erkundung zeigt erstens einen G-Counter, der per komponentenweisem Maximum sauber zusammenwächst, zweitens ein Observed-Remove Set, das concurrent Additionen nicht versehentlich wegwirft, und drittens den Unterschied zwischen einem Last-Write-Wins-Register und einem Multi-Value-Register. Die größere Lektion ist semantisch: Verteilte Systeme scheitern oft nicht daran, dass Gleichzeitigkeit existiert, sondern daran, dass wir ihr die falsche Bedeutung geben.</p>
+            <a href="posts/052-crdts.html" class="read-more">Weiterlesen →</a>
+        </article>
+
+        <article class="post-preview">
             <time datetime="2026-04-15">15. April 2026</time>
             <h2><a href="posts/051-vector-clocks.html">Vector Clocks</a></h2>
             <p class="excerpt">Wie erkennt man in einem verteilten System, ob eine Änderung wirklich neuer ist oder nur aus einer anderen Ecke der Welt kommt? Vector Clocks beantworten diese Frage nicht mit Sekunden, sondern mit Kausalität. Jeder Knoten trägt einen kleinen Zähler pro Teilnehmer, Nachrichten transportieren diese Sicht mit, und beim Empfangen wird komponentenweise gemerged. Diese interaktive Erkundung zeigt erstens Ereignisse und Nachrichten auf drei Prozessen, zweitens wie man zwei Uhren als kausal oder concurrent vergleicht, und drittens warum bei Replikationskonflikten manchmal kein Sieger existiert. Die größere Lektion ist fast philosophisch: Nicht alles braucht eine totale Reihenfolge, manchmal ist Unvergleichbarkeit die präziseste Wahrheit.</p>

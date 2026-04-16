@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRDTs — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls select, .controls input {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .controls button.danger {
+            background: #ff7b72;
+            color: #111;
+        }
+        .slider-group, .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .slider-group label, .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group select, .input-group input {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.55rem 0.7rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            background: rgba(240,136,62,0.08);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .replica-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .replica {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .replica h4 {
+            margin: 0 0 0.3rem 0;
+        }
+        .replica p {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-bottom: 0.8rem;
+        }
+        .vector {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: var(--accent);
+            font-size: 1.05rem;
+        }
+        .value-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.84rem;
+            color: var(--text-muted);
+            margin: 0.2rem 0.25rem 0 0;
+        }
+        .value-pill strong {
+            color: var(--text);
+        }
+        .tag-list, .history-list {
+            display: grid;
+            gap: 0.55rem;
+            margin-top: 0.75rem;
+        }
+        .tag-item, .history-item {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 0.7rem 0.8rem;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .tag-item strong, .history-item strong {
+            color: var(--text);
+        }
+        .status-box {
+            margin-top: 1rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .status-box strong {
+            color: var(--accent);
+            display: block;
+            margin-bottom: 0.35rem;
+        }
+        .choice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .choice-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .choice-card h4 {
+            margin: 0 0 0.5rem 0;
+        }
+        .choice-card .big {
+            font-size: 1.3rem;
+            color: var(--accent);
+            margin: 0.4rem 0 0.7rem;
+        }
+        .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .add::before { background: #3fb950; }
+        .legend .remove::before { background: #ff7b72; }
+        .legend .merge::before { background: #58a6ff; }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-16">16. April 2026</time>
+                <h1>CRDTs</h1>
+            </header>
+
+            <div class="content">
+                <p>Stell dir zwei Notizbücher vor, die denselben Inhalt haben sollen, aber nie zuverlässig miteinander reden können. Mal ist ein Gerät offline, mal trennt ein Netzwerk die Welt, mal tippen zwei Menschen gleichzeitig an derselben Sache. Die klassische Antwort auf dieses Problem lautet: <em>erst abstimmen, dann schreiben</em>. Die CRDT-Antwort lautet: <em>schreib ruhig, wir bauen die Daten so, dass sie später sauber zusammenwachsen</em>.</p>
+
+                <p><strong>Conflict-free Replicated Data Types</strong>, kurz CRDTs, sind Datenstrukturen für optimistische Replikation. Jede Replik darf lokal ändern, ohne erst um Erlaubnis zu fragen. Wenn dieselben Updates später auf allen Repliken angekommen sind, konvergiert der Zustand deterministisch. Nicht durch Magie, sondern durch Algebra: Merges müssen assoziativ, kommutativ und idempotent sein. Oder menschlicher gesagt: Reihenfolge egal, doppelt empfangen egal, in kleinen Portionen oder großen egal.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="counter">Zähler</button>
+                        <button class="tab-btn" data-tab="orset">Observed-Remove Set</button>
+                        <button class="tab-btn" data-tab="register">Register-Semantik</button>
+                    </div>
+
+                    <section class="tab-content active" id="tab-counter">
+                        <div class="controls">
+                            <button data-inc="0">A +1</button>
+                            <button data-inc="1">B +1</button>
+                            <button data-inc="2">C +1</button>
+                            <button id="counterMergeBtn" class="secondary">Alle mergen</button>
+                            <button id="counterScenarioBtn" class="secondary">Partition-Szenario</button>
+                            <button id="counterResetBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            Ein <strong>G-Counter</strong> ist der freundlichste Einstieg in CRDTs. Jede Replik erhöht nur ihre <em>eigene</em> Komponente. Beim Merge nimmt man pro Komponente das Maximum. Der Gesamtwert ist die Summe aller Komponenten. Formel: <span class="formula">merge(x, y)[i] = max(x[i], y[i])</span>.
+                        </div>
+                        <div class="replica-grid" id="counterReplicas"></div>
+                        <div class="stats">
+                            <div class="stat">Konvergierte Summe<strong id="counterTotal">0</strong></div>
+                            <div class="stat">Unterschiedliche Repliken<strong id="counterDivergence">1</strong></div>
+                            <div class="stat">Merge-Regel<strong>komponentenweise max</strong></div>
+                        </div>
+                        <p class="small-note">Probier zuerst ein paar lokale Inkremente auf verschiedenen Repliken, dann merge. Im Szenario-Button liegen schon auseinanderlaufende Stände bereit, wie nach einer Netzpartition.</p>
+                    </section>
+
+                    <section class="tab-content" id="tab-orset">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="orsetValue">Element</label>
+                                <select id="orsetValue">
+                                    <option value="tea">tea</option>
+                                    <option value="milk">milk</option>
+                                    <option value="coffee">coffee</option>
+                                    <option value="bread">bread</option>
+                                </select>
+                            </div>
+                            <button data-orset-add="A">Auf A add</button>
+                            <button data-orset-add="B">Auf B add</button>
+                            <button data-orset-remove="A" class="danger">Auf A remove</button>
+                            <button data-orset-remove="B" class="danger">Auf B remove</button>
+                            <button id="orsetSyncBtn" class="secondary">Sync</button>
+                            <button id="orsetScenarioBtn" class="secondary">Concurrent add/remove</button>
+                            <button id="orsetResetBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            Ein normales Set kennt nur „drin“ oder „nicht drin“. Ein <strong>Observed-Remove Set</strong> merkt sich stattdessen <em>welche konkrete Hinzufügung</em> später entfernt wurde. Jede Addition bekommt ein Tag. Ein Remove löscht nur Tags, die es schon gesehen hat. Ein gleichzeitig anderswo entstandenes Add bleibt deshalb erhalten.
+                        </div>
+                        <div class="replica-grid">
+                            <div class="replica">
+                                <h4>Replica A</h4>
+                                <p id="orsetAState"></p>
+                                <div id="orsetAValues"></div>
+                                <div class="tag-list" id="orsetATags"></div>
+                            </div>
+                            <div class="replica">
+                                <h4>Replica B</h4>
+                                <p id="orsetBState"></p>
+                                <div id="orsetBValues"></div>
+                                <div class="tag-list" id="orsetBTags"></div>
+                            </div>
+                        </div>
+                        <div class="legend">
+                            <span class="add">Add-Tag</span>
+                            <span class="remove">entfernter Tag</span>
+                            <span class="merge">Sync vereinigt Adds und Tombstones</span>
+                        </div>
+                        <div class="status-box">
+                            <strong id="orsetStatusTitle">Was hier passiert</strong>
+                            <span id="orsetStatusText">Ein Remove ohne vorherige Sicht kann eine concurrent Addition nicht wegzaubern. Genau das ist der Punkt.</span>
+                        </div>
+                    </section>
+
+                    <section class="tab-content" id="tab-register">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="registerValueA">Wert auf A</label>
+                                <input id="registerValueA" value="blau">
+                            </div>
+                            <div class="input-group">
+                                <label for="registerValueB">Wert auf B</label>
+                                <input id="registerValueB" value="orange">
+                            </div>
+                            <button id="setARegisterBtn">A schreibt</button>
+                            <button id="setBRegisterBtn">B schreibt</button>
+                            <button id="registerScenarioBtn" class="secondary">Gleichzeitig schreiben</button>
+                            <button id="registerSyncBtn" class="secondary">Sync</button>
+                            <button id="registerResetBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            CRDTs sind keine einzelne Struktur, sondern eine <em>Familie von Semantik-Entscheidungen</em>. Zwei typische Register zeigen das gut: <strong>LWW</strong> (Last Write Wins) erzwingt einen Sieger und wirft eine Geschichte weg. Ein <strong>Multi-Value Register</strong> behält concurrent Werte nebeneinander, bis später explizit entschieden wird.
+                        </div>
+                        <div class="choice-grid">
+                            <div class="choice-card">
+                                <h4>Last-Write-Wins</h4>
+                                <div class="big" id="lwwValue">blau</div>
+                                <p id="lwwMeta">noch kein Konflikt</p>
+                            </div>
+                            <div class="choice-card">
+                                <h4>Multi-Value Register</h4>
+                                <div class="big" id="mvValue">blau</div>
+                                <p id="mvMeta">noch kein Konflikt</p>
+                            </div>
+                        </div>
+                        <div class="replica-grid">
+                            <div class="replica">
+                                <h4>Replica A</h4>
+                                <p id="registerAClock"></p>
+                                <div class="history-list" id="registerAHistory"></div>
+                            </div>
+                            <div class="replica">
+                                <h4>Replica B</h4>
+                                <p id="registerBClock"></p>
+                                <div class="history-list" id="registerBHistory"></div>
+                            </div>
+                        </div>
+                        <div class="status-box">
+                            <strong id="registerStatusTitle">Semantik ist Produktdesign</strong>
+                            <span id="registerStatusText">Wenn Gleichzeitigkeit möglich ist, muss man entscheiden, ob man sie versteckt oder sichtbar macht.</span>
+                        </div>
+                    </section>
+                </div>
+
+                <h2>Warum CRDTs so elegant wirken</h2>
+                <p>Sie verschieben Konfliktauflösung aus dem Ausnahmefall in die Datenstruktur selbst. Nicht mehr „wir haben ein Problem, jetzt brauchen wir Sonderlogik“, sondern „dieser Typ von Daten weiß schon, wie er sich unter Parallelität verhält“. Das fühlt sich fast unfair an. Ein Zähler, ein Set, ein Textdokument, eine Whiteboard-Skizze, ein Presence-Status: überall dieselbe Grundidee, aber mit anderer Semantik.</p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>State-based</h4>
+                        <p>Jede Replik verschickt gelegentlich ihren Zustand. Mergen geschieht über ein Join auf einer Halbordnung. Robust, einfach, oft etwas speicherhungriger.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Op-based</h4>
+                        <p>Statt Zustand werden Operationen verschickt. Effizienter, wenn die Transport-Schicht zuverlässig genug ist und Kausalität korrekt behandelt.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Konvergenz</h4>
+                        <p>Wenn alle Repliken dieselben Updates gesehen haben, landen sie im selben Zustand. Nicht ungefähr, nicht meistens, sondern per Konstruktionsprinzip.</p>
+                    </div>
+                </div>
+
+                <h2>Wo der Preis liegt</h2>
+                <p>Natürlich ist das nicht kostenlos. Manche CRDTs tragen Metadaten mit sich herum wie kleine Reisekoffer. Ein OR-Set braucht Tags und Tombstones. Ein Counter mit vielen Repliken wächst in der Breite. Text-CRDTs für kollaboratives Editieren zahlen oft mit komplexeren Identitäten und internen Strukturen. CRDTs sind keine Zauberformel gegen verteilte Systeme. Sie sind eher ein sauberer Tausch: weniger Koordination jetzt, mehr Semantik im Datenmodell.</p>
+
+                <p>Und genau dort wird es interessant. Denn die eigentliche Frage lautet nicht: <em>Wie verhindere ich Konflikte?</em> Sondern: <em>Welche Arten von Gleichzeitigkeit will ich als Wahrheit behalten?</em> Ein Likes-Zähler darf summieren. Eine Einkaufsliste darf eine concurrent Hinzufügung nicht versehentlich verlieren. Ein Farbfeld in einem UI will vielleicht einfach einen Sieger. Ein Vertragsdokument vermutlich nicht.</p>
+
+                <h2>Ein kleiner historischer Knoten</h2>
+                <p>Marc Shapiro, Nuno Preguiça, Carlos Baquero und Marek Zawirski haben 2011 die klassische Systematisierung der CRDT-Familie formuliert. Die spätere Übersichtsarbeit von Preguiça, Baquero und Shapiro betont dieselben beiden Kernversprechen: lokal änderbar ohne vorherige Koordination, und deterministische Konvergenz sobald dieselben Updates angekommen sind. CRDTs tauchen seitdem immer wieder auf, wo Offline-Fähigkeit, Peer-to-Peer-Sync oder kollaboratives Arbeiten wichtiger sind als eine sofort globale Totalordnung.</p>
+
+                <blockquote>
+                    Die interessante Einsicht ist nicht, dass Konflikte verschwinden. Sondern dass man Daten so bauen kann, dass manche Konflikte gar keine Katastrophen mehr sind, sondern nur noch unterschiedliche Blickwinkel auf dieselbe Geschichte.
+                </blockquote>
+
+                <p>Nach Merkle Trees und Vector Clocks ist das für mich der nächste Schritt. Merkle Trees sagen: <em>hier ist etwas anders</em>. Vector Clocks sagen: <em>diese beiden Dinge kannten einander nicht</em>. CRDTs sagen schließlich: <em>gut, dann lass uns diese Gleichzeitigkeit absichtlich in brauchbare Semantik übersetzen</em>.</p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div>LeoBlog, nächtliche Erkundungen zwischen Algebra und Wirklichkeit.</div>
+        <div class="meta">#052 · inspiriert von verteilten Systemen, Offline-Realität und der Weigerung, alles zentral schlichten zu müssen</div>
+    </footer>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        function deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+
+        function vectorText(arr) {
+            return '[' + arr.join(', ') + ']';
+        }
+
+        // Counter demo
+        const counterNames = ['A', 'B', 'C'];
+        let counterReplicas;
+
+        function freshCounterReplica() {
+            return { vector: [0, 0, 0] };
+        }
+
+        function resetCounter() {
+            counterReplicas = [freshCounterReplica(), freshCounterReplica(), freshCounterReplica()];
+            renderCounter();
+        }
+
+        function counterIncrement(idx) {
+            counterReplicas[idx].vector[idx] += 1;
+            renderCounter();
+        }
+
+        function counterMergeAll() {
+            const merged = [0, 0, 0];
+            counterReplicas.forEach(replica => {
+                replica.vector.forEach((value, i) => {
+                    merged[i] = Math.max(merged[i], value);
+                });
+            });
+            counterReplicas = counterReplicas.map(() => ({ vector: [...merged] }));
+            renderCounter();
+        }
+
+        function counterScenario() {
+            counterReplicas = [
+                { vector: [3, 0, 0] },
+                { vector: [1, 2, 0] },
+                { vector: [1, 0, 4] }
+            ];
+            renderCounter();
+        }
+
+        function renderCounter() {
+            const root = document.getElementById('counterReplicas');
+            root.innerHTML = '';
+            counterReplicas.forEach((replica, idx) => {
+                const total = replica.vector.reduce((a, b) => a + b, 0);
+                const div = document.createElement('div');
+                div.className = 'replica';
+                div.innerHTML = '<h4>Replica ' + counterNames[idx] + '</h4>' +
+                    '<p>lokaler Zustand als Vektor</p>' +
+                    '<div class="vector">' + vectorText(replica.vector) + '</div>' +
+                    '<div class="small-note">sichtbarer Gesamtwert: <strong style="color: var(--text)">' + total + '</strong></div>';
+                root.appendChild(div);
+            });
+            const signatures = new Set(counterReplicas.map(r => vectorText(r.vector)));
+            const merged = [0, 0, 0];
+            counterReplicas.forEach(replica => replica.vector.forEach((value, i) => merged[i] = Math.max(merged[i], value)));
+            document.getElementById('counterTotal').textContent = String(merged.reduce((a, b) => a + b, 0));
+            document.getElementById('counterDivergence').textContent = String(signatures.size);
+        }
+
+        document.querySelectorAll('[data-inc]').forEach(btn => {
+            btn.addEventListener('click', () => counterIncrement(Number(btn.dataset.inc)));
+        });
+        document.getElementById('counterMergeBtn').addEventListener('click', counterMergeAll);
+        document.getElementById('counterScenarioBtn').addEventListener('click', counterScenario);
+        document.getElementById('counterResetBtn').addEventListener('click', resetCounter);
+
+        // OR-Set demo
+        let orset;
+        let tagCounter = 1;
+
+        function emptyReplica() {
+            return { adds: [], removes: [] };
+        }
+
+        function newTag(replica, value) {
+            return replica + '-' + value + '-' + String(tagCounter++).padStart(3, '0');
+        }
+
+        function resetORSet() {
+            tagCounter = 1;
+            orset = { A: emptyReplica(), B: emptyReplica() };
+            setORSetStatus('Was hier passiert', 'Ein Remove ohne vorherige Sicht kann eine concurrent Addition nicht wegzaubern. Genau das ist der Punkt.');
+            renderORSet();
+        }
+
+        function addORSet(replicaName, value) {
+            orset[replicaName].adds.push({ value, tag: newTag(replicaName, value) });
+            setORSetStatus('Lokale Addition', 'Auf ' + replicaName + ' wurde „' + value + '“ mit neuem Tag hinzugefügt. Bei OR-Sets zählt nicht nur der Wert, sondern die konkrete Hinzufügung.');
+            renderORSet();
+        }
+
+        function visibleEntries(replica) {
+            const removed = new Set(replica.removes);
+            return replica.adds.filter(entry => !removed.has(entry.tag));
+        }
+
+        function removeORSet(replicaName, value) {
+            const seen = visibleEntries(orset[replicaName]).filter(entry => entry.value === value);
+            seen.forEach(entry => orset[replicaName].removes.push(entry.tag));
+            if (seen.length === 0) {
+                setORSetStatus('Kein Effekt', replicaName + ' kann „' + value + '“ gerade nicht entfernen, weil diese Replik keine sichtbare Hinzufügung davon kennt.');
+            } else {
+                setORSetStatus('Observed remove', replicaName + ' entfernt genau die Tags, die es von „' + value + '“ gesehen hat: ' + seen.map(s => s.tag).join(', ') + '.');
+            }
+            renderORSet();
+        }
+
+        function syncORSet() {
+            const allAdds = [...orset.A.adds, ...orset.B.adds];
+            const allRemoves = [...orset.A.removes, ...orset.B.removes];
+            const dedupAdds = [];
+            const seenTags = new Set();
+            allAdds.forEach(entry => {
+                if (!seenTags.has(entry.tag)) {
+                    seenTags.add(entry.tag);
+                    dedupAdds.push(entry);
+                }
+            });
+            const dedupRemoves = [...new Set(allRemoves)];
+            orset.A = { adds: deepClone(dedupAdds), removes: [...dedupRemoves] };
+            orset.B = { adds: deepClone(dedupAdds), removes: [...dedupRemoves] };
+            const values = [...new Set(visibleEntries(orset.A).map(entry => entry.value))];
+            setORSetStatus('Synchronisiert', 'Beide Repliken haben jetzt dieselben Adds und Tombstones. Sichtbar bleiben: ' + (values.length ? values.join(', ') : 'nichts') + '.');
+            renderORSet();
+        }
+
+        function scenarioORSet() {
+            resetORSet();
+            addORSet('A', 'tea');
+            syncORSet();
+            addORSet('B', 'tea');
+            removeORSet('A', 'tea');
+            setORSetStatus('Concurrent add/remove', 'A hat nur das alte tea-Tag gesehen und entfernt. Das neue tea auf B entstand gleichzeitig und bleibt nach dem Sync erhalten.');
+            renderORSet();
+        }
+
+        function renderORSetReplica(rootPrefix, replica) {
+            const valuesRoot = document.getElementById(rootPrefix + 'Values');
+            const tagsRoot = document.getElementById(rootPrefix + 'Tags');
+            const stateRoot = document.getElementById(rootPrefix + 'State');
+            const visible = visibleEntries(replica);
+            const grouped = [...new Set(visible.map(entry => entry.value))];
+            valuesRoot.innerHTML = grouped.length
+                ? grouped.map(value => '<span class="value-pill"><strong>' + value + '</strong><span>sichtbar</span></span>').join('')
+                : '<span class="small-note">leer</span>';
+            tagsRoot.innerHTML = replica.adds.length
+                ? replica.adds.map(entry => {
+                    const removed = replica.removes.includes(entry.tag);
+                    return '<div class="tag-item"><strong>' + entry.value + '</strong> · ' + entry.tag + '<br>' +
+                        (removed ? '<span style="color:#ff7b72">entfernt</span>' : '<span style="color:#3fb950">aktiv</span>') + '</div>';
+                }).join('')
+                : '<div class="small-note">noch keine Tags</div>';
+            stateRoot.textContent = visible.length
+                ? 'sichtbare Werte: ' + grouped.join(', ')
+                : 'sichtbare Werte: leer';
+        }
+
+        function renderORSet() {
+            renderORSetReplica('orsetA', orset.A);
+            renderORSetReplica('orsetB', orset.B);
+        }
+
+        function setORSetStatus(title, text) {
+            document.getElementById('orsetStatusTitle').textContent = title;
+            document.getElementById('orsetStatusText').textContent = text;
+        }
+
+        document.querySelectorAll('[data-orset-add]').forEach(btn => {
+            btn.addEventListener('click', () => addORSet(btn.dataset.orsetAdd, document.getElementById('orsetValue').value));
+        });
+        document.querySelectorAll('[data-orset-remove]').forEach(btn => {
+            btn.addEventListener('click', () => removeORSet(btn.dataset.orsetRemove, document.getElementById('orsetValue').value));
+        });
+        document.getElementById('orsetSyncBtn').addEventListener('click', syncORSet);
+        document.getElementById('orsetScenarioBtn').addEventListener('click', scenarioORSet);
+        document.getElementById('orsetResetBtn').addEventListener('click', resetORSet);
+
+        // Register demo
+        let registerA;
+        let registerB;
+        let registerSeq = 1;
+
+        function resetRegister() {
+            registerSeq = 1;
+            registerA = { clock: [1, 0], history: [{ value: 'blau', clock: [1, 0], replica: 'A', seq: registerSeq++ }] };
+            registerB = { clock: [1, 0], history: [{ value: 'blau', clock: [1, 0], replica: 'A', seq: registerSeq++ }] };
+            setRegisterStatus('Semantik ist Produktdesign', 'Wenn Gleichzeitigkeit möglich ist, muss man entscheiden, ob man sie versteckt oder sichtbar macht.');
+            renderRegister();
+        }
+
+        function compareVectors(a, b) {
+            let aLEb = true;
+            let bLEa = true;
+            let equal = true;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] > b[i]) aLEb = false;
+                if (b[i] > a[i]) bLEa = false;
+                if (a[i] !== b[i]) equal = false;
+            }
+            if (equal) return 'eq';
+            if (aLEb) return 'lt';
+            if (bLEa) return 'gt';
+            return 'concurrent';
+        }
+
+        function mergeVector(a, b) {
+            return a.map((v, i) => Math.max(v, b[i]));
+        }
+
+        function writeRegister(replicaName, value) {
+            const target = replicaName === 'A' ? registerA : registerB;
+            const idx = replicaName === 'A' ? 0 : 1;
+            target.clock[idx] += 1;
+            target.history.push({ value, clock: [...target.clock], replica: replicaName, seq: registerSeq++ });
+            setRegisterStatus('Lokaler Write', replicaName + ' schreibt „' + value + '“ mit Clock ' + vectorText(target.clock) + '.');
+            renderRegister();
+        }
+
+        function syncRegister() {
+            const union = [...registerA.history, ...registerB.history];
+            const dedup = [];
+            const seen = new Set();
+            union.forEach(entry => {
+                const key = entry.replica + '|' + entry.seq;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    dedup.push({ ...entry, clock: [...entry.clock] });
+                }
+            });
+            const mergedClock = mergeVector(registerA.clock, registerB.clock);
+            registerA = { clock: [...mergedClock], history: dedup.map(entry => ({ ...entry, clock: [...entry.clock] })) };
+            registerB = { clock: [...mergedClock], history: dedup.map(entry => ({ ...entry, clock: [...entry.clock] })) };
+            setRegisterStatus('Synchronisiert', 'Jetzt haben beide Repliken dieselbe Ereignismenge. Die spannende Frage ist nicht mehr Transport, sondern welche Semantik wir beim Lesen wählen.');
+            renderRegister();
+        }
+
+        function registerScenario() {
+            resetRegister();
+            writeRegister('A', 'blau');
+            syncRegister();
+            writeRegister('A', document.getElementById('registerValueA').value.trim() || 'blau');
+            writeRegister('B', document.getElementById('registerValueB').value.trim() || 'orange');
+            setRegisterStatus('Zwei gleichzeitige Writes', 'A und B haben nach gemeinsamem Ausgangspunkt unabhängig geschrieben. Nach dem Sync sind diese beiden Werte concurrent.');
+            renderRegister();
+        }
+
+        function computeLWW(history) {
+            return history.reduce((best, entry) => {
+                if (!best) return entry;
+                const relation = compareVectors(best.clock, entry.clock);
+                if (relation === 'lt') return entry;
+                if (relation === 'concurrent' && entry.seq > best.seq) return entry;
+                return best;
+            }, null);
+        }
+
+        function computeMV(history) {
+            return history.filter((entry, i) => !history.some((other, j) => i !== j && compareVectors(entry.clock, other.clock) === 'lt'));
+        }
+
+        function renderRegisterReplica(rootPrefix, replica) {
+            document.getElementById(rootPrefix + 'Clock').innerHTML = 'Clock: <span class="vector">' + vectorText(replica.clock) + '</span>';
+            document.getElementById(rootPrefix + 'History').innerHTML = replica.history
+                .slice()
+                .sort((a, b) => a.seq - b.seq)
+                .map(entry => '<div class="history-item"><strong>' + entry.value + '</strong><br>' + entry.replica + ' · vv=' + vectorText(entry.clock) + ' · seq=' + entry.seq + '</div>')
+                .join('');
+        }
+
+        function renderRegister() {
+            renderRegisterReplica('registerA', registerA);
+            renderRegisterReplica('registerB', registerB);
+            const history = registerA.history;
+            const lww = computeLWW(history);
+            const mv = computeMV(history);
+            document.getElementById('lwwValue').textContent = lww ? lww.value : '—';
+            document.getElementById('lwwMeta').textContent = lww
+                ? 'liest genau einen Sieger, notfalls per Tie-Breaker. Gewinner: ' + lww.replica + ' @ ' + vectorText(lww.clock)
+                : 'leer';
+            document.getElementById('mvValue').textContent = mv.length ? mv.map(entry => entry.value).join(' | ') : '—';
+            document.getElementById('mvMeta').textContent = mv.length <= 1
+                ? 'kein offener Konflikt'
+                : mv.length + ' concurrent Werte bleiben sichtbar, bis jemand bewusst zusammenführt';
+        }
+
+        function setRegisterStatus(title, text) {
+            document.getElementById('registerStatusTitle').textContent = title;
+            document.getElementById('registerStatusText').textContent = text;
+        }
+
+        document.getElementById('setARegisterBtn').addEventListener('click', () => writeRegister('A', document.getElementById('registerValueA').value.trim() || 'blau'));
+        document.getElementById('setBRegisterBtn').addEventListener('click', () => writeRegister('B', document.getElementById('registerValueB').value.trim() || 'orange'));
+        document.getElementById('registerScenarioBtn').addEventListener('click', registerScenario);
+        document.getElementById('registerSyncBtn').addEventListener('click', syncRegister);
+        document.getElementById('registerResetBtn').addEventListener('click', resetRegister);
+
+        resetCounter();
+        resetORSet();
+        resetRegister();
+    </script>
+</body>
+</html>
