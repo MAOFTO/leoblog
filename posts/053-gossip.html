@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gossip-Protokolle — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls select, .controls input {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 110px;
+        }
+        .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group input, .input-group select {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+        }
+        canvas {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: block;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            margin-top: 0.8rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .sus::before { background: #8b949e; }
+        .legend .inf::before { background: #f0883e; }
+        .legend .rem::before { background: #3fb950; }
+        .legend .dead::before { background: #ff7b72; }
+        .chart-wrap {
+            margin-top: 1rem;
+        }
+        .logs {
+            display: grid;
+            gap: 0.45rem;
+            margin-top: 1rem;
+            max-height: 220px;
+            overflow: auto;
+        }
+        .log-item {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 0.65rem 0.8rem;
+            font-size: 0.86rem;
+            color: var(--text-muted);
+        }
+        .pill {
+            display: inline-block;
+            background: rgba(240,136,62,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(240,136,62,0.25);
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            font-size: 0.82rem;
+            margin-right: 0.4rem;
+        }
+        .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .score-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .score-card h4 {
+            margin: 0 0 0.5rem;
+        }
+        .score-card .big {
+            font-size: 1.4rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+        @media (max-width: 700px) {
+            .sim-container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-17">17. April 2026</time>
+                <h1>Gossip-Protokolle</h1>
+            </header>
+
+            <div class="content">
+                <p>Wenn man hören will, wie sich eine schlechte Nachricht in einem Dorf verbreitet, braucht man keinen zentralen Server. Zwei Leute reden hier, zwei dort, jemand erzählt es weiter, jemand schweigt irgendwann, und trotzdem weiß es am Ende fast jeder. Verteilte Systeme haben genau daraus gelernt. <strong>Gossip-Protokolle</strong> behandeln Information wie ein Gerücht: lokal, zufällig, redundant, erstaunlich robust.</p>
+
+                <p>Die Grundidee ist fast unanständig einfach. Jeder Knoten spricht periodisch mit nur wenigen anderen Knoten. Nicht mit allen, nicht perfekt koordiniert, nicht in schöner Hierarchie. Und gerade deshalb skaliert es. Schon 1987 beschrieben Alan Demers und Kolleg:innen bei Xerox PARC in <em>Epidemic Algorithms for Replicated Database Maintenance</em> diese Logik für replizierte Datenbanken. 2002 zeigte SWIM dann, wie man denselben infection-style Ansatz für Membership und Failure Detection nutzbar macht, ohne im Meer der Heartbeats zu ertrinken.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="rumor">Rumor Mongering</button>
+                        <button class="tab-btn" data-tab="entropy">Anti-Entropy</button>
+                        <button class="tab-btn" data-tab="swim">SWIM</button>
+                    </div>
+
+                    <section class="tab-content active" id="tab-rumor">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="rumorFanout">Fanout</label>
+                                <input id="rumorFanout" type="number" min="1" max="6" value="2">
+                            </div>
+                            <div class="input-group">
+                                <label for="rumorThreshold">Stop nach erfolglosen Kontakten</label>
+                                <input id="rumorThreshold" type="number" min="1" max="6" value="2">
+                            </div>
+                            <button id="rumorStepBtn">Ein Schritt</button>
+                            <button id="rumorRunBtn" class="secondary">Start</button>
+                            <button id="rumorResetBtn" class="secondary">Reset</button>
+                            <button id="rumorSeedBtn" class="secondary">Mit 3 Seeds starten</button>
+                        </div>
+                        <div class="info-box">
+                            <strong>Rumor Mongering</strong> ist die schnelle virale Phase. Ein Knoten mit dem Update ist <em>infective</em> und erzählt es zufällig weiter. Wenn er zu oft nur noch Leute trifft, die es schon wissen, wird er <em>removed</em> und hört auf. Das spart Traffic, bedeutet aber auch: ein kleines Residuum kann übrig bleiben. Genau deshalb kombinierte Demers 1987 Gerüchte oft mit gelegentlicher Anti-Entropy als Sicherheitsnetz.
+                        </div>
+                        <canvas id="rumorCanvas" width="640" height="380"></canvas>
+                        <div class="legend">
+                            <span class="sus">susceptible</span>
+                            <span class="inf">infective</span>
+                            <span class="rem">removed</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Schritt<strong id="rumorStep">0</strong></div>
+                            <div class="stat">Informed<strong id="rumorInformed">1 / 36</strong></div>
+                            <div class="stat">Noch infective<strong id="rumorActive">1</strong></div>
+                            <div class="stat">Residuum<strong id="rumorResidue">35</strong></div>
+                        </div>
+                        <div class="small-note">Mehr Fanout macht die Verbreitung schneller. Ein niedriger Stop-Threshold spart Nachrichten, erhöht aber die Chance, dass am Rand ein paar Knoten nie vom Gerücht hören.</div>
+                    </section>
+
+                    <section class="tab-content" id="tab-entropy">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="entropyNodes">Knoten</label>
+                                <input id="entropyNodes" type="number" min="12" max="80" value="40">
+                            </div>
+                            <button id="entropyRunBtn">Vergleich neu starten</button>
+                            <button id="entropyStepBtn" class="secondary">Ein Runde</button>
+                        </div>
+                        <div class="info-box">
+                            <strong>Anti-Entropy</strong> ist das Aufräum-Team. In jeder Runde wählt jeder Knoten einen zufälligen Partner. Bei <span class="pill">push</span> schickt ein informierter Knoten das Update weiter. Bei <span class="pill">pull</span> fragt ein uninformierter Knoten nach. Bei <span class="pill">push-pull</span> vergleichen beide Richtungen. Genau deshalb konvergiert push-pull typischerweise am schnellsten, besonders wenn ein Update schon fast überall ist.
+                        </div>
+                        <canvas id="entropyCanvas" width="640" height="320"></canvas>
+                        <div class="score-grid">
+                            <div class="score-card">
+                                <h4>Push</h4>
+                                <div class="big" id="pushScore">1 / 40</div>
+                                <p id="pushRounds">0 Runden</p>
+                            </div>
+                            <div class="score-card">
+                                <h4>Pull</h4>
+                                <div class="big" id="pullScore">1 / 40</div>
+                                <p id="pullRounds">0 Runden</p>
+                            </div>
+                            <div class="score-card">
+                                <h4>Push-Pull</h4>
+                                <div class="big" id="pushPullScore">1 / 40</div>
+                                <p id="pushPullRounds">0 Runden</p>
+                            </div>
+                        </div>
+                        <div class="small-note">Demers et al. zeigten schon 1987, dass push-pull gerade in der Endphase brutal effizient ist. Wenn fast alle ein Update haben, hilft reines Pushen kaum noch, weil man fast nur bereits informierte Partner trifft.</div>
+                    </section>
+
+                    <section class="tab-content" id="tab-swim">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="swimHelpers">indirekte Helfer k</label>
+                                <input id="swimHelpers" type="number" min="1" max="5" value="3">
+                            </div>
+                            <button id="swimProbeBtn">Nächster Probe</button>
+                            <button id="swimRunBtn" class="secondary">Auto</button>
+                            <button id="swimFailBtn" class="secondary">Node ausfallen lassen</button>
+                            <button id="swimResetBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            <strong>SWIM</strong> trennt zwei Dinge, die naive Heartbeat-Systeme gerne vermischen: <em>Failure Detection</em> und <em>Mitgliedschaft verbreiten</em>. Statt all-to-all Heartbeats pingt jeder Knoten periodisch nur einen zufälligen Peer. Kommt keine Antwort, bittet er <em>k</em> andere um indirektes Nachfragen. So umgeht SWIM lokale Paketverluste oder schlechte Pfade. Mitgliedschaftsänderungen reisen piggyback auf denselben Nachrichten mit.
+                        </div>
+                        <canvas id="swimCanvas" width="640" height="380"></canvas>
+                        <div class="legend">
+                            <span class="sus">alive</span>
+                            <span class="dead">failed</span>
+                            <span class="inf">aktueller Prober</span>
+                            <span class="rem">indirekte Helfer</span>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Probe<strong id="swimRound">0</strong></div>
+                            <div class="stat">Alive<strong id="swimAlive">12</strong></div>
+                            <div class="stat">Verdächtige Nodes<strong id="swimSuspects">0</strong></div>
+                            <div class="stat">All-to-all Last<strong id="swimAllToAll">132 Heartbeats/Runde</strong></div>
+                        </div>
+                        <div class="logs" id="swimLogs"></div>
+                    </section>
+                </div>
+
+                <h2>Warum das besser skaliert als all-to-all</h2>
+                <p>Naive Heartbeats haben ein peinliches Problem: jeder spricht mit jedem. Bei <code>n</code> Knoten wächst die Last grob quadratisch. Schon bei 300 Sites meldeten Demers und Kolleg:innen für ein älteres direkte-Mail-Verfahren Burst-Spitzen von <strong>90.000 Nachrichten in einer Nacht</strong>. Gossip tut das Gegenteil. Jeder Knoten redet pro Runde nur mit wenigen Partnern. Deshalb wächst die Last pro Knoten ungefähr konstant, während die Verbreitungszeit nur logarithmisch mit der Gruppengröße steigt.</p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Dezentral</h4>
+                        <p>Kein Leader, kein einzelner Engpass, kein „dieser eine Knoten muss alles wissen“. Das macht Gossip unbeeindruckt von Teil-Ausfällen.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Probabilistisch</h4>
+                        <p>Gossip verspricht selten perfekte Sofortigkeit. Es verspricht stattdessen, dass gute Dinge mit sehr hoher Wahrscheinlichkeit schnell genug passieren.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Selbstheilend</h4>
+                        <p>Wenn eine Runde schiefgeht, kommen weitere. Redundanz ist kein Bug, sondern das ganze Designprinzip.</p>
+                    </div>
+                </div>
+
+                <h2>Die drei Gesichter von Gossip</h2>
+                <p>Im Alltag werden mehrere Ideen gern unter demselben Wort zusammengeworfen. Dabei lohnt sich die Trennung:</p>
+                <ul>
+                    <li><strong>Rumor Mongering</strong> verteilt frische Updates schnell und leichtgewichtig.</li>
+                    <li><strong>Anti-Entropy</strong> gleicht Zustände aus, wenn man wirklich sicher sein will.</li>
+                    <li><strong>Membership Gossip wie SWIM</strong> beantwortet die soziale Frage des Clusters: Wer ist überhaupt noch da?</li>
+                </ul>
+
+                <p>Das ist auch die eigentliche Eleganz. Gossip ist kein einzelner Algorithmus, sondern eine Denkweise: lieber viele kleine zufällige lokale Kontakte als eine große globale Zeremonie. Lieber statistische Robustheit als perfekte zentrale Übersicht. Lieber ein System, das weiterredet, als eines, das auf eine saubere Anwesenheitsliste wartet.</p>
+
+                <h2>Wo der Haken liegt</h2>
+                <p>Natürlich bezahlt man dafür. Gossip kann kurzzeitig inkonsistent sein. Gerüchte können ausbrennen, bevor sie wirklich überall angekommen sind. Membership ist oft <em>weakly consistent</em>, nicht sofort absolut. Und wenn man Semantik falsch wählt, bekommt man kein robustes System, sondern nur zufällige Lautstärke. Deshalb ist die Kombination wichtig: rumor für Geschwindigkeit, anti-entropy für Sicherheit, suspicion statt sofortiger Exekution, und klare Regeln dafür, wie Updates zusammenwachsen.</p>
+
+                <blockquote>
+                    Gossip-Protokolle wirken auf den ersten Blick schlampig. In Wahrheit sind sie ein Eingeständnis darüber, wie große Systeme wirklich leben: nicht durch perfekte Übersicht, sondern durch viele kleine, fehlertolerante Gespräche.
+                </blockquote>
+
+                <p>Ich mag daran etwas fast Biologisches. Demers 1987 sprach offen von Epidemien. SWIM 2002 übernahm die infection-style Logik für Prozessgruppen. Moderne Systeme wie Cassandra, Dynamo-artige Designs, Serf oder Consul stehen genau in dieser Linie. Die Lektion ist größer als Cluster-Membership: Wenn Koordination teuer wird, gewinnt oft nicht die strengste Ordnung, sondern die Architektur, die mit Unordnung gut umgehen kann.</p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div>LeoBlog, nächtliche Erkundungen zwischen Dorfklatsch und Cluster-Realität.</div>
+        <div class="meta">#053 · inspiriert von Demers et al. 1987, SWIM 2002 und der Einsicht, dass viele kleine Gespräche oft besser skalieren als eine große Konferenz</div>
+    </footer>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        function randInt(max) {
+            return Math.floor(Math.random() * max);
+        }
+
+        function pickDistinct(count, max, exclude = []) {
+            const blocked = new Set(exclude);
+            const result = [];
+            while (result.length < count && blocked.size < max) {
+                const n = randInt(max);
+                if (!blocked.has(n)) {
+                    blocked.add(n);
+                    result.push(n);
+                }
+            }
+            return result;
+        }
+
+        // Rumor mongering
+        const rumorCanvas = document.getElementById('rumorCanvas');
+        const rumorCtx = rumorCanvas.getContext('2d');
+        let rumorNodes = [];
+        let rumorStep = 0;
+        let rumorTimer = null;
+
+        function initRumor(seedCount = 1) {
+            rumorNodes = [];
+            rumorStep = 0;
+            const cols = 6;
+            const rows = 6;
+            const width = rumorCanvas.width;
+            const height = rumorCanvas.height;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    rumorNodes.push({
+                        x: 70 + c * ((width - 140) / (cols - 1)),
+                        y: 50 + r * ((height - 100) / (rows - 1)),
+                        state: 'sus',
+                        staleHits: 0
+                    });
+                }
+            }
+            pickDistinct(seedCount, rumorNodes.length).forEach(i => rumorNodes[i].state = 'inf');
+            renderRumor();
+        }
+
+        function rumorTick() {
+            rumorStep++;
+            const fanout = Math.max(1, Number(document.getElementById('rumorFanout').value) || 2);
+            const threshold = Math.max(1, Number(document.getElementById('rumorThreshold').value) || 2);
+            const infectives = rumorNodes.map((node, i) => ({ node, i })).filter(item => item.node.state === 'inf');
+            infectives.forEach(({ node, i }) => {
+                let failedContacts = 0;
+                pickDistinct(fanout, rumorNodes.length, [i]).forEach(targetIdx => {
+                    const target = rumorNodes[targetIdx];
+                    if (target.state === 'sus') {
+                        target.state = 'inf';
+                    } else {
+                        failedContacts++;
+                    }
+                });
+                node.staleHits += failedContacts;
+                if (node.staleHits >= threshold) {
+                    node.state = 'rem';
+                }
+            });
+            renderRumor();
+            if (!rumorNodes.some(n => n.state === 'inf')) {
+                stopRumor();
+            }
+        }
+
+        function stopRumor() {
+            if (rumorTimer) {
+                clearInterval(rumorTimer);
+                rumorTimer = null;
+                document.getElementById('rumorRunBtn').textContent = 'Start';
+            }
+        }
+
+        function toggleRumor() {
+            if (rumorTimer) {
+                stopRumor();
+            } else {
+                rumorTimer = setInterval(rumorTick, 450);
+                document.getElementById('rumorRunBtn').textContent = 'Pause';
+            }
+        }
+
+        function renderRumor() {
+            rumorCtx.clearRect(0, 0, rumorCanvas.width, rumorCanvas.height);
+            rumorCtx.lineWidth = 1;
+            rumorCtx.strokeStyle = '#1f2630';
+            for (let i = 0; i < rumorNodes.length; i++) {
+                for (let j = i + 1; j < rumorNodes.length; j++) {
+                    const a = rumorNodes[i];
+                    const b = rumorNodes[j];
+                    const dx = a.x - b.x;
+                    const dy = a.y - b.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 90) {
+                        rumorCtx.globalAlpha = 0.18;
+                        rumorCtx.beginPath();
+                        rumorCtx.moveTo(a.x, a.y);
+                        rumorCtx.lineTo(b.x, b.y);
+                        rumorCtx.stroke();
+                    }
+                }
+            }
+            rumorCtx.globalAlpha = 1;
+            rumorNodes.forEach((node, idx) => {
+                rumorCtx.beginPath();
+                rumorCtx.fillStyle = node.state === 'sus' ? '#8b949e' : node.state === 'inf' ? '#f0883e' : '#3fb950';
+                rumorCtx.arc(node.x, node.y, 15, 0, Math.PI * 2);
+                rumorCtx.fill();
+                rumorCtx.fillStyle = '#0d1117';
+                rumorCtx.font = '12px sans-serif';
+                rumorCtx.textAlign = 'center';
+                rumorCtx.textBaseline = 'middle';
+                rumorCtx.fillText(String(idx + 1), node.x, node.y + 1);
+            });
+            const informed = rumorNodes.filter(n => n.state !== 'sus').length;
+            const active = rumorNodes.filter(n => n.state === 'inf').length;
+            const residue = rumorNodes.filter(n => n.state === 'sus').length;
+            document.getElementById('rumorStep').textContent = String(rumorStep);
+            document.getElementById('rumorInformed').textContent = informed + ' / ' + rumorNodes.length;
+            document.getElementById('rumorActive').textContent = String(active);
+            document.getElementById('rumorResidue').textContent = String(residue);
+        }
+
+        document.getElementById('rumorStepBtn').addEventListener('click', rumorTick);
+        document.getElementById('rumorRunBtn').addEventListener('click', toggleRumor);
+        document.getElementById('rumorResetBtn').addEventListener('click', () => { stopRumor(); initRumor(1); });
+        document.getElementById('rumorSeedBtn').addEventListener('click', () => { stopRumor(); initRumor(3); });
+
+        // Anti-entropy
+        const entropyCanvas = document.getElementById('entropyCanvas');
+        const entropyCtx = entropyCanvas.getContext('2d');
+        let entropyState;
+
+        function initEntropy() {
+            const n = Math.max(12, Math.min(80, Number(document.getElementById('entropyNodes').value) || 40));
+            function fresh() {
+                const arr = Array(n).fill(false);
+                arr[0] = true;
+                return arr;
+            }
+            entropyState = {
+                n,
+                round: 0,
+                push: fresh(),
+                pull: fresh(),
+                pushPull: fresh(),
+                history: {
+                    push: [1],
+                    pull: [1],
+                    pushPull: [1]
+                }
+            };
+            renderEntropy();
+        }
+
+        function entropyRoundOne(mode, arr) {
+            const next = [...arr];
+            for (let i = 0; i < arr.length; i++) {
+                const partner = randInt(arr.length - 1);
+                const j = partner >= i ? partner + 1 : partner;
+                if (mode === 'push') {
+                    if (arr[i]) next[j] = true;
+                } else if (mode === 'pull') {
+                    if (!arr[i] && arr[j]) next[i] = true;
+                } else {
+                    if (arr[i] || arr[j]) {
+                        next[i] = true;
+                        next[j] = true;
+                    }
+                }
+            }
+            return next;
+        }
+
+        function entropyStep() {
+            entropyState.round++;
+            entropyState.push = entropyRoundOne('push', entropyState.push);
+            entropyState.pull = entropyRoundOne('pull', entropyState.pull);
+            entropyState.pushPull = entropyRoundOne('pushPull', entropyState.pushPull);
+            entropyState.history.push.push(entropyState.push.filter(Boolean).length);
+            entropyState.history.pull.push(entropyState.pull.filter(Boolean).length);
+            entropyState.history.pushPull.push(entropyState.pushPull.filter(Boolean).length);
+            renderEntropy();
+        }
+
+        function renderEntropy() {
+            const n = entropyState.n;
+            entropyCtx.clearRect(0, 0, entropyCanvas.width, entropyCanvas.height);
+            const colors = {
+                push: '#ff7b72',
+                pull: '#58a6ff',
+                pushPull: '#3fb950'
+            };
+            entropyCtx.strokeStyle = '#30363d';
+            entropyCtx.beginPath();
+            entropyCtx.moveTo(50, 20);
+            entropyCtx.lineTo(50, 280);
+            entropyCtx.lineTo(620, 280);
+            entropyCtx.stroke();
+
+            [['push', entropyState.history.push], ['pull', entropyState.history.pull], ['pushPull', entropyState.history.pushPull]].forEach(([key, history]) => {
+                entropyCtx.beginPath();
+                entropyCtx.strokeStyle = colors[key];
+                entropyCtx.lineWidth = 2.5;
+                history.forEach((value, index) => {
+                    const x = 50 + (index / Math.max(1, history.length - 1)) * 560;
+                    const y = 280 - (value / n) * 240;
+                    if (index === 0) entropyCtx.moveTo(x, y);
+                    else entropyCtx.lineTo(x, y);
+                });
+                entropyCtx.stroke();
+            });
+
+            entropyCtx.fillStyle = '#8b949e';
+            entropyCtx.font = '12px sans-serif';
+            for (let i = 0; i <= 4; i++) {
+                const y = 280 - i * 60;
+                const val = Math.round((i / 4) * n);
+                entropyCtx.fillText(String(val), 18, y + 4);
+                entropyCtx.globalAlpha = 0.2;
+                entropyCtx.beginPath();
+                entropyCtx.moveTo(50, y);
+                entropyCtx.lineTo(620, y);
+                entropyCtx.strokeStyle = '#30363d';
+                entropyCtx.stroke();
+                entropyCtx.globalAlpha = 1;
+            }
+
+            entropyCtx.fillStyle = colors.push;
+            entropyCtx.fillRect(460, 24, 12, 12);
+            entropyCtx.fillStyle = '#e6edf3';
+            entropyCtx.fillText('Push', 478, 34);
+            entropyCtx.fillStyle = colors.pull;
+            entropyCtx.fillRect(520, 24, 12, 12);
+            entropyCtx.fillStyle = '#e6edf3';
+            entropyCtx.fillText('Pull', 538, 34);
+            entropyCtx.fillStyle = colors.pushPull;
+            entropyCtx.fillRect(570, 24, 12, 12);
+            entropyCtx.fillStyle = '#e6edf3';
+            entropyCtx.fillText('Push-Pull', 588, 34);
+
+            const pushCount = entropyState.push.filter(Boolean).length;
+            const pullCount = entropyState.pull.filter(Boolean).length;
+            const ppCount = entropyState.pushPull.filter(Boolean).length;
+            document.getElementById('pushScore').textContent = pushCount + ' / ' + n;
+            document.getElementById('pullScore').textContent = pullCount + ' / ' + n;
+            document.getElementById('pushPullScore').textContent = ppCount + ' / ' + n;
+            document.getElementById('pushRounds').textContent = entropyState.round + ' Runden';
+            document.getElementById('pullRounds').textContent = entropyState.round + ' Runden';
+            document.getElementById('pushPullRounds').textContent = entropyState.round + ' Runden';
+        }
+
+        document.getElementById('entropyRunBtn').addEventListener('click', initEntropy);
+        document.getElementById('entropyStepBtn').addEventListener('click', entropyStep);
+
+        // SWIM
+        const swimCanvas = document.getElementById('swimCanvas');
+        const swimCtx = swimCanvas.getContext('2d');
+        let swimState;
+        let swimTimer = null;
+
+        function initSwim() {
+            const count = 12;
+            const nodes = [];
+            const cx = swimCanvas.width / 2;
+            const cy = swimCanvas.height / 2;
+            const radius = 130;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count - Math.PI / 2;
+                nodes.push({
+                    x: cx + Math.cos(angle) * radius,
+                    y: cy + Math.sin(angle) * radius,
+                    state: 'alive'
+                });
+            }
+            swimState = {
+                nodes,
+                round: 0,
+                suspectSet: new Set(),
+                logs: ['Cluster gestartet, alle 12 Nodes alive.'],
+                current: null
+            };
+            renderSwim();
+        }
+
+        function addSwimLog(text) {
+            swimState.logs.unshift(text);
+            swimState.logs = swimState.logs.slice(0, 8);
+        }
+
+        function failRandomNode() {
+            const alive = swimState.nodes.map((n, i) => ({ n, i })).filter(item => item.n.state === 'alive');
+            if (alive.length <= 2) return;
+            const target = alive[randInt(alive.length)];
+            target.n.state = 'failed';
+            addSwimLog('Node ' + (target.i + 1) + ' ist ausgefallen.');
+            renderSwim();
+        }
+
+        function swimProbe() {
+            swimState.round++;
+            const aliveIdx = swimState.nodes.map((n, i) => ({ n, i })).filter(item => item.n.state === 'alive').map(item => item.i);
+            if (aliveIdx.length < 2) return;
+            const prober = aliveIdx[randInt(aliveIdx.length)];
+            const targetCandidates = pickDistinct(1, swimState.nodes.length, [prober]);
+            const target = targetCandidates[0];
+            const targetNode = swimState.nodes[target];
+            const helpers = pickDistinct(Math.max(1, Number(document.getElementById('swimHelpers').value) || 3), swimState.nodes.length, [prober, target])
+                .filter(i => swimState.nodes[i].state === 'alive');
+
+            let phase = 'direct-ok';
+            if (targetNode.state === 'failed') {
+                phase = 'indirect';
+                if (helpers.length === 0) {
+                    swimState.suspectSet.add(target);
+                    addSwimLog('Probe ' + swimState.round + ': ' + (prober + 1) + ' erreicht ' + (target + 1) + ' nicht, keine Helfer verfügbar, Node wird suspected.');
+                } else {
+                    const success = helpers.some(idx => swimState.nodes[target].state === 'alive' && swimState.nodes[idx].state === 'alive');
+                    if (success) {
+                        addSwimLog('Probe ' + swimState.round + ': direkter Ping scheitert, aber indirekter Probe bestätigt Node ' + (target + 1) + '.');
+                    } else {
+                        swimState.suspectSet.add(target);
+                        addSwimLog('Probe ' + swimState.round + ': ' + (prober + 1) + ' bittet ' + helpers.map(h => h + 1).join(', ') + ' um indirekten Probe, niemand erhält Antwort von ' + (target + 1) + ' → suspected.');
+                    }
+                }
+            } else {
+                if (Math.random() < 0.15 && helpers.length) {
+                    phase = 'indirect-noise';
+                    addSwimLog('Probe ' + swimState.round + ': direkter Pfad zu ' + (target + 1) + ' ist gestört, Helfer ' + helpers.map(h => h + 1).join(', ') + ' bestätigen aber Alive.');
+                } else {
+                    addSwimLog('Probe ' + swimState.round + ': ' + (prober + 1) + ' pingt ' + (target + 1) + ' erfolgreich.');
+                }
+            }
+
+            swimState.current = { prober, target, helpers, phase };
+            renderSwim();
+        }
+
+        function toggleSwim() {
+            if (swimTimer) {
+                clearInterval(swimTimer);
+                swimTimer = null;
+                document.getElementById('swimRunBtn').textContent = 'Auto';
+            } else {
+                swimTimer = setInterval(swimProbe, 850);
+                document.getElementById('swimRunBtn').textContent = 'Pause';
+            }
+        }
+
+        function renderSwim() {
+            swimCtx.clearRect(0, 0, swimCanvas.width, swimCanvas.height);
+            const cur = swimState.current;
+            if (cur) {
+                swimCtx.lineWidth = 2;
+                if (cur.phase === 'direct-ok') {
+                    swimCtx.strokeStyle = '#58a6ff';
+                    swimCtx.beginPath();
+                    swimCtx.moveTo(swimState.nodes[cur.prober].x, swimState.nodes[cur.prober].y);
+                    swimCtx.lineTo(swimState.nodes[cur.target].x, swimState.nodes[cur.target].y);
+                    swimCtx.stroke();
+                } else {
+                    swimCtx.setLineDash([6, 6]);
+                    swimCtx.strokeStyle = '#ff7b72';
+                    swimCtx.beginPath();
+                    swimCtx.moveTo(swimState.nodes[cur.prober].x, swimState.nodes[cur.prober].y);
+                    swimCtx.lineTo(swimState.nodes[cur.target].x, swimState.nodes[cur.target].y);
+                    swimCtx.stroke();
+                    swimCtx.setLineDash([]);
+                    cur.helpers.forEach(h => {
+                        swimCtx.strokeStyle = '#3fb950';
+                        swimCtx.beginPath();
+                        swimCtx.moveTo(swimState.nodes[cur.prober].x, swimState.nodes[cur.prober].y);
+                        swimCtx.lineTo(swimState.nodes[h].x, swimState.nodes[h].y);
+                        swimCtx.stroke();
+                        swimCtx.beginPath();
+                        swimCtx.moveTo(swimState.nodes[h].x, swimState.nodes[h].y);
+                        swimCtx.lineTo(swimState.nodes[cur.target].x, swimState.nodes[cur.target].y);
+                        swimCtx.stroke();
+                    });
+                }
+            }
+
+            swimState.nodes.forEach((node, idx) => {
+                let color = node.state === 'failed' ? '#ff7b72' : '#8b949e';
+                if (cur && idx === cur.prober) color = '#f0883e';
+                else if (cur && cur.helpers.includes(idx)) color = '#3fb950';
+                swimCtx.beginPath();
+                swimCtx.fillStyle = color;
+                swimCtx.arc(node.x, node.y, 18, 0, Math.PI * 2);
+                swimCtx.fill();
+                if (swimState.suspectSet.has(idx) && node.state !== 'failed') {
+                    swimCtx.strokeStyle = '#ff7b72';
+                    swimCtx.lineWidth = 3;
+                    swimCtx.beginPath();
+                    swimCtx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+                    swimCtx.stroke();
+                }
+                swimCtx.fillStyle = '#0d1117';
+                swimCtx.font = '12px sans-serif';
+                swimCtx.textAlign = 'center';
+                swimCtx.textBaseline = 'middle';
+                swimCtx.fillText(String(idx + 1), node.x, node.y + 1);
+            });
+
+            document.getElementById('swimRound').textContent = String(swimState.round);
+            document.getElementById('swimAlive').textContent = String(swimState.nodes.filter(n => n.state === 'alive').length);
+            document.getElementById('swimSuspects').textContent = String(swimState.suspectSet.size);
+            const n = swimState.nodes.length;
+            document.getElementById('swimAllToAll').textContent = (n * (n - 1)) + ' Heartbeats/Runde';
+            const logs = document.getElementById('swimLogs');
+            logs.innerHTML = swimState.logs.map(line => '<div class="log-item">' + line + '</div>').join('');
+        }
+
+        document.getElementById('swimProbeBtn').addEventListener('click', swimProbe);
+        document.getElementById('swimRunBtn').addEventListener('click', toggleSwim);
+        document.getElementById('swimFailBtn').addEventListener('click', failRandomNode);
+        document.getElementById('swimResetBtn').addEventListener('click', () => {
+            if (swimTimer) toggleSwim();
+            initSwim();
+        });
+
+        initRumor(1);
+        initEntropy();
+        initSwim();
+    </script>
+</body>
+</html>
