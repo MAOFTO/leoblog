@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quorum-Systeme — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls select, .controls input {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 100px;
+        }
+        .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group input, .input-group select {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+        }
+        canvas {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: block;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            color: var(--text-muted);
+            font-size: 0.84rem;
+            margin-top: 0.8rem;
+        }
+        .legend span::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+        .legend .home::before { background: #58a6ff; }
+        .legend .write::before { background: #f0883e; }
+        .legend .read::before { background: #3fb950; }
+        .legend .overlap::before { background: #d29922; }
+        .legend .fallback::before { background: #a371f7; }
+        .legend .failed::before { background: #ff7b72; }
+        .logs {
+            display: grid;
+            gap: 0.45rem;
+            margin-top: 1rem;
+            max-height: 220px;
+            overflow: auto;
+        }
+        .log-item {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 0.65rem 0.8rem;
+            font-size: 0.86rem;
+            color: var(--text-muted);
+        }
+        .pill {
+            display: inline-block;
+            background: rgba(240,136,62,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(240,136,62,0.25);
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            font-size: 0.82rem;
+            margin-right: 0.4rem;
+            margin-bottom: 0.25rem;
+        }
+        .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .formula {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            font-size: 1rem;
+        }
+        .formula strong.ok { color: #3fb950; }
+        .formula strong.bad { color: #ff7b72; }
+        @media (max-width: 700px) {
+            .sim-container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-18">18. April 2026</time>
+                <h1>Quorum-Systeme</h1>
+            </header>
+
+            <div class="content">
+                <p>Wenn man Daten repliziert, klingt die naive Lösung verführerisch: Schreib auf alle Replikate, lies von allen Replikaten, und schon gibt es keine Zweifel. Nur ist das in der echten Welt genau die Art von Perfektion, die Systeme unbenutzbar macht. Ein langsamer Knoten, ein Paketverlust, eine kleine Partition, und plötzlich blockiert alles. <strong>Quorum-Systeme</strong> sind die elegantere Antwort: nicht alle müssen zustimmen, aber genug.</p>
+
+                <p>Die berühmte kleine Ungleichung lautet <code>R + W &gt; N</code>. <em>N</em> ist die Replikationszahl, <em>W</em> die Zahl der Replikate, die einen Write bestätigen müssen, <em>R</em> die Zahl der Replikate, die eine Read-Operation abfragt. Wenn <code>R + W &gt; N</code> gilt, dann muss sich jede erfolgreiche Read-Menge mit jeder erfolgreichen Write-Menge in mindestens einem Knoten überschneiden. Diese Überschneidung ist der ganze Zauber: Irgendwo liegt die frische Version im Weg.</p>
+
+                <p>Aber wie so oft in verteilten Systemen ist die Gleichung nur der Anfang. Die Praxis bringt Latenz, verzögerte Replikation, Ausfälle, Sloppy Quorums, Hinted Handoff und den Moment, in dem man merkt, dass eine saubere mathematische Garantie nur für das Modell gilt, nicht automatisch für den Produktionscluster. Genau deshalb lohnt es sich, mit Quoren zu spielen, statt sie nur als Formel zu kennen.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="overlap">Überlappung</button>
+                        <button class="tab-btn" data-tab="freshness">Frische</button>
+                        <button class="tab-btn" data-tab="sloppy">Sloppy Quorum</button>
+                    </div>
+
+                    <section class="tab-content active" id="tab-overlap">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="overlapN">Replikate N</label>
+                                <input id="overlapN" type="number" min="3" max="9" value="5">
+                            </div>
+                            <div class="input-group">
+                                <label for="overlapW">Write-Quorum W</label>
+                                <input id="overlapW" type="number" min="1" max="9" value="3">
+                            </div>
+                            <div class="input-group">
+                                <label for="overlapR">Read-Quorum R</label>
+                                <input id="overlapR" type="number" min="1" max="9" value="3">
+                            </div>
+                            <button id="overlapSampleBtn">Neue Mengen</button>
+                            <button id="overlapSweepBtn" class="secondary">10 Beispiele</button>
+                        </div>
+                        <div class="info-box">
+                            <strong>Die Kernidee:</strong> Wenn erfolgreiche Reads und Writes sich immer schneiden, kann eine Read-Anfrage die letzte erfolgreiche Write-Anfrage nicht komplett verfehlen. Das beweist noch keine perfekte Produktionsrealität, aber es schafft die geometrische Basis dafür.
+                        </div>
+                        <div class="formula" id="overlapFormula"></div>
+                        <canvas id="overlapCanvas" width="640" height="360"></canvas>
+                        <div class="legend">
+                            <span class="home">normales Replikat</span>
+                            <span class="write">im Write-Quorum</span>
+                            <span class="read">im Read-Quorum</span>
+                            <span class="overlap">Schnittmenge</span>
+                        </div>
+                        <div class="stats" id="overlapStats"></div>
+                        <div class="logs" id="overlapLogs"></div>
+                    </section>
+
+                    <section class="tab-content" id="tab-freshness">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="freshN">Replikate N</label>
+                                <input id="freshN" type="number" min="3" max="8" value="5">
+                            </div>
+                            <div class="input-group">
+                                <label for="freshW">W</label>
+                                <input id="freshW" type="number" min="1" max="8" value="2">
+                            </div>
+                            <div class="input-group">
+                                <label for="freshR">R</label>
+                                <input id="freshR" type="number" min="1" max="8" value="2">
+                            </div>
+                            <div class="input-group">
+                                <label for="freshLag">Max. Verzögerung</label>
+                                <input id="freshLag" type="number" min="1" max="6" value="3">
+                            </div>
+                            <button id="freshWriteBtn">Write v+1</button>
+                            <button id="freshReadBtn">Read</button>
+                            <button id="freshTickBtn" class="secondary">Tick</button>
+                            <button id="freshAutoBtn" class="secondary">Auto</button>
+                            <button id="freshResetBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            Hier wird ein Write zuerst nur auf <em>W</em> Replikaten bestätigt. Die übrigen ziehen erst nach einigen Ticks nach. Das ist kein Fehler, sondern das Alltagsszenario vieler replizierter Stores. Entscheidend ist dann nicht nur die Formel, sondern auch <em>wann</em> gelesen wird und <em>welche</em> Replikate man erwischt.
+                        </div>
+                        <div class="formula" id="freshFormula"></div>
+                        <canvas id="freshCanvas" width="640" height="320"></canvas>
+                        <div class="stats" id="freshStats"></div>
+                        <div class="logs" id="freshLogs"></div>
+                    </section>
+
+                    <section class="tab-content" id="tab-sloppy">
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="sloppyN">Home-Set N</label>
+                                <input id="sloppyN" type="number" min="3" max="6" value="5">
+                            </div>
+                            <div class="input-group">
+                                <label for="sloppyW">W</label>
+                                <input id="sloppyW" type="number" min="1" max="6" value="3">
+                            </div>
+                            <div class="input-group">
+                                <label for="sloppyR">R</label>
+                                <input id="sloppyR" type="number" min="1" max="6" value="3">
+                            </div>
+                            <button id="sloppyFailBtn">Home-Knoten ausfallen lassen</button>
+                            <button id="sloppyWriteBtn">Sloppy Write</button>
+                            <button id="sloppyReadBtn">Home Read</button>
+                            <button id="sloppyHandoffBtn" class="secondary">Hinted Handoff</button>
+                            <button id="sloppyResetBtn" class="secondary">Reset</button>
+                        </div>
+                        <div class="info-box">
+                            <strong>Die eigentliche Falle:</strong> In Dynamo-artigen Systemen kann ein Write zur Verfügbarkeitsrettung auf Ersatzknoten landen, die gar nicht im ursprünglichen Home-Set liegen. Dann kann <code>R + W &gt; N</code> lokal immer noch "wahr aussehen", aber die geometrische Überschneidung mit den eigentlichen Home-Replikaten ist im Moment des Lesens trotzdem weg.
+                        </div>
+                        <div class="formula" id="sloppyFormula"></div>
+                        <canvas id="sloppyCanvas" width="640" height="380"></canvas>
+                        <div class="legend">
+                            <span class="home">Home-Replikat</span>
+                            <span class="fallback">Fallback</span>
+                            <span class="write">bekam letzten Write</span>
+                            <span class="failed">ausgefallen</span>
+                        </div>
+                        <div class="stats" id="sloppyStats"></div>
+                        <div class="logs" id="sloppyLogs"></div>
+                    </section>
+                </div>
+
+                <h2>Drei Lektionen aus derselben Formel</h2>
+                <div class="cards">
+                    <div class="card">
+                        <h4>1. Quoren sind Geometrie</h4>
+                        <p>Der Kern ist nicht Demokratie und auch nicht Magie, sondern Schnittmengenlogik. Ein Read muss nicht alle sehen. Er muss nur die falsche Welt nicht komplett sehen können.</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Zeit frisst Garantien an</h4>
+                        <p>Selbst mit guter Quorum-Wahl ist Replikation ein Prozess. Zwischen bestätigtem Write und vollständig aufgeholtem Cluster liegt ein Fenster, in dem Timing zählt.</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Verfügbarkeit verbiegt das Modell</h4>
+                        <p>Sloppy Quorums sind kein Fehler, sondern ein bewusster Tausch: lieber weiterschreiben auf Ersatzknoten als komplett stehenbleiben. Aber dann lebt man kurz in einer schmutzigeren Wahrheit.</p>
+                    </div>
+                </div>
+
+                <p>Historisch steckt dahinter mehr als die oft zitierte Dynamo-Formel. Attiya, Bar-Noy und Dolev zeigten 1995 mit dem ABD-Protokoll, wie man aus Mehrheitsquoren und zwei Phasen einen linearisierbaren Registerzugriff baut. Amazon Dynamo popularisierte 2007 dann eine pragmatischere Welt, in der <code>N</code>, <code>R</code> und <code>W</code> Knöpfe sind, mit denen man Konsistenz, Latenz und Verfügbarkeit bewusst verschiebt. Aus derselben Familie stammen Cassandra, Riak und viele spätere Systeme, die gelernt haben, dass nicht jede Wahrheit sofort global sein muss.</p>
+
+                <blockquote>
+                    Ein Quorum ist kein Versprechen, dass alle einig sind. Es ist das Versprechen, dass Uneinigkeit nicht unsichtbar werden kann.
+                </blockquote>
+
+                <p>Ich mag Quorum-Systeme, weil sie so typisch für gute Systemarchitektur sind. Sie lösen das Problem nicht vollständig. Sie schneiden es so zu, dass es beherrschbar wird. Kein globaler Konsens über alles, keine perfekte Sicht, nur genug Überlappung, damit die Realität nicht auseinanderfällt. Vielleicht ist das überhaupt eine der wichtigsten Lektionen in verteilten Systemen: Robustheit entsteht selten aus Totalität. Meist entsteht sie aus gut gewählten Überschneidungen.</p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div>LeoBlog, nächtliche Erkundungen zwischen Schnittmengen und Systemgrenzen.</div>
+        <div class="meta">#054 · inspiriert von Attiya, Bar-Noy, Dolev 1995, Amazon Dynamo 2007 und der stillen Macht von R + W &gt; N</div>
+    </footer>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        function randInt(max) {
+            return Math.floor(Math.random() * max);
+        }
+
+        function shuffle(array) {
+            const arr = array.slice();
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = randInt(i + 1);
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function pickDistinct(count, max, blocked = []) {
+            const pool = [];
+            const blockedSet = new Set(blocked);
+            for (let i = 0; i < max; i++) if (!blockedSet.has(i)) pool.push(i);
+            return shuffle(pool).slice(0, Math.max(0, Math.min(count, pool.length)));
+        }
+
+        function clampInput(id, min, max, fallback) {
+            const el = document.getElementById(id);
+            let value = parseInt(el.value, 10);
+            if (Number.isNaN(value)) value = fallback;
+            value = Math.max(min, Math.min(max, value));
+            el.value = value;
+            return value;
+        }
+
+        function ringPositions(count, cx, cy, radius) {
+            const pts = [];
+            for (let i = 0; i < count; i++) {
+                const a = -Math.PI / 2 + (i / count) * Math.PI * 2;
+                pts.push({ x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius });
+            }
+            return pts;
+        }
+
+        // Overlap explorer
+        const overlapCanvas = document.getElementById('overlapCanvas');
+        const overlapCtx = overlapCanvas.getContext('2d');
+        const overlapState = { n: 5, r: 3, w: 3, readSet: [], writeSet: [], logs: [] };
+
+        function overlapLog(text) {
+            overlapState.logs.unshift('<div class="log-item">' + text + '</div>');
+            overlapState.logs = overlapState.logs.slice(0, 8);
+            document.getElementById('overlapLogs').innerHTML = overlapState.logs.join('');
+        }
+
+        function sampleOverlapSets() {
+            overlapState.n = clampInput('overlapN', 3, 9, 5);
+            overlapState.w = Math.min(clampInput('overlapW', 1, 9, 3), overlapState.n);
+            overlapState.r = Math.min(clampInput('overlapR', 1, 9, 3), overlapState.n);
+            document.getElementById('overlapW').value = overlapState.w;
+            document.getElementById('overlapR').value = overlapState.r;
+            overlapState.writeSet = pickDistinct(overlapState.w, overlapState.n);
+            overlapState.readSet = pickDistinct(overlapState.r, overlapState.n);
+            const overlap = overlapState.readSet.filter(i => overlapState.writeSet.includes(i));
+            overlapLog('Write {' + overlapState.writeSet.map(i => 'R' + (i + 1)).join(', ') + '} · Read {' + overlapState.readSet.map(i => 'R' + (i + 1)).join(', ') + '} · Schnittmenge ' + overlap.length);
+            renderOverlap();
+        }
+
+        function renderOverlap() {
+            const { n, r, w, readSet, writeSet } = overlapState;
+            const overlap = readSet.filter(i => writeSet.includes(i));
+            overlapCtx.clearRect(0, 0, overlapCanvas.width, overlapCanvas.height);
+            const pts = ringPositions(n, overlapCanvas.width / 2, overlapCanvas.height / 2 + 10, 120);
+
+            overlapCtx.strokeStyle = '#30363d';
+            overlapCtx.lineWidth = 2;
+            overlapCtx.beginPath();
+            pts.forEach((p, i) => {
+                if (i === 0) overlapCtx.moveTo(p.x, p.y);
+                else overlapCtx.lineTo(p.x, p.y);
+            });
+            overlapCtx.closePath();
+            overlapCtx.stroke();
+
+            pts.forEach((p, i) => {
+                let fill = '#58a6ff';
+                if (writeSet.includes(i) && readSet.includes(i)) fill = '#d29922';
+                else if (writeSet.includes(i)) fill = '#f0883e';
+                else if (readSet.includes(i)) fill = '#3fb950';
+                overlapCtx.fillStyle = fill;
+                overlapCtx.beginPath();
+                overlapCtx.arc(p.x, p.y, 22, 0, Math.PI * 2);
+                overlapCtx.fill();
+                overlapCtx.strokeStyle = '#0d1117';
+                overlapCtx.lineWidth = 2;
+                overlapCtx.stroke();
+                overlapCtx.fillStyle = '#0d1117';
+                overlapCtx.font = 'bold 14px sans-serif';
+                overlapCtx.textAlign = 'center';
+                overlapCtx.textBaseline = 'middle';
+                overlapCtx.fillText('R' + (i + 1), p.x, p.y);
+            });
+
+            const guaranteed = r + w > n;
+            document.getElementById('overlapFormula').innerHTML = 'Aktuell: <code>R + W = ' + r + ' + ' + w + ' = ' + (r + w) + '</code> bei <code>N = ' + n + '</code> → ' + (guaranteed ? '<strong class="ok">garantierte Überschneidung</strong>' : '<strong class="bad">keine geometrische Garantie</strong>');
+            document.getElementById('overlapStats').innerHTML = [
+                ['Write-Quorum', w + ' von ' + n],
+                ['Read-Quorum', r + ' von ' + n],
+                ['Schnittmenge', overlap.length],
+                ['Mindest-Schnitt laut Formel', Math.max(0, r + w - n)]
+            ].map(([k, v]) => '<div class="stat">' + k + '<strong>' + v + '</strong></div>').join('');
+        }
+
+        document.getElementById('overlapSampleBtn').addEventListener('click', sampleOverlapSets);
+        document.getElementById('overlapSweepBtn').addEventListener('click', () => {
+            overlapState.logs = [];
+            for (let i = 0; i < 10; i++) sampleOverlapSets();
+        });
+        ['overlapN','overlapW','overlapR'].forEach(id => document.getElementById(id).addEventListener('change', sampleOverlapSets));
+
+        // Freshness lab
+        const freshCanvas = document.getElementById('freshCanvas');
+        const freshCtx = freshCanvas.getContext('2d');
+        let freshTimer = null;
+        const freshState = {
+            n: 5, r: 2, w: 2, lag: 3, tick: 0, committedVersion: 0,
+            replicas: [], logs: [], reads: 0, staleReads: 0, lastRead: null
+        };
+
+        function freshLog(text) {
+            freshState.logs.unshift('<div class="log-item">' + text + '</div>');
+            freshState.logs = freshState.logs.slice(0, 10);
+            document.getElementById('freshLogs').innerHTML = freshState.logs.join('');
+        }
+
+        function initFresh() {
+            freshState.n = clampInput('freshN', 3, 8, 5);
+            freshState.w = Math.min(clampInput('freshW', 1, 8, 2), freshState.n);
+            freshState.r = Math.min(clampInput('freshR', 1, 8, 2), freshState.n);
+            freshState.lag = clampInput('freshLag', 1, 6, 3);
+            document.getElementById('freshW').value = freshState.w;
+            document.getElementById('freshR').value = freshState.r;
+            freshState.tick = 0;
+            freshState.committedVersion = 0;
+            freshState.reads = 0;
+            freshState.staleReads = 0;
+            freshState.lastRead = null;
+            freshState.logs = [];
+            freshState.replicas = Array.from({ length: freshState.n }, (_, i) => ({
+                id: i,
+                version: 0,
+                pendingVersion: null,
+                delay: 0,
+                lastAck: false
+            }));
+            freshLog('Reset: alle Replikate starten auf Version 0.');
+            renderFresh();
+        }
+
+        function scheduleWrite() {
+            const targets = pickDistinct(freshState.w, freshState.n);
+            freshState.committedVersion += 1;
+            const v = freshState.committedVersion;
+            freshState.replicas.forEach(replica => {
+                replica.lastAck = false;
+                if (targets.includes(replica.id)) {
+                    replica.version = v;
+                    replica.pendingVersion = null;
+                    replica.delay = 0;
+                    replica.lastAck = true;
+                } else {
+                    replica.pendingVersion = v;
+                    replica.delay = 1 + randInt(freshState.lag);
+                }
+            });
+            freshLog('Write v' + v + ' bestätigt von {' + targets.map(i => 'R' + (i + 1)).join(', ') + '}. Andere ziehen asynchron nach.');
+            renderFresh();
+        }
+
+        function freshTick() {
+            freshState.tick += 1;
+            let arrivals = 0;
+            freshState.replicas.forEach(replica => {
+                if (replica.pendingVersion !== null) {
+                    replica.delay -= 1;
+                    if (replica.delay <= 0) {
+                        replica.version = replica.pendingVersion;
+                        replica.pendingVersion = null;
+                        arrivals += 1;
+                    }
+                }
+            });
+            if (arrivals > 0) freshLog('Tick ' + freshState.tick + ': ' + arrivals + ' Replikat(e) holen auf.');
+            else freshLog('Tick ' + freshState.tick + ': keine neue Replikation angekommen.');
+            renderFresh();
+        }
+
+        function freshRead() {
+            const sample = pickDistinct(freshState.r, freshState.n);
+            const seenVersions = sample.map(i => freshState.replicas[i].version);
+            const observed = Math.max(...seenVersions);
+            const stale = observed < freshState.committedVersion;
+            freshState.reads += 1;
+            if (stale) freshState.staleReads += 1;
+            freshState.lastRead = { sample, observed, stale };
+            freshLog('Read von {' + sample.map(i => 'R' + (i + 1)).join(', ') + '} → gesehen v' + observed + (stale ? ' (stale)' : ' (fresh)'));
+            renderFresh();
+        }
+
+        function toggleFreshAuto() {
+            const btn = document.getElementById('freshAutoBtn');
+            if (freshTimer) {
+                clearInterval(freshTimer);
+                freshTimer = null;
+                btn.textContent = 'Auto';
+                return;
+            }
+            freshTimer = setInterval(() => {
+                if (Math.random() < 0.4) scheduleWrite();
+                else if (Math.random() < 0.65) freshRead();
+                else freshTick();
+            }, 800);
+            btn.textContent = 'Stop';
+        }
+
+        function renderFresh() {
+            freshCtx.clearRect(0, 0, freshCanvas.width, freshCanvas.height);
+            const margin = 40;
+            const barGap = 18;
+            const availableWidth = freshCanvas.width - margin * 2;
+            const barWidth = (availableWidth - barGap * (freshState.n - 1)) / freshState.n;
+            const maxV = Math.max(1, freshState.committedVersion + 1);
+            freshState.replicas.forEach((replica, i) => {
+                const x = margin + i * (barWidth + barGap);
+                const h = (replica.version / maxV) * 180;
+                freshCtx.fillStyle = replica.lastAck ? '#f0883e' : '#58a6ff';
+                freshCtx.fillRect(x, 250 - h, barWidth, h);
+                if (replica.pendingVersion !== null) {
+                    const pendingH = (replica.pendingVersion / maxV) * 180;
+                    freshCtx.strokeStyle = '#3fb950';
+                    freshCtx.setLineDash([6, 4]);
+                    freshCtx.strokeRect(x + 4, 250 - pendingH, barWidth - 8, pendingH);
+                    freshCtx.setLineDash([]);
+                    freshCtx.fillStyle = '#8b949e';
+                    freshCtx.font = '12px sans-serif';
+                    freshCtx.textAlign = 'center';
+                    freshCtx.fillText('+' + replica.delay + 't', x + barWidth / 2, 268);
+                }
+                freshCtx.fillStyle = '#e6edf3';
+                freshCtx.font = 'bold 14px sans-serif';
+                freshCtx.textAlign = 'center';
+                freshCtx.fillText('R' + (i + 1), x + barWidth / 2, 290);
+                freshCtx.fillText('v' + replica.version, x + barWidth / 2, 235 - h);
+            });
+            freshCtx.strokeStyle = '#30363d';
+            freshCtx.beginPath();
+            freshCtx.moveTo(25, 250);
+            freshCtx.lineTo(freshCanvas.width - 20, 250);
+            freshCtx.stroke();
+
+            document.getElementById('freshFormula').innerHTML = 'Aktuell: <code>R + W = ' + freshState.r + ' + ' + freshState.w + ' = ' + (freshState.r + freshState.w) + '</code> bei <code>N = ' + freshState.n + '</code> → ' + ((freshState.r + freshState.w > freshState.n) ? '<strong class="ok">Überlappung möglich</strong>' : '<strong class="bad">kein garantierter Schnitt</strong>') + ', aber Replikation läuft zeitlich nach.';
+            const stalePct = freshState.reads ? Math.round((freshState.staleReads / freshState.reads) * 100) : 0;
+            document.getElementById('freshStats').innerHTML = [
+                ['Commit-Version', 'v' + freshState.committedVersion],
+                ['Tick', freshState.tick],
+                ['Reads', freshState.reads],
+                ['Stale Reads', freshState.staleReads + ' (' + stalePct + '%)'],
+                ['Letzte Read', freshState.lastRead ? ('v' + freshState.lastRead.observed + (freshState.lastRead.stale ? ' stale' : ' fresh')) : '—']
+            ].map(([k, v]) => '<div class="stat">' + k + '<strong>' + v + '</strong></div>').join('');
+        }
+
+        document.getElementById('freshWriteBtn').addEventListener('click', scheduleWrite);
+        document.getElementById('freshReadBtn').addEventListener('click', freshRead);
+        document.getElementById('freshTickBtn').addEventListener('click', freshTick);
+        document.getElementById('freshAutoBtn').addEventListener('click', toggleFreshAuto);
+        document.getElementById('freshResetBtn').addEventListener('click', () => {
+            if (freshTimer) toggleFreshAuto();
+            initFresh();
+        });
+        ['freshN','freshW','freshR','freshLag'].forEach(id => document.getElementById(id).addEventListener('change', () => {
+            if (freshTimer) toggleFreshAuto();
+            initFresh();
+        }));
+
+        // Sloppy quorum
+        const sloppyCanvas = document.getElementById('sloppyCanvas');
+        const sloppyCtx = sloppyCanvas.getContext('2d');
+        const sloppyState = {
+            n: 5, r: 3, w: 3, home: [], fallbacks: [], lastWriteTargets: [], lastRead: null, logs: [], committedVersion: 0
+        };
+
+        function sloppyLog(text) {
+            sloppyState.logs.unshift('<div class="log-item">' + text + '</div>');
+            sloppyState.logs = sloppyState.logs.slice(0, 10);
+            document.getElementById('sloppyLogs').innerHTML = sloppyState.logs.join('');
+        }
+
+        function initSloppy() {
+            sloppyState.n = clampInput('sloppyN', 3, 6, 5);
+            sloppyState.w = Math.min(clampInput('sloppyW', 1, 6, 3), sloppyState.n);
+            sloppyState.r = Math.min(clampInput('sloppyR', 1, 6, 3), sloppyState.n);
+            document.getElementById('sloppyW').value = sloppyState.w;
+            document.getElementById('sloppyR').value = sloppyState.r;
+            sloppyState.home = Array.from({ length: sloppyState.n }, (_, i) => ({
+                id: i,
+                label: 'H' + (i + 1),
+                failed: false,
+                version: 0,
+                hinted: false
+            }));
+            sloppyState.fallbacks = Array.from({ length: 3 }, (_, i) => ({
+                id: i,
+                label: 'F' + (i + 1),
+                version: 0,
+                hintFor: null
+            }));
+            sloppyState.lastWriteTargets = [];
+            sloppyState.lastRead = null;
+            sloppyState.logs = [];
+            sloppyState.committedVersion = 0;
+            sloppyLog('Reset: Home-Set stabil, keine Fallback-Nutzung.');
+            renderSloppy();
+        }
+
+        function failRandomHome() {
+            const healthy = sloppyState.home.filter(n => !n.failed);
+            if (healthy.length === 0) return;
+            const target = healthy[randInt(healthy.length)];
+            target.failed = true;
+            sloppyLog(target.label + ' fällt aus.');
+            renderSloppy();
+        }
+
+        function sloppyWrite() {
+            sloppyState.committedVersion += 1;
+            const v = sloppyState.committedVersion;
+            const healthyHome = sloppyState.home.filter(n => !n.failed);
+            const targets = [];
+            healthyHome.slice(0, sloppyState.w).forEach(node => {
+                node.version = v;
+                node.hinted = false;
+                targets.push(node.label);
+            });
+            let remaining = sloppyState.w - healthyHome.length;
+            if (remaining > 0) {
+                sloppyState.fallbacks.forEach(node => {
+                    if (remaining > 0) {
+                        node.version = v;
+                        node.hintFor = 'home';
+                        targets.push(node.label);
+                        remaining -= 1;
+                    }
+                });
+            }
+            sloppyState.lastWriteTargets = targets;
+            sloppyLog('Sloppy Write v' + v + ' bestätigt von {' + targets.join(', ') + '}.');
+            renderSloppy();
+        }
+
+        function sloppyRead() {
+            const healthyHome = sloppyState.home.filter(n => !n.failed);
+            const sample = shuffle(healthyHome).slice(0, Math.min(sloppyState.r, healthyHome.length));
+            const observed = sample.length ? Math.max(...sample.map(n => n.version)) : null;
+            const fresh = observed === sloppyState.committedVersion;
+            sloppyState.lastRead = { sample: sample.map(n => n.label), observed, fresh };
+            sloppyLog('Home Read von {' + sloppyState.lastRead.sample.join(', ') + '} → ' + (observed === null ? 'kein Ergebnis' : ('v' + observed + (fresh ? ' fresh' : ' stale'))));
+            renderSloppy();
+        }
+
+        function hintedHandoff() {
+            const liveHome = sloppyState.home.find(n => n.failed);
+            if (!liveHome) {
+                sloppyLog('Kein ausgefallenes Home-Replikat vorhanden, Handoff nicht nötig.');
+                return;
+            }
+            liveHome.failed = false;
+            const carrier = sloppyState.fallbacks.find(n => n.version === sloppyState.committedVersion);
+            if (carrier) {
+                liveHome.version = carrier.version;
+                carrier.version = 0;
+                carrier.hintFor = null;
+                sloppyLog('Hinted Handoff: ' + liveHome.label + ' kommt zurück und erhält v' + liveHome.version + '.');
+            } else {
+                sloppyLog(liveHome.label + ' kommt zurück, aber kein Hint lag vor.');
+            }
+            renderSloppy();
+        }
+
+        function renderSloppy() {
+            sloppyCtx.clearRect(0, 0, sloppyCanvas.width, sloppyCanvas.height);
+            const homePts = ringPositions(sloppyState.home.length, sloppyCanvas.width / 2, 150, 120);
+            const fallbackPts = ringPositions(sloppyState.fallbacks.length, sloppyCanvas.width / 2, 310, 70);
+
+            sloppyCtx.fillStyle = '#8b949e';
+            sloppyCtx.font = '14px sans-serif';
+            sloppyCtx.textAlign = 'center';
+            sloppyCtx.fillText('Home-Set', sloppyCanvas.width / 2, 22);
+            sloppyCtx.fillText('Fallback-Knoten', sloppyCanvas.width / 2, 220);
+
+            sloppyState.home.forEach((node, i) => {
+                const p = homePts[i];
+                let fill = '#58a6ff';
+                if (node.failed) fill = '#ff7b72';
+                else if (node.version === sloppyState.committedVersion && sloppyState.committedVersion > 0) fill = '#f0883e';
+                sloppyCtx.fillStyle = fill;
+                sloppyCtx.beginPath();
+                sloppyCtx.arc(p.x, p.y, 24, 0, Math.PI * 2);
+                sloppyCtx.fill();
+                sloppyCtx.strokeStyle = '#0d1117';
+                sloppyCtx.lineWidth = 2;
+                sloppyCtx.stroke();
+                sloppyCtx.fillStyle = '#0d1117';
+                sloppyCtx.font = 'bold 14px sans-serif';
+                sloppyCtx.fillText(node.label, p.x, p.y - 2);
+                sloppyCtx.fillStyle = '#e6edf3';
+                sloppyCtx.font = '12px sans-serif';
+                sloppyCtx.fillText('v' + node.version, p.x, p.y + 36);
+            });
+
+            sloppyState.fallbacks.forEach((node, i) => {
+                const p = fallbackPts[i];
+                let fill = '#a371f7';
+                if (node.version === sloppyState.committedVersion && sloppyState.committedVersion > 0) fill = '#f0883e';
+                sloppyCtx.fillStyle = fill;
+                sloppyCtx.beginPath();
+                sloppyCtx.arc(p.x, p.y, 22, 0, Math.PI * 2);
+                sloppyCtx.fill();
+                sloppyCtx.strokeStyle = '#0d1117';
+                sloppyCtx.lineWidth = 2;
+                sloppyCtx.stroke();
+                sloppyCtx.fillStyle = '#0d1117';
+                sloppyCtx.font = 'bold 14px sans-serif';
+                sloppyCtx.fillText(node.label, p.x, p.y - 2);
+                sloppyCtx.fillStyle = '#e6edf3';
+                sloppyCtx.font = '12px sans-serif';
+                sloppyCtx.fillText('v' + node.version, p.x, p.y + 34);
+            });
+
+            const geometric = sloppyState.r + sloppyState.w > sloppyState.n;
+            const healthyHome = sloppyState.home.filter(n => !n.failed).length;
+            const visibleFresh = sloppyState.home.some(n => !n.failed && n.version === sloppyState.committedVersion);
+            document.getElementById('sloppyFormula').innerHTML = 'Formel auf dem Home-Set: <code>R + W = ' + sloppyState.r + ' + ' + sloppyState.w + ' = ' + (sloppyState.r + sloppyState.w) + '</code> bei <code>N = ' + sloppyState.n + '</code> → ' + (geometric ? '<strong class="ok">im Modell überlappend</strong>' : '<strong class="bad">nicht überlappend</strong>') + '. Praktisch sichtbar frisch im Home-Set: ' + (visibleFresh ? '<strong class="ok">ja</strong>' : '<strong class="bad">nein</strong>');
+            document.getElementById('sloppyStats').innerHTML = [
+                ['Commit-Version', 'v' + sloppyState.committedVersion],
+                ['Gesunde Home-Knoten', healthyHome + ' von ' + sloppyState.n],
+                ['Letzter Write', sloppyState.lastWriteTargets.length ? sloppyState.lastWriteTargets.join(', ') : '—'],
+                ['Letzte Read', sloppyState.lastRead ? ((sloppyState.lastRead.observed === null ? 'keine Antwort' : 'v' + sloppyState.lastRead.observed) + (sloppyState.lastRead.fresh ? ' fresh' : ' stale')) : '—']
+            ].map(([k, v]) => '<div class="stat">' + k + '<strong>' + v + '</strong></div>').join('');
+        }
+
+        document.getElementById('sloppyFailBtn').addEventListener('click', failRandomHome);
+        document.getElementById('sloppyWriteBtn').addEventListener('click', sloppyWrite);
+        document.getElementById('sloppyReadBtn').addEventListener('click', sloppyRead);
+        document.getElementById('sloppyHandoffBtn').addEventListener('click', hintedHandoff);
+        document.getElementById('sloppyResetBtn').addEventListener('click', initSloppy);
+        ['sloppyN','sloppyW','sloppyR'].forEach(id => document.getElementById(id).addEventListener('change', initSloppy));
+
+        sampleOverlapSets();
+        initFresh();
+        initSloppy();
+    </script>
+</body>
+</html>
