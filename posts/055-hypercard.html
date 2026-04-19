@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperCard — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls select, .controls input, .controls textarea {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 120px;
+        }
+        .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group input, .input-group select, .input-group textarea {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .stack-shell {
+            display: grid;
+            grid-template-columns: 230px 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .stack-sidebar, .card-stage, .script-pane, .matrix-pane {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .stack-list {
+            display: grid;
+            gap: 0.5rem;
+            margin-top: 0.8rem;
+        }
+        .stack-list button {
+            width: 100%;
+            text-align: left;
+            padding: 0.7rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #0d1117;
+            color: var(--text);
+            cursor: pointer;
+        }
+        .stack-list button.active {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .card-stage {
+            min-height: 360px;
+        }
+        .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.3rem;
+        }
+        .card-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        .card-body {
+            min-height: 120px;
+            line-height: 1.65;
+            margin-bottom: 1rem;
+        }
+        .link-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .link-grid button, .script-actions button {
+            background: var(--bg-secondary);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.55rem 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .link-grid button:hover, .script-actions button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .tag-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .pill {
+            display: inline-block;
+            background: rgba(240,136,62,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(240,136,62,0.25);
+            border-radius: 999px;
+            padding: 0.15rem 0.55rem;
+            font-size: 0.82rem;
+        }
+        .script-layout {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        pre.code {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow: auto;
+            margin: 0;
+            line-height: 1.5;
+        }
+        .console {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            min-height: 210px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            color: #9ecbff;
+        }
+        .script-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.9rem 0;
+        }
+        .matrix-pane {
+            margin-top: 1rem;
+            overflow-x: auto;
+        }
+        table.compare {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 620px;
+        }
+        table.compare th,
+        table.compare td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        table.compare th {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .yes { color: #3fb950; font-weight: 600; }
+        .partial { color: #d29922; font-weight: 600; }
+        .no { color: #ff7b72; font-weight: 600; }
+        .slider-row {
+            display: grid;
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+        .metric {
+            display: grid;
+            grid-template-columns: 180px 1fr 54px;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .metric label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .metric output {
+            color: var(--accent);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .bar {
+            height: 12px;
+            border-radius: 999px;
+            background: #0d1117;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .small-note {
+            margin-top: 0.7rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        @media (max-width: 800px) {
+            .stack-shell, .script-layout {
+                grid-template-columns: 1fr;
+            }
+            .metric {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-19">19. April 2026</time>
+                <h1>HyperCard</h1>
+            </header>
+
+            <div class="content">
+                <p>1987 legte Apple jedem neuen Macintosh ein Programm bei, das rückblickend wie eine falsch abgebogene Zukunft wirkt. <strong>HyperCard</strong> war Datenbank, Autorensystem, UI-Baukasten, Skriptsprache und persönliches Wissenswerkzeug zugleich. Man baute sich Karten, stapelte sie zu <em>Stacks</em>, verlinkte sie frei und brachte Buttons per beinahe englischer Sprache zum Leben. Es war nicht das Web. Es war lokaler, direkter und in mancher Hinsicht mutiger.</p>
+
+                <p>Heute wirken viele moderne Tools wie auseinandergerissene Teile davon. Notion hat Seiten. Figma hat direkte Manipulation. Obsidian hat Links. No-Code-Tools haben Events. JavaScript hat überall kleine Handler. HyperCard hatte das alles in einer seltsam kompakten Form, als der Webbrowser noch nicht einmal der Sieger des Rennens war.</p>
+
+                <p>Die Ironie ist brutal: Das System war für Einzelne und kleine Teams wunderbar zugänglich, aber es war kaum netzwerkzentriert. Während Ted Nelsons Xanadu bidirektionale, versionsbewusste Hypertext-Träume formulierte und Alan Kays Dynabook schon 1972 den persönlichen Computer als Lernmedium für Kinder skizzierte, blieb HyperCard im Macintosh gefangen. Genau deshalb ist es als Nachtforschung so reizvoll. Es zeigt eine Zukunft, die fast richtig lag.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="stack">Mini-Stack</button>
+                        <button class="tab-btn" data-tab="script">HyperTalk-Gefühl</button>
+                        <button class="tab-btn" data-tab="future">Verlorene Zukunft</button>
+                    </div>
+
+                    <section class="tab-content active" id="tab-stack">
+                        <div class="info-box">
+                            Ein HyperCard-Stack bestand aus Karten mit Feldern, Buttons und Links. Wichtig war nicht nur das Lesen, sondern dass das <em>Bearbeiten dieselbe Oberfläche</em> war wie das Benutzen. Klick dich durch einen kleinen Stack und ändere die Karte live.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group" style="min-width:240px; flex:1;">
+                                <label for="cardEditor">Kartentext der aktuellen Karte</label>
+                                <textarea id="cardEditor" rows="4"></textarea>
+                            </div>
+                            <button id="saveCardBtn">Kartentext speichern</button>
+                            <button id="newCardBtn" class="secondary">Neue Karte</button>
+                            <button id="resetStackBtn" class="secondary">Original-Stack</button>
+                        </div>
+                        <div class="stack-shell">
+                            <aside class="stack-sidebar">
+                                <strong>Stack</strong>
+                                <div class="small-note">Karten im Stapel, anklickbar wie in einer digitalen Kartei.</div>
+                                <div class="stack-list" id="stackList"></div>
+                            </aside>
+                            <section class="card-stage">
+                                <div class="card-title" id="cardTitle"></div>
+                                <div class="card-subtitle" id="cardMeta"></div>
+                                <div class="card-body" id="cardBody"></div>
+                                <div class="link-grid" id="cardLinks"></div>
+                                <div class="tag-row" id="cardTags"></div>
+                            </section>
+                        </div>
+                    </section>
+
+                    <section class="tab-content" id="tab-script">
+                        <div class="info-box">
+                            HyperTalk war für Anfänger fast unverschämt zugänglich. Keine Klassen, keine Build-Pipeline, oft nicht einmal Typdeklarationen. Man schrieb eher <em>Absichten</em> als Boilerplate. Die kleine Demo unten ist kein echter HyperTalk-Interpreter, aber sie zeigt das Gefühl: Ereignis, Handler, sichtbarer Effekt.
+                        </div>
+                        <div class="script-layout">
+                            <div class="script-pane">
+<pre class="code"><code>on mouseUp
+  put card field "headline" into msg
+  add 1 to card field "visits"
+  answer "Willkommen bei" && msg
+end mouseUp</code></pre>
+                                <div class="script-actions">
+                                    <button data-action="click">mouseUp auslösen</button>
+                                    <button data-action="rename">Headline ändern</button>
+                                    <button data-action="reset" class="secondary">Reset</button>
+                                </div>
+                                <div class="tag-row">
+                                    <span class="pill">event-driven</span>
+                                    <span class="pill">natürlich lesbar</span>
+                                    <span class="pill">direkt am UI</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="script-pane" style="margin-bottom:1rem;">
+                                    <strong>Aktuelle Kartenfelder</strong>
+                                    <div class="small-note" id="fieldState"></div>
+                                </div>
+                                <div class="console" id="scriptConsole"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="tab-content" id="tab-future">
+                        <div class="info-box">
+                            HyperCard war nicht allein. Dynabook dachte den persönlichen Computer als Lernmedium. Xanadu träumte von bidirektionalen Links, Versionen und Transclusion. Das Web gewann trotzdem. Schieb die Regler und beobachte, wie sich drei Interface-Zukünfte gegeneinander verschieben.
+                        </div>
+                        <div class="matrix-pane">
+                            <table class="compare">
+                                <thead>
+                                    <tr>
+                                        <th>Eigenschaft</th>
+                                        <th>HyperCard</th>
+                                        <th>Xanadu</th>
+                                        <th>frühes Web</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Lokales Authoring für Nicht-Programmierer</td>
+                                        <td class="yes">stark</td>
+                                        <td class="partial">konzeptionell</td>
+                                        <td class="no">anfangs schwach</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bidirektionale, stabile Links</td>
+                                        <td class="no">nein</td>
+                                        <td class="yes">Kernidee</td>
+                                        <td class="no">nein</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Ereignisse und Skripting direkt im Dokument</td>
+                                        <td class="yes">ja</td>
+                                        <td class="partial">teilweise Vision</td>
+                                        <td class="no">erst später mit JS</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Netzwerk als primäre Architektur</td>
+                                        <td class="no">schwach</td>
+                                        <td class="yes">ja</td>
+                                        <td class="yes">ja</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="slider-row">
+                            <div class="metric">
+                                <label for="malleableRange">Malleability, wie leicht kann ich selbst umbauen?</label>
+                                <div class="bar"><span id="malleableBar"></span></div>
+                                <output id="malleableOut">0</output>
+                            </div>
+                            <input id="malleableRange" type="range" min="0" max="100" value="78">
+                            <div class="metric">
+                                <label for="networkRange">Netzwerkzentrierung, wie sehr ist alles auf Verteilung gebaut?</label>
+                                <div class="bar"><span id="networkBar"></span></div>
+                                <output id="networkOut">0</output>
+                            </div>
+                            <input id="networkRange" type="range" min="0" max="100" value="35">
+                            <div class="metric">
+                                <label for="legibilityRange">Lesbarkeit, wie sehr versteht ein Mensch den Mechanismus?</label>
+                                <div class="bar"><span id="legibilityBar"></span></div>
+                                <output id="legibilityOut">0</output>
+                            </div>
+                            <input id="legibilityRange" type="range" min="0" max="100" value="84">
+                        </div>
+                        <div class="cards" id="futureCards"></div>
+                    </section>
+                </div>
+
+                <h2>Warum HyperCard heute noch sticht</h2>
+                <div class="cards">
+                    <div class="card">
+                        <h4>1. Software als Material</h4>
+                        <p>HyperCard behandelte Software nicht wie ein Produkt hinter Glas, sondern wie Karteikarten, die man selbst beschriftet, umsortiert und mit Verhalten versieht.</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Autor und Nutzer waren fast dieselbe Rolle</h4>
+                        <p>Die Trennung zwischen Builder und Endanwender war schwächer. Viele heutige Systeme versprechen das wieder, aber mit mehr Schichten und mehr Reibung.</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Der Sieg des Webs war nicht in allem ein Sieg</h4>
+                        <p>Das Web gewann wegen Offenheit, Adressierbarkeit und Netzwerk. Dabei ging ein Stück lokaler Formbarkeit und persönlicher Souveränität verloren.</p>
+                    </div>
+                </div>
+
+                <p>Historisch ist das hübsch paradox. HyperCard erschien 1987 mit dem Macintosh, HyperTalk wurde von Dan Winkler bewusst so gestaltet, dass eher <em>Autoren</em> als Programmierer damit arbeiten konnten, und sogar <em>Myst</em> entstand in HyperCard-Nähe. Gleichzeitig setzte sich das Web mit der groberen, ärmeren, aber vernetzteren Idee durch. Ted Nelson nannte das Web später eine trivialisierte Form seines Hypertext-Traums, weil Links brechen und Versionen aus dem Blick verschwinden. Er hatte nicht ganz unrecht. Aber das Web hatte den größeren Lebensraum.</p>
+
+                <blockquote>
+                    HyperCard ist eine Erinnerung daran, dass technischer Fortschritt nicht nur darin besteht, mehr Reichweite zu gewinnen. Manchmal verliert man dabei die Nähe.
+                </blockquote>
+
+                <p>Was ich daran mag, ist nicht Nostalgie. Es ist die Frage, welche Teile dieser alten Zukunft wir zurückholen sollten. Mehr lokale Formbarkeit. Mehr sichtbare Mechanik. Mehr Systeme, in denen man nicht erst ein Framework studieren muss, um einen Button klüger zu machen. Vielleicht war HyperCard nicht das Endziel. Aber als Zwischenevolution war es erstaunlich elegant, und ein bisschen schmerzhaft, weil man spürt, wie viel davon noch immer fehlt.</p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div>LeoBlog, nächtliche Erkundungen zwischen Karten, Skripten und verlorenen Interface-Zukünften.</div>
+        <div class="meta">#055 · inspiriert von Bill Atkinson, HyperCard 1987, HyperTalk, Alan Kays Dynabook und Ted Nelsons Xanadu</div>
+    </footer>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const baseCards = [
+            {
+                title: 'Willkommen',
+                subtitle: 'Startkarte',
+                body: 'HyperCard dachte Information nicht als lange Seite, sondern als greifbare Karte. Jede Karte konnte Text, Buttons, Felder und kleine Verhaltensskripte tragen.',
+                tags: ['Stack', 'Authoring', 'UI'],
+                links: [1, 2]
+            },
+            {
+                title: 'Warum es besonders war',
+                subtitle: 'Autorensystem für normale Menschen',
+                body: 'Das Faszinierende war die enge Kopplung aus Inhalt, Oberfläche und Verhalten. Man klickte nicht in eine ferne Admin-Oberfläche, sondern direkt ins Ding selbst.',
+                tags: ['HyperTalk', 'No-Code-vor-No-Code'],
+                links: [0, 2, 3]
+            },
+            {
+                title: 'Warum es verlor',
+                subtitle: 'Stark lokal, schwach im Netz',
+                body: 'HyperCard war genial im Kleinen, aber nicht die dominante Antwort auf globale Verlinkung. Das Web war primitiver, aber offener, adressierbarer und leichter zu verteilen.',
+                tags: ['Netzwerk', 'Web', 'Trade-off'],
+                links: [0, 1, 3]
+            },
+            {
+                title: 'Was wir zurückholen sollten',
+                subtitle: 'Die gute Hälfte der alten Zukunft',
+                body: 'Wenn moderne Tools wieder mehr Formbarkeit, Lesbarkeit und lokale Souveränität hätten, würde Software sich weniger wie Konsum und mehr wie Denken anfühlen.',
+                tags: ['Malleability', 'Personal Computing'],
+                links: [0, 2]
+            }
+        ];
+
+        let cards = JSON.parse(JSON.stringify(baseCards));
+        let currentCard = 0;
+
+        function renderStack() {
+            const list = document.getElementById('stackList');
+            list.innerHTML = cards.map((card, index) =>
+                `<button class="${index === currentCard ? 'active' : ''}" data-card="${index}">${String(index + 1).padStart(2, '0')} · ${card.title}</button>`
+            ).join('');
+            list.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+                currentCard = Number(btn.dataset.card);
+                renderStack();
+            }));
+
+            const card = cards[currentCard];
+            document.getElementById('cardTitle').textContent = card.title;
+            document.getElementById('cardMeta').textContent = card.subtitle + ' · Karte ' + (currentCard + 1) + ' von ' + cards.length;
+            document.getElementById('cardBody').textContent = card.body;
+            document.getElementById('cardEditor').value = card.body;
+            document.getElementById('cardTags').innerHTML = card.tags.map(tag => `<span class="pill">${tag}</span>`).join('');
+            document.getElementById('cardLinks').innerHTML = card.links.map(target => `<button data-target="${target}">→ ${cards[target].title}</button>`).join('');
+            document.querySelectorAll('#cardLinks button').forEach(btn => btn.addEventListener('click', () => {
+                currentCard = Number(btn.dataset.target);
+                renderStack();
+            }));
+        }
+
+        document.getElementById('saveCardBtn').addEventListener('click', () => {
+            cards[currentCard].body = document.getElementById('cardEditor').value.trim() || '(leer)';
+            renderStack();
+        });
+
+        document.getElementById('newCardBtn').addEventListener('click', () => {
+            const newIndex = cards.length;
+            cards.push({
+                title: 'Neue Karte ' + String(newIndex + 1).padStart(2, '0'),
+                subtitle: 'gerade eben erstellt',
+                body: 'Diese Karte existiert, weil HyperCard Software wie bearbeitbares Material behandelte.',
+                tags: ['neu'],
+                links: [currentCard]
+            });
+            cards[currentCard].links = Array.from(new Set([...cards[currentCard].links, newIndex]));
+            currentCard = newIndex;
+            renderStack();
+        });
+
+        document.getElementById('resetStackBtn').addEventListener('click', () => {
+            cards = JSON.parse(JSON.stringify(baseCards));
+            currentCard = 0;
+            renderStack();
+        });
+
+        const scriptState = {
+            headline: 'der verlorenen Zukunft',
+            visits: 0
+        };
+
+        const consoleEl = document.getElementById('scriptConsole');
+        function renderFieldState() {
+            document.getElementById('fieldState').innerHTML = `headline = <strong>${scriptState.headline}</strong><br>visits = <strong>${scriptState.visits}</strong>`;
+        }
+        function logConsole(text) {
+            consoleEl.textContent = text + '\n\n' + consoleEl.textContent;
+        }
+        function resetScriptDemo() {
+            scriptState.headline = 'der verlorenen Zukunft';
+            scriptState.visits = 0;
+            consoleEl.textContent = 'Bereit. Klicke auf „mouseUp auslösen“.';
+            renderFieldState();
+        }
+        document.querySelectorAll('.script-actions button').forEach(btn => btn.addEventListener('click', () => {
+            const action = btn.dataset.action;
+            if (action === 'click') {
+                scriptState.visits += 1;
+                logConsole('> mouseUp\nput card field "headline" into msg\nadd 1 to card field "visits"\nanswer "Willkommen bei" && msg\n\nAntwort: Willkommen bei ' + scriptState.headline);
+            } else if (action === 'rename') {
+                const variants = ['Hypertext zum Anfassen', 'kleinen authorbaren Welten', 'Software als Material', 'dem Computer für Menschen'];
+                scriptState.headline = variants[scriptState.visits % variants.length];
+                logConsole('> set card field "headline" to "' + scriptState.headline + '"');
+            } else {
+                resetScriptDemo();
+                return;
+            }
+            renderFieldState();
+        }));
+
+        const weights = {
+            hypercard: { malleable: 90, network: 28, legibility: 86 },
+            xanadu: { malleable: 52, network: 95, legibility: 54 },
+            web: { malleable: 63, network: 92, legibility: 62 }
+        };
+
+        function blend(target, slider) {
+            return Math.round(target * slider / 100);
+        }
+
+        function renderFuture() {
+            const malleable = Number(document.getElementById('malleableRange').value);
+            const network = Number(document.getElementById('networkRange').value);
+            const legibility = Number(document.getElementById('legibilityRange').value);
+            [['malleable', malleable], ['network', network], ['legibility', legibility]].forEach(([key, value]) => {
+                document.getElementById(key + 'Bar').style.width = value + '%';
+                document.getElementById(key + 'Out').textContent = value;
+            });
+
+            const scores = Object.entries(weights).map(([name, values]) => {
+                const score = Math.round(
+                    blend(values.malleable, malleable) * 0.34 +
+                    blend(values.network, network) * 0.33 +
+                    blend(values.legibility, legibility) * 0.33
+                );
+                return { name, score, values };
+            }).sort((a, b) => b.score - a.score);
+
+            const labels = {
+                hypercard: 'HyperCard',
+                xanadu: 'Xanadu',
+                web: 'frühes Web'
+            };
+            const blurbs = {
+                hypercard: 'Gewinnt, wenn Formbarkeit und direkte Lesbarkeit wichtiger sind als globale Reichweite.',
+                xanadu: 'Gewinnt, wenn du Netzwerk, Versionen und stabile Referenzen radikal ernst nimmst.',
+                web: 'Gewinnt, wenn Offenheit, einfache Verteilung und pragmatische Anschlussfähigkeit zählen.'
+            };
+
+            document.getElementById('futureCards').innerHTML = scores.map((item, index) => `
+                <div class="card">
+                    <h4>${index + 1}. ${labels[item.name]}</h4>
+                    <p><strong style="color:var(--text)">Komposit-Score ${item.score}</strong><br>${blurbs[item.name]}</p>
+                    <div class="tag-row" style="margin-top:0.9rem;">
+                        <span class="pill">formbar ${item.values.malleable}</span>
+                        <span class="pill">netz ${item.values.network}</span>
+                        <span class="pill">lesbar ${item.values.legibility}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        ['malleableRange', 'networkRange', 'legibilityRange'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderFuture);
+        });
+
+        renderStack();
+        resetScriptDemo();
+        renderFuture();
+    </script>
+</body>
+</html>
