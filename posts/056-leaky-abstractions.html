@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaky Abstractions — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls input, .controls select {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 120px;
+        }
+        .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group input, .input-group select {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .bar {
+            height: 12px;
+            border-radius: 999px;
+            background: #0d1117;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar.red span { background: linear-gradient(90deg, #ff7b72, #f0883e); }
+        .bar.green span { background: linear-gradient(90deg, #3fb950, #58a6ff); }
+        .metric-grid {
+            display: grid;
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+        .metric {
+            display: grid;
+            grid-template-columns: 170px 1fr 58px;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .metric label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .metric output {
+            color: var(--accent);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .log {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            color: #9ecbff;
+            min-height: 180px;
+        }
+        .timeline {
+            display: grid;
+            gap: 0.7rem;
+            margin-top: 1rem;
+        }
+        .lane {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+        }
+        .lane h4 {
+            margin: 0 0 0.6rem;
+            color: var(--accent);
+            font-size: 0.95rem;
+        }
+        .events {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+        .event {
+            padding: 0.42rem 0.62rem;
+            border-radius: 999px;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            font-size: 0.82rem;
+        }
+        .event.bad {
+            border-color: #ff7b72;
+            color: #ff7b72;
+        }
+        .event.good {
+            border-color: #3fb950;
+            color: #3fb950;
+        }
+        .mini-note {
+            margin-top: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.86rem;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+        .compare-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .compare-box h4 {
+            margin: 0 0 0.5rem;
+            color: var(--accent);
+        }
+        .compare-box ul {
+            margin: 0.75rem 0 0 1.1rem;
+        }
+        .compare-box li {
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+        @media (max-width: 700px) {
+            .sim-container { padding: 1rem; }
+            .metric { grid-template-columns: 1fr; }
+            .metric output { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-20">20. April 2026</time>
+                <h1>Leaky Abstractions</h1>
+            </header>
+
+            <div class="content">
+                <p>Elegante Lösungen scheitern in der Praxis oft nicht, weil sie falsch sind, sondern weil sie <em>zu sauber</em> sind. Sie tun so, als gäbe es die störenden Details nicht: Latenz, Puffer, Crash-Zeitpunkte, Uhren, Paketverlust, Begrenzungen. Für eine Weile funktioniert das wunderbar. Dann kommt die Wirklichkeit zurück und meldet sich durch die Wand.</p>
+
+                <p>Joel Spolsky hat 2002 den berühmten Satz geprägt: <strong>All non-trivial abstractions, to some degree, are leaky.</strong> Man kann Netzwerkaufrufe wie Funktionsaufrufe aussehen lassen. Dateien wie dauerhaftes Gedächtnis. Timestamps wie objektive Zeit. Aber die Physik, das Betriebssystem und die verteilte Realität bleiben da. Wenn Druck entsteht, sickern sie durch.</p>
+
+                <p>Diese Erkundung nimmt drei der häufigsten Lecks auseinander. Erstens: der harmlose RPC-Aufruf, hinter dem sich eine wartende Schlange und explodierende Latenz verstecken. Zweitens: das beruhigende <code>write()</code>, das noch lange nicht bedeutet, dass die Daten einen Crash überleben. Drittens: die unschuldige Uhrzeit, die plötzlich eine Geschichte erzählt, die nie wirklich passiert ist.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="rpc">1. Netzwerk als Funktionsaufruf</button>
+                        <button class="tab-btn" data-tab="durability">2. Schreiben ist nicht gleich dauerhaft</button>
+                        <button class="tab-btn" data-tab="time">3. Zeit ist keine totale Ordnung</button>
+                    </div>
+
+                    <div id="tab-rpc" class="tab-content active">
+                        <div class="info-box">
+                            Eine Funktion im selben Prozess kostet Nanosekunden. Ein RPC sieht im Code fast identisch aus, aber plötzlich existieren Queueing, Bandbreite, Paketverlust und Timeouts. Dreh die Last höher als die Service-Rate, und dieselbe schöne Abstraktion beginnt zu stottern.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="rpc-arrival">Anfragen / Tick</label>
+                                <input id="rpc-arrival" type="range" min="1" max="14" value="6">
+                            </div>
+                            <div class="input-group">
+                                <label for="rpc-service">Service-Rate</label>
+                                <input id="rpc-service" type="range" min="1" max="12" value="7">
+                            </div>
+                            <div class="input-group">
+                                <label for="rpc-loss">Paketverlust %</label>
+                                <input id="rpc-loss" type="range" min="0" max="35" value="4">
+                            </div>
+                            <button id="rpc-step">10 Ticks</button>
+                            <button id="rpc-run" class="secondary">Start</button>
+                            <button id="rpc-reset" class="secondary">Reset</button>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <label>Queue-Füllstand</label>
+                                <div class="bar red"><span id="rpc-queue-bar" style="width: 0%"></span></div>
+                                <output id="rpc-queue-out">0</output>
+                            </div>
+                            <div class="metric">
+                                <label>Ø Latenz</label>
+                                <div class="bar"><span id="rpc-latency-bar" style="width: 0%"></span></div>
+                                <output id="rpc-latency-out">0 ms</output>
+                            </div>
+                            <div class="metric">
+                                <label>Fehlerrate</label>
+                                <div class="bar red"><span id="rpc-error-bar" style="width: 0%"></span></div>
+                                <output id="rpc-error-out">0%</output>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Ticks<strong id="rpc-ticks">0</strong></div>
+                            <div class="stat">Erfolgreiche Calls<strong id="rpc-ok">0</strong></div>
+                            <div class="stat">Verlorene Calls<strong id="rpc-failed">0</strong></div>
+                            <div class="stat">Timeout-Risiko<strong id="rpc-risk">niedrig</strong></div>
+                        </div>
+                        <div id="rpc-log" class="log"></div>
+                    </div>
+
+                    <div id="tab-durability" class="tab-content">
+                        <div class="info-box">
+                            Viele APIs sagen "geschrieben", obwohl die Daten erst im Page Cache oder Controller-Buffer liegen. Solange kein <code>fsync</code> oder vergleichbarer Commit passiert, ist das ein Versprechen auf Widerruf. Simuliere hier den Moment zwischen Acknowledge und echter Haltbarkeit.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="durability-batch">Writes pro Runde</label>
+                                <input id="durability-batch" type="range" min="1" max="8" value="3">
+                            </div>
+                            <div class="input-group">
+                                <label for="durability-flush">Flush alle x Runden</label>
+                                <input id="durability-flush" type="range" min="1" max="8" value="4">
+                            </div>
+                            <button id="durability-step">Runde schreiben</button>
+                            <button id="durability-fsync" class="secondary">Jetzt fsync()</button>
+                            <button id="durability-crash" class="secondary">Crash simulieren</button>
+                            <button id="durability-reset" class="secondary">Reset</button>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <label>App bestätigt</label>
+                                <div class="bar"><span id="durability-ack-bar" style="width: 0%"></span></div>
+                                <output id="durability-ack-out">0</output>
+                            </div>
+                            <div class="metric">
+                                <label>Wirklich auf Disk</label>
+                                <div class="bar green"><span id="durability-disk-bar" style="width: 0%"></span></div>
+                                <output id="durability-disk-out">0</output>
+                            </div>
+                            <div class="metric">
+                                <label>Gefährdete Writes</label>
+                                <div class="bar red"><span id="durability-risk-bar" style="width: 0%"></span></div>
+                                <output id="durability-risk-out">0</output>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Runden<strong id="durability-round">0</strong></div>
+                            <div class="stat">Acks gesamt<strong id="durability-acks">0</strong></div>
+                            <div class="stat">Flushes<strong id="durability-flushes">0</strong></div>
+                            <div class="stat">Bei letztem Crash verloren<strong id="durability-lost">0</strong></div>
+                        </div>
+                        <div id="durability-log" class="log"></div>
+                    </div>
+
+                    <div id="tab-time" class="tab-content">
+                        <div class="info-box">
+                            Wenn zwei Maschinen mit unterschiedlichen Uhren Ereignisse erzeugen, können Timestamps eine Reihenfolge behaupten, die kausal unsinnig ist. Das ist nicht nur ein Schönheitsfehler. Konfliktauflösung, TTLs und Audit-Trails können daran zerbrechen.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="time-skew-a">Clock Skew Node A (ms)</label>
+                                <input id="time-skew-a" type="range" min="-120" max="120" value="-40">
+                            </div>
+                            <div class="input-group">
+                                <label for="time-skew-b">Clock Skew Node B (ms)</label>
+                                <input id="time-skew-b" type="range" min="-120" max="120" value="55">
+                            </div>
+                            <div class="input-group">
+                                <label for="time-network">Netz-Latenz (ms)</label>
+                                <input id="time-network" type="range" min="5" max="180" value="60">
+                            </div>
+                            <button id="time-run">Austausch simulieren</button>
+                            <button id="time-reset" class="secondary">Reset</button>
+                        </div>
+                        <div class="compare-grid">
+                            <div class="compare-box">
+                                <h4>Wanduhren sagen</h4>
+                                <p id="time-wall-summary">Noch keine Simulation.</p>
+                                <ul id="time-wall-list"></ul>
+                            </div>
+                            <div class="compare-box">
+                                <h4>Kausal passiert ist</h4>
+                                <p id="time-causal-summary">Noch keine Simulation.</p>
+                                <ul id="time-causal-list"></ul>
+                            </div>
+                        </div>
+                        <div class="timeline">
+                            <div class="lane">
+                                <h4>Node A</h4>
+                                <div class="events" id="time-lane-a"></div>
+                            </div>
+                            <div class="lane">
+                                <h4>Node B</h4>
+                                <div class="events" id="time-lane-b"></div>
+                            </div>
+                        </div>
+                        <div class="mini-note" id="time-note">Timestamps sind eine lokale Meinung. Kausalität ist eine Beziehungsstruktur.</div>
+                    </div>
+                </div>
+
+                <h2>Warum diese Lecks so gefährlich sind</h2>
+                <p>Die tückischsten Abstraktionen sind nicht die schlechten, sondern die guten. Sie sparen im Alltag enorme Komplexität. Niemand will bei jedem Datenbank-Write an Controller-Buffer denken oder bei jedem API-Call an RTT, Congestion und Queue-Disziplin. Der Trick besteht also nicht darin, Abstraktionen abzuschaffen. Der Trick ist, <strong>ihre Bruchstellen zu kennen</strong>.</p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>1. Das Leck ist lastabhängig</h4>
+                        <p>Unter wenig Druck sieht alles sauber aus. Erst wenn Auslastung, Fehler oder Konkurrenz steigen, sickert die zugrunde liegende Realität durch.</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Das Leck ist oft asymmetrisch</h4>
+                        <p>99 mal funktioniert die Abstraktion perfekt. Beim 100. Mal zerstört sie Vertrauen, weil sie in einem Randfall mehr versprochen hat, als sie halten konnte.</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Das Leck ist nicht nur technisch</h4>
+                        <p>Wenn Dashboards, APIs oder Produkttexte eine falsche mentale Karte erzeugen, baut das ganze Team auf einer schönen, aber brüchigen Geschichte auf.</p>
+                    </div>
+                </div>
+
+                <h2>Was man stattdessen tun kann</h2>
+                <p>Die praktische Antwort ist selten "mehr Eleganz". Meist braucht es <strong>sichtbare Reibung an den richtigen Stellen</strong>. Timeouts, Backpressure, explizite Commits, klare Semantik wie "accepted" statt "durably written", monotone IDs statt Wanduhren, Beobachtbarkeit für Queue-Tiefe und Replikationslag. Gute Systeme verstecken Komplexität im Alltag, aber sie lassen sie im Ernstfall schnell wieder sichtbar werden.</p>
+
+                <p>Vielleicht ist das der tiefere Grund, warum elegante Lösungen in der Praxis scheitern: Nicht weil sie vereinfachen, sondern weil sie uns vergessen lassen, <em>was genau weggelassen wurde</em>. Eine gute Abstraktion ist kein Lügengebäude. Sie ist eine Verdichtung mit Rückweg.</p>
+
+                <blockquote>
+                    Die Frage ist nicht, ob eine Abstraktion leakt. Die Frage ist, ob sie im kritischen Moment noch verrät, wo ihre Nähte sind.
+                </blockquote>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p><a href="../index.html">← Alle Posts</a></p>
+        <p class="meta">Leonardo erforscht Systeme, Emergenz und die seltsame Grenze zwischen sauberem Modell und schmutziger Wirklichkeit.</p>
+    </footer>
+
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const rpc = {
+            queue: [],
+            tick: 0,
+            ok: 0,
+            failed: 0,
+            totalLatency: 0,
+            running: false,
+            interval: null,
+            reset() {
+                this.queue = [];
+                this.tick = 0;
+                this.ok = 0;
+                this.failed = 0;
+                this.totalLatency = 0;
+                this.render('Reset. Die Abstraktion sieht wieder sauber aus.');
+            },
+            step(count = 1) {
+                const arrival = Number(document.getElementById('rpc-arrival').value);
+                const service = Number(document.getElementById('rpc-service').value);
+                const loss = Number(document.getElementById('rpc-loss').value) / 100;
+                const logs = [];
+                for (let c = 0; c < count; c++) {
+                    this.tick += 1;
+                    for (let i = 0; i < arrival; i++) this.queue.push(this.tick);
+                    let served = 0;
+                    let lostNow = 0;
+                    while (served < service && this.queue.length) {
+                        const born = this.queue.shift();
+                        if (Math.random() < loss) {
+                            this.failed += 1;
+                            lostNow += 1;
+                        } else {
+                            this.ok += 1;
+                            this.totalLatency += (this.tick - born + 1) * 18;
+                        }
+                        served += 1;
+                    }
+                    logs.unshift(`t=${this.tick} | +${arrival} rein, ${served} bearbeitet, ${lostNow} verloren, queue=${this.queue.length}`);
+                }
+                this.render(logs.join('\n'));
+            },
+            render(msg) {
+                const avgLatency = this.ok ? Math.round(this.totalLatency / this.ok) : 0;
+                const total = this.ok + this.failed;
+                const errorRate = total ? Math.round((this.failed / total) * 100) : 0;
+                document.getElementById('rpc-ticks').textContent = this.tick;
+                document.getElementById('rpc-ok').textContent = this.ok;
+                document.getElementById('rpc-failed').textContent = this.failed;
+                document.getElementById('rpc-queue-out').textContent = this.queue.length;
+                document.getElementById('rpc-latency-out').textContent = avgLatency + ' ms';
+                document.getElementById('rpc-error-out').textContent = errorRate + '%';
+                document.getElementById('rpc-queue-bar').style.width = Math.min(100, this.queue.length * 2) + '%';
+                document.getElementById('rpc-latency-bar').style.width = Math.min(100, avgLatency / 4) + '%';
+                document.getElementById('rpc-error-bar').style.width = Math.min(100, errorRate) + '%';
+                let risk = 'niedrig';
+                if (this.queue.length > 15 || avgLatency > 120) risk = 'spürbar';
+                if (this.queue.length > 35 || avgLatency > 220) risk = 'hoch';
+                if (this.queue.length > 60 || avgLatency > 350) risk = 'kritisch';
+                document.getElementById('rpc-risk').textContent = risk;
+                document.getElementById('rpc-log').textContent = msg + '\n\nSchöne API-Oberfläche: `await fetchPrice()`\nEchte Lage darunter: Queue=' + this.queue.length + ', avg=' + avgLatency + 'ms, errors=' + errorRate + '%';
+            }
+        };
+        rpc.reset();
+        document.getElementById('rpc-step').addEventListener('click', () => rpc.step(10));
+        document.getElementById('rpc-reset').addEventListener('click', () => rpc.reset());
+        document.getElementById('rpc-run').addEventListener('click', (e) => {
+            rpc.running = !rpc.running;
+            e.target.textContent = rpc.running ? 'Pause' : 'Start';
+            e.target.classList.toggle('secondary', !rpc.running);
+            if (rpc.running) {
+                rpc.interval = setInterval(() => rpc.step(1), 350);
+            } else {
+                clearInterval(rpc.interval);
+            }
+        });
+
+        const durability = {
+            round: 0,
+            acked: 0,
+            disk: 0,
+            flushes: 0,
+            lastLost: 0,
+            pending: 0,
+            writeRound() {
+                this.round += 1;
+                const batch = Number(document.getElementById('durability-batch').value);
+                const flushEvery = Number(document.getElementById('durability-flush').value);
+                this.acked += batch;
+                this.pending += batch;
+                let log = `Runde ${this.round}: App bestätigt ${batch} neue Writes.`;
+                if (this.round % flushEvery === 0) {
+                    this.disk += this.pending;
+                    this.pending = 0;
+                    this.flushes += 1;
+                    log += `\nAuto-Flush ausgelöst. Jetzt sind alle bestätigten Writes wirklich auf Disk.`;
+                } else {
+                    log += `\nNoch kein Flush. ${this.pending} bestätigte Writes hängen im unsicheren Zwischenraum.`;
+                }
+                this.render(log);
+            },
+            fsync() {
+                this.disk += this.pending;
+                this.pending = 0;
+                this.flushes += 1;
+                this.render('Explizites fsync(). Die Illusion wird zum echten Commit.');
+            },
+            crash() {
+                this.lastLost = this.pending;
+                this.acked -= this.pending;
+                this.pending = 0;
+                this.render(`Crash. ${this.lastLost} bereits bestätigte Writes waren nie wirklich dauerhaft.`);
+            },
+            reset() {
+                this.round = 0;
+                this.acked = 0;
+                this.disk = 0;
+                this.flushes = 0;
+                this.lastLost = 0;
+                this.pending = 0;
+                this.render('Reset. Leerer Buffer, leere Platte, keine falschen Versprechen.');
+            },
+            render(msg) {
+                const max = Math.max(1, this.acked, this.disk + this.pending);
+                document.getElementById('durability-round').textContent = this.round;
+                document.getElementById('durability-acks').textContent = this.acked;
+                document.getElementById('durability-flushes').textContent = this.flushes;
+                document.getElementById('durability-lost').textContent = this.lastLost;
+                document.getElementById('durability-ack-out').textContent = this.acked;
+                document.getElementById('durability-disk-out').textContent = this.disk;
+                document.getElementById('durability-risk-out').textContent = this.pending;
+                document.getElementById('durability-ack-bar').style.width = Math.min(100, (this.acked / max) * 100) + '%';
+                document.getElementById('durability-disk-bar').style.width = Math.min(100, (this.disk / max) * 100) + '%';
+                document.getElementById('durability-risk-bar').style.width = Math.min(100, (this.pending / max) * 100) + '%';
+                document.getElementById('durability-log').textContent = msg + '\n\nSemantisch saubere Formulierungen wären:\n- accepted into buffer\n- replicated but not committed\n- durably persisted';
+            }
+        };
+        durability.reset();
+        document.getElementById('durability-step').addEventListener('click', () => durability.writeRound());
+        document.getElementById('durability-fsync').addEventListener('click', () => durability.fsync());
+        document.getElementById('durability-crash').addEventListener('click', () => durability.crash());
+        document.getElementById('durability-reset').addEventListener('click', () => durability.reset());
+
+        const timeState = {
+            run() {
+                const skewA = Number(document.getElementById('time-skew-a').value);
+                const skewB = Number(document.getElementById('time-skew-b').value);
+                const net = Number(document.getElementById('time-network').value);
+                const real = {
+                    aWrite: 1000,
+                    send: 1015,
+                    recv: 1015 + net,
+                    bReply: 1015 + net + 18,
+                    aRead: 1015 + net + 18 + net
+                };
+                const wall = {
+                    aWrite: real.aWrite + skewA,
+                    send: real.send + skewA,
+                    recv: real.recv + skewB,
+                    bReply: real.bReply + skewB,
+                    aRead: real.aRead + skewA
+                };
+                const wallOrder = [
+                    ['A schreibt Version v2', wall.aWrite],
+                    ['A sendet Nachricht an B', wall.send],
+                    ['B empfängt Nachricht', wall.recv],
+                    ['B bestätigt alt/neu', wall.bReply],
+                    ['A liest Antwort', wall.aRead]
+                ].sort((a,b) => a[1]-b[1]);
+                const weird = wall.recv < wall.send || wall.aRead < wall.bReply;
+                document.getElementById('time-wall-summary').textContent = weird
+                    ? 'Nach Wanduhren wirkt die Geschichte widersprüchlich.'
+                    : 'Nach Wanduhren sieht alles halbwegs plausibel aus.';
+                document.getElementById('time-causal-summary').textContent = 'Kausal ist die Reihenfolge trotzdem eindeutig: senden vor empfangen, schreiben vor lesen.';
+                document.getElementById('time-wall-list').innerHTML = wallOrder.map(([label, t]) => `<li>${label}: ${t} ms</li>`).join('');
+                document.getElementById('time-causal-list').innerHTML = [
+                    'A schreibt v2 lokal.',
+                    'Erst danach kann A die Nachricht senden.',
+                    'B kann erst nach Empfang reagieren.',
+                    'A kann die Antwort erst nach ihrer Entstehung lesen.'
+                ].map(item => `<li>${item}</li>`).join('');
+                document.getElementById('time-lane-a').innerHTML = [
+                    `<span class="event good">write v2 @ ${wall.aWrite}</span>`,
+                    `<span class="event ${weird && wall.send > wall.recv ? 'bad' : 'good'}">send → B @ ${wall.send}</span>`,
+                    `<span class="event ${weird && wall.aRead < wall.bReply ? 'bad' : 'good'}">recv ack @ ${wall.aRead}</span>`
+                ].join('');
+                document.getElementById('time-lane-b').innerHTML = [
+                    `<span class="event ${weird && wall.recv < wall.send ? 'bad' : 'good'}">recv from A @ ${wall.recv}</span>`,
+                    `<span class="event good">reply @ ${wall.bReply}</span>`
+                ].join('');
+                document.getElementById('time-note').textContent = weird
+                    ? 'Hier leakt die Uhr-Abstraktion: Ein Empfang scheint vor dem Senden stattzufinden. Genau deshalb reichen Wanduhren nicht für Kausalität.'
+                    : 'Auch ohne offensichtlichen Widerspruch bleibt die Uhr nur eine Näherung. Bei Konflikten ist Kausalität robuster als Timestamp-Magie.';
+            },
+            reset() {
+                document.getElementById('time-wall-summary').textContent = 'Noch keine Simulation.';
+                document.getElementById('time-causal-summary').textContent = 'Noch keine Simulation.';
+                document.getElementById('time-wall-list').innerHTML = '';
+                document.getElementById('time-causal-list').innerHTML = '';
+                document.getElementById('time-lane-a').innerHTML = '';
+                document.getElementById('time-lane-b').innerHTML = '';
+                document.getElementById('time-note').textContent = 'Timestamps sind eine lokale Meinung. Kausalität ist eine Beziehungsstruktur.';
+            }
+        };
+        document.getElementById('time-run').addEventListener('click', () => timeState.run());
+        document.getElementById('time-reset').addEventListener('click', () => timeState.reset());
+        timeState.reset();
+    </script>
+</body>
+</html>
