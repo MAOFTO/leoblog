@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hysterese — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls input, .controls select {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 120px;
+        }
+        .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group input {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .metric-grid {
+            display: grid;
+            gap: 0.9rem;
+            margin-top: 1rem;
+        }
+        .metric {
+            display: grid;
+            grid-template-columns: 190px 1fr 66px;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .metric label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .metric output {
+            color: var(--accent);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .bar {
+            height: 12px;
+            border-radius: 999px;
+            background: #0d1117;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #f0883e);
+        }
+        .bar.red span { background: linear-gradient(90deg, #ff7b72, #f0883e); }
+        .bar.green span { background: linear-gradient(90deg, #3fb950, #58a6ff); }
+        .bar.yellow span { background: linear-gradient(90deg, #d29922, #f2cc60); }
+        .panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .panel h4 {
+            margin: 0 0 0.6rem;
+            color: var(--accent);
+        }
+        .log {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.88rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            color: #9ecbff;
+            min-height: 160px;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        .thermo-box {
+            position: relative;
+            height: 180px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(88,166,255,0.14), rgba(240,136,62,0.18));
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .thermo-fill {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, #58a6ff, #f0883e);
+            opacity: 0.9;
+        }
+        .thermo-target, .thermo-low, .thermo-high {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed rgba(255,255,255,0.35);
+        }
+        .thermo-target::after, .thermo-low::after, .thermo-high::after {
+            position: absolute;
+            right: 0.5rem;
+            top: -0.9rem;
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            background: rgba(13,17,23,0.85);
+            padding: 0.1rem 0.35rem;
+            border-radius: 999px;
+        }
+        .thermo-target::after { content: 'Soll'; }
+        .thermo-low::after { content: 'EIN'; }
+        .thermo-high::after { content: 'AUS'; }
+        .wave {
+            position: relative;
+            height: 180px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #0d1117;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .wave svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .ladder {
+            position: relative;
+            height: 180px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #0d1117;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .ladder svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .tiny {
+            color: var(--text-muted);
+            font-size: 0.86rem;
+            line-height: 1.55;
+        }
+        @media (max-width: 700px) {
+            .sim-container { padding: 1rem; }
+            .metric { grid-template-columns: 1fr; }
+            .metric output { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-21">21. April 2026</time>
+                <h1>Hysterese</h1>
+            </header>
+
+            <div class="content">
+                <p>Manchmal ist die beste Reaktion auf einen Schwellenwert nicht sofortiges Umschalten, sondern <em>kurzes Starrbleiben</em>. Genau das ist Hysterese: Ein System merkt sich, aus welcher Richtung es gekommen ist, und benutzt deshalb <strong>verschiedene Schwellen fürs Ein- und Ausschalten</strong>. Die Gegenwart allein reicht nicht. Die Vorgeschichte zählt mit.</p>
+
+                <p>Sir James Alfred Ewing prägte 1881 den Begriff für magnetische Materialien. Später tauchte dasselbe Muster überall wieder auf: in Thermostaten, Schmitt-Triggern, Relais, Regelkreisen, Alarmierung, Autoscaling. Die Idee ist unscheinbar, aber unglaublich praktisch. Ohne Hysterese beginnt die Welt an Schwellen zu flattern: klick, klick, klick. Mit Hysterese entsteht Ruhe.</p>
+
+                <p>Diese Erkundung zeigt drei Versionen derselben kleinen Klugheit. Erstens einen Thermostaten, der nicht bei jeder Zehntelgrad-Zuckung hektisch anspringt. Zweitens einen Schmitt-Trigger, der verrauschte Eingangssignale in stabile digitale Entscheidungen verwandelt. Drittens ein operatives Beispiel aus Monitoring und Autoscaling, wo zwei Schwellen billiger sind als Panik.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="thermostat">1. Thermostat</button>
+                        <button class="tab-btn" data-tab="schmitt">2. Schmitt-Trigger</button>
+                        <button class="tab-btn" data-tab="ops">3. Alerts und Autoscaling</button>
+                    </div>
+
+                    <div id="tab-thermostat" class="tab-content active">
+                        <div class="info-box">
+                            Ein Heizsystem ohne Hysterese würde an einem einzigen Sollwert ständig an und aus gehen. Hier gibt es stattdessen zwei Schwellen: Unterhalb der unteren wird geheizt, oberhalb der oberen wird abgeschaltet. Dazwischen bleibt der aktuelle Zustand bestehen.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="thermo-target">Solltemperatur</label>
+                                <input id="thermo-target" type="range" min="18" max="25" step="0.5" value="21">
+                            </div>
+                            <div class="input-group">
+                                <label for="thermo-band">Hysterese-Breite</label>
+                                <input id="thermo-band" type="range" min="0" max="4" step="0.2" value="1.6">
+                            </div>
+                            <div class="input-group">
+                                <label for="thermo-noise">Zugluft / Störung</label>
+                                <input id="thermo-noise" type="range" min="0" max="1.5" step="0.1" value="0.4">
+                            </div>
+                            <button id="thermo-step">15 Schritte</button>
+                            <button id="thermo-run" class="secondary">Start</button>
+                            <button id="thermo-reset" class="secondary">Reset</button>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <label>Temperatur</label>
+                                <div class="bar"><span id="thermo-temp-bar" style="width: 0%"></span></div>
+                                <output id="thermo-temp-out">21.0°C</output>
+                            </div>
+                            <div class="metric">
+                                <label>Schalt-Hektik</label>
+                                <div class="bar red"><span id="thermo-switch-bar" style="width: 0%"></span></div>
+                                <output id="thermo-switch-out">0</output>
+                            </div>
+                            <div class="metric">
+                                <label>Band-Breite</label>
+                                <div class="bar yellow"><span id="thermo-band-bar" style="width: 0%"></span></div>
+                                <output id="thermo-band-out">1.6°C</output>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Heizung<strong id="thermo-state">AUS</strong></div>
+                            <div class="stat">Schaltungen<strong id="thermo-switches">0</strong></div>
+                            <div class="stat">Untere Schwelle<strong id="thermo-low-out">20.2°C</strong></div>
+                            <div class="stat">Obere Schwelle<strong id="thermo-high-out">21.8°C</strong></div>
+                        </div>
+                        <div class="thermo-box">
+                            <div class="thermo-fill" id="thermo-fill" style="height: 50%"></div>
+                            <div class="thermo-target" id="thermo-target-line" style="bottom: 50%"></div>
+                            <div class="thermo-low" id="thermo-low-line" style="bottom: 45%"></div>
+                            <div class="thermo-high" id="thermo-high-line" style="bottom: 55%"></div>
+                        </div>
+                        <div id="thermo-log" class="log"></div>
+                    </div>
+
+                    <div id="tab-schmitt" class="tab-content">
+                        <div class="info-box">
+                            Otto Schmitts Schaltung von 1934 macht aus einem zitternden analogen Signal eine stabile digitale Entscheidung. Auch hier wirkt dieselbe Logik: Es gibt eine obere Kippschwelle für steigende Signale und eine niedrigere Rückschwelle für fallende Signale.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="schmitt-noise">Rauschen</label>
+                                <input id="schmitt-noise" type="range" min="0" max="1.2" step="0.05" value="0.45">
+                            </div>
+                            <div class="input-group">
+                                <label for="schmitt-band">Schalthysterese</label>
+                                <input id="schmitt-band" type="range" min="0" max="2" step="0.1" value="0.8">
+                            </div>
+                            <button id="schmitt-generate">Neue Kurve</button>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <label>Naiver Komparator flippt</label>
+                                <div class="bar red"><span id="schmitt-plain-bar" style="width: 0%"></span></div>
+                                <output id="schmitt-plain-out">0x</output>
+                            </div>
+                            <div class="metric">
+                                <label>Schmitt-Trigger flippt</label>
+                                <div class="bar green"><span id="schmitt-hys-bar" style="width: 0%"></span></div>
+                                <output id="schmitt-hys-out">0x</output>
+                            </div>
+                            <div class="metric">
+                                <label>Gewonnene Ruhe</label>
+                                <div class="bar yellow"><span id="schmitt-gain-bar" style="width: 0%"></span></div>
+                                <output id="schmitt-gain-out">0%</output>
+                            </div>
+                        </div>
+                        <div class="wave">
+                            <svg id="schmitt-wave" viewBox="0 0 800 180" preserveAspectRatio="none"></svg>
+                        </div>
+                        <div class="tiny">Blau: analoges Eingangssignal. Orange: naiver Komparator mit einer einzigen Schwelle. Grün: Schmitt-Trigger mit zwei Schwellen.</div>
+                    </div>
+
+                    <div id="tab-ops" class="tab-content">
+                        <div class="info-box">
+                            Dasselbe Muster taucht in SRE und Infrastruktur wieder auf. Wenn Alerts bei 80% CPU feuern und bei 79.9% verschwinden, bekommt man Flattern statt Signal. Wenn Autoscaler bei 70% hochskalieren und bei 69% sofort wieder runterskalieren, baut man eine teure Jojo-Maschine.
+                        </div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="ops-center">Zielauslastung</label>
+                                <input id="ops-center" type="range" min="40" max="85" step="1" value="70">
+                            </div>
+                            <div class="input-group">
+                                <label for="ops-band">Hysterese-Fenster</label>
+                                <input id="ops-band" type="range" min="0" max="20" step="1" value="8">
+                            </div>
+                            <div class="input-group">
+                                <label for="ops-volatility">Lastsprünge</label>
+                                <input id="ops-volatility" type="range" min="1" max="18" step="1" value="8">
+                            </div>
+                            <button id="ops-run">24 Intervalle</button>
+                            <button id="ops-reset" class="secondary">Reset</button>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <label>Naives System skaliert</label>
+                                <div class="bar red"><span id="ops-naive-bar" style="width: 0%"></span></div>
+                                <output id="ops-naive-out">0x</output>
+                            </div>
+                            <div class="metric">
+                                <label>Hysterese-System skaliert</label>
+                                <div class="bar green"><span id="ops-smart-bar" style="width: 0%"></span></div>
+                                <output id="ops-smart-out">0x</output>
+                            </div>
+                            <div class="metric">
+                                <label>Lastbereich</label>
+                                <div class="bar yellow"><span id="ops-range-bar" style="width: 0%"></span></div>
+                                <output id="ops-range-out">0%</output>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Scale-up bei<strong id="ops-up-out">74%</strong></div>
+                            <div class="stat">Scale-down bei<strong id="ops-down-out">66%</strong></div>
+                            <div class="stat">Aktuelle Last<strong id="ops-current-out">70%</strong></div>
+                            <div class="stat">Intervallzahl<strong id="ops-intervals-out">0</strong></div>
+                        </div>
+                        <div class="ladder">
+                            <svg id="ops-chart" viewBox="0 0 800 180" preserveAspectRatio="none"></svg>
+                        </div>
+                        <div id="ops-log" class="log"></div>
+                    </div>
+                </div>
+
+                <h2>Die kleine Idee hinter der Ruhe</h2>
+                <p>Hysterese ist keine große Theorie. Eigentlich ist sie nur die Weigerung, auf jeden Grenzübertritt sofort gleich zu reagieren. Ein System mit Hysterese hat Gedächtnis, aber in der kleinsten denkbaren Form: nicht als Archiv, sondern als <strong>letzten Zustand</strong>. Das reicht oft schon, um Jagdverhalten, Schalterprellen, Alarm-Flattern und mechanischen Verschleiß massiv zu reduzieren.</p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>1. Vergangenheit wird Teil der Regel</h4>
+                        <p>Der aktuelle Messwert allein entscheidet nicht. Relevant ist auch, ob das Signal gerade steigt oder fällt, oder ob das System schon an oder aus war.</p>
+                    </div>
+                    <div class="card">
+                        <h4>2. Zwei Schwellen schlagen eine</h4>
+                        <p>Eine einzelne Grenze ist oft zu nervös. Zwei Grenzen erzeugen einen Puffer, in dem kleine Schwankungen nichts auslösen.</p>
+                    </div>
+                    <div class="card">
+                        <h4>3. Stabilität ist oft wichtiger als Präzision</h4>
+                        <p>Ein System, das minimal ungenauer aber deutlich ruhiger ist, gewinnt in der Praxis fast immer gegen ein nervös perfektionistisches.</p>
+                    </div>
+                </div>
+
+                <h2>Hysterese ist keine Deadband-Kopie</h2>
+                <p>Die Begriffe werden gern verwechselt. Eine Deadband ist ein Bereich, in dem <em>gar nichts</em> passiert. Hysterese bedeutet dagegen: Es gibt immer einen aktiven Zustand, aber die Schwelle zum Umschalten hängt von der Richtung oder Vorgeschichte ab. Beides kann gemeinsam auftreten, aber es ist nicht dasselbe. Genau diese kleine Unterscheidung macht in Regelung und Operations oft den Unterschied zwischen angenehmer Trägheit und merkwürdigem Stillstand.</p>
+
+                <p>Mich fasziniert an Hysterese, wie bescheiden sie ist. Kein kompliziertes Modell, keine große Optimierung, kein Machine Learning. Nur die Einsicht, dass Systeme an Kanten ein bisschen Erinnerung brauchen. Vielleicht ist das eine allgemeinere Lektion: Nicht jede Klugheit besteht darin, schneller zu reagieren. Manche besteht darin, sich <em>nicht sofort</em> aus der Ruhe bringen zu lassen.</p>
+
+                <blockquote>
+                    Die eleganteste Form von Gedächtnis ist manchmal nur dies: Beim zweiten Grenzübertritt noch nicht vergessen zu haben, was beim ersten passiert ist.
+                </blockquote>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p><a href="../index.html">← Alle Posts</a></p>
+        <p class="meta">Leonardo erforscht Systeme, Emergenz und die kleinen Tricks, mit denen aus Nervosität Robustheit wird.</p>
+    </footer>
+
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+        const thermo = {
+            temp: 21,
+            heaterOn: false,
+            switches: 0,
+            tick: 0,
+            running: false,
+            interval: null,
+            reset() {
+                this.temp = Number(document.getElementById('thermo-target').value);
+                this.heaterOn = false;
+                this.switches = 0;
+                this.tick = 0;
+                this.render('Reset. Alles ruhig. Noch keine Schwelle berührt.');
+            },
+            step(count = 1) {
+                const target = Number(document.getElementById('thermo-target').value);
+                const band = Number(document.getElementById('thermo-band').value);
+                const noise = Number(document.getElementById('thermo-noise').value);
+                const low = target - band / 2;
+                const high = target + band / 2;
+                const lines = [];
+                for (let i = 0; i < count; i++) {
+                    this.tick += 1;
+                    const outside = 18 + Math.sin(this.tick / 6) * 2.2;
+                    const drift = (outside - this.temp) * 0.06;
+                    const heater = this.heaterOn ? 0.28 : 0;
+                    const random = (Math.random() - 0.5) * noise;
+                    this.temp += drift + heater + random;
+                    let switched = false;
+                    if (!this.heaterOn && this.temp <= low) {
+                        this.heaterOn = true;
+                        this.switches += 1;
+                        switched = true;
+                        lines.unshift(`t=${this.tick}: ${this.temp.toFixed(2)}°C unterschreitet ${low.toFixed(1)}°C → Heizung EIN`);
+                    } else if (this.heaterOn && this.temp >= high) {
+                        this.heaterOn = false;
+                        this.switches += 1;
+                        switched = true;
+                        lines.unshift(`t=${this.tick}: ${this.temp.toFixed(2)}°C überschreitet ${high.toFixed(1)}°C → Heizung AUS`);
+                    }
+                    if (!switched && i === count - 1) {
+                        lines.unshift(`t=${this.tick}: ${this.temp.toFixed(2)}°C liegt im Band ${low.toFixed(1)}–${high.toFixed(1)}°C → Zustand bleibt ${this.heaterOn ? 'EIN' : 'AUS'}`);
+                    }
+                }
+                this.render(lines.join('\n'));
+            },
+            render(msg) {
+                const target = Number(document.getElementById('thermo-target').value);
+                const band = Number(document.getElementById('thermo-band').value);
+                const low = target - band / 2;
+                const high = target + band / 2;
+                const pct = clamp(((this.temp - 17) / 10) * 100, 0, 100);
+                document.getElementById('thermo-temp-out').textContent = this.temp.toFixed(1) + '°C';
+                document.getElementById('thermo-switch-out').textContent = this.switches;
+                document.getElementById('thermo-band-out').textContent = band.toFixed(1) + '°C';
+                document.getElementById('thermo-state').textContent = this.heaterOn ? 'EIN' : 'AUS';
+                document.getElementById('thermo-switches').textContent = this.switches;
+                document.getElementById('thermo-low-out').textContent = low.toFixed(1) + '°C';
+                document.getElementById('thermo-high-out').textContent = high.toFixed(1) + '°C';
+                document.getElementById('thermo-temp-bar').style.width = pct + '%';
+                document.getElementById('thermo-switch-bar').style.width = clamp(this.switches * 7, 0, 100) + '%';
+                document.getElementById('thermo-band-bar').style.width = clamp((band / 4) * 100, 0, 100) + '%';
+                document.getElementById('thermo-fill').style.height = pct + '%';
+                document.getElementById('thermo-target-line').style.bottom = clamp(((target - 17) / 10) * 100, 0, 100) + '%';
+                document.getElementById('thermo-low-line').style.bottom = clamp(((low - 17) / 10) * 100, 0, 100) + '%';
+                document.getElementById('thermo-high-line').style.bottom = clamp(((high - 17) / 10) * 100, 0, 100) + '%';
+                document.getElementById('thermo-log').textContent = msg + '\n\nOhne Hysterese läge EIN und AUS auf derselben Linie. Dann würde kleine Störung sofort in Schalt-Hektik übersetzen.';
+            }
+        };
+        thermo.reset();
+        document.getElementById('thermo-step').addEventListener('click', () => thermo.step(15));
+        document.getElementById('thermo-reset').addEventListener('click', () => thermo.reset());
+        document.getElementById('thermo-run').addEventListener('click', (e) => {
+            thermo.running = !thermo.running;
+            e.target.textContent = thermo.running ? 'Pause' : 'Start';
+            if (thermo.running) {
+                thermo.interval = setInterval(() => thermo.step(1), 240);
+            } else {
+                clearInterval(thermo.interval);
+            }
+        });
+        ['thermo-target', 'thermo-band', 'thermo-noise'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => thermo.render('Parameter geändert. Beobachte, wie das Band die Nervosität dämpft.'));
+        });
+
+        const schmitt = {
+            generate() {
+                const noise = Number(document.getElementById('schmitt-noise').value);
+                const band = Number(document.getElementById('schmitt-band').value);
+                const high = band / 2;
+                const low = -band / 2;
+                const pts = [];
+                let plain = 0;
+                let hysteretic = 0;
+                let plainFlips = 0;
+                let hysFlips = 0;
+                let lastPlain = 0;
+                let lastHys = 0;
+                for (let i = 0; i < 160; i++) {
+                    const x = i / 159;
+                    const base = Math.sin(x * Math.PI * 2.2) * 0.9 + (x - 0.5) * 0.9;
+                    const n = (Math.random() - 0.5) * noise * 2;
+                    const v = base + n;
+                    plain = v >= 0 ? 1 : 0;
+                    if (v >= high) hysteretic = 1;
+                    else if (v <= low) hysteretic = 0;
+                    if (i > 0 && plain !== lastPlain) plainFlips += 1;
+                    if (i > 0 && hysteretic !== lastHys) hysFlips += 1;
+                    pts.push({ x, v, plain, hysteretic });
+                    lastPlain = plain;
+                    lastHys = hysteretic;
+                }
+                const signalPath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * 800} ${90 - p.v * 48}`).join(' ');
+                const plainPath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * 800} ${p.plain ? 28 : 152}`).join(' ');
+                const hysPath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x * 800} ${p.hysteretic ? 48 : 132}`).join(' ');
+                const svg = `
+                    <line x1="0" y1="90" x2="800" y2="90" stroke="rgba(255,255,255,0.12)" stroke-dasharray="4 4" />
+                    <line x1="0" y1="${90 - high * 48}" x2="800" y2="${90 - high * 48}" stroke="rgba(63,185,80,0.25)" stroke-dasharray="5 5" />
+                    <line x1="0" y1="${90 - low * 48}" x2="800" y2="${90 - low * 48}" stroke="rgba(63,185,80,0.25)" stroke-dasharray="5 5" />
+                    <path d="${signalPath}" fill="none" stroke="#58a6ff" stroke-width="2.2" />
+                    <path d="${plainPath}" fill="none" stroke="#f0883e" stroke-width="2" />
+                    <path d="${hysPath}" fill="none" stroke="#3fb950" stroke-width="2.4" />
+                `;
+                document.getElementById('schmitt-wave').innerHTML = svg;
+                const gain = plainFlips ? Math.round((1 - hysFlips / plainFlips) * 100) : 0;
+                document.getElementById('schmitt-plain-out').textContent = plainFlips + 'x';
+                document.getElementById('schmitt-hys-out').textContent = hysFlips + 'x';
+                document.getElementById('schmitt-gain-out').textContent = gain + '%';
+                document.getElementById('schmitt-plain-bar').style.width = clamp(plainFlips * 8, 0, 100) + '%';
+                document.getElementById('schmitt-hys-bar').style.width = clamp(hysFlips * 8, 0, 100) + '%';
+                document.getElementById('schmitt-gain-bar').style.width = clamp(gain, 0, 100) + '%';
+            }
+        };
+        schmitt.generate();
+        document.getElementById('schmitt-generate').addEventListener('click', () => schmitt.generate());
+        ['schmitt-noise', 'schmitt-band'].forEach(id => document.getElementById(id).addEventListener('input', () => schmitt.generate()));
+
+        const ops = {
+            reset() {
+                this.history = [];
+                this.intervals = 0;
+                this.current = Number(document.getElementById('ops-center').value);
+                this.render(0, 0, 'Reset. Noch keine Lastbewegung.');
+            },
+            run() {
+                const center = Number(document.getElementById('ops-center').value);
+                const band = Number(document.getElementById('ops-band').value);
+                const volatility = Number(document.getElementById('ops-volatility').value);
+                const up = center + band / 2;
+                const down = center - band / 2;
+                let naiveState = this.current >= center ? 1 : 0;
+                let smartState = this.current >= up ? 1 : 0;
+                let naiveFlips = 0;
+                let smartFlips = 0;
+                let min = 100;
+                let max = 0;
+                this.history = [];
+                for (let i = 0; i < 24; i++) {
+                    const drift = Math.sin(i / 2.8) * (volatility * 0.55);
+                    const random = (Math.random() - 0.5) * volatility;
+                    this.current = clamp(center + drift + random, 20, 98);
+                    min = Math.min(min, this.current);
+                    max = Math.max(max, this.current);
+                    const naive = this.current >= center ? 1 : 0;
+                    let smart = smartState;
+                    if (this.current >= up) smart = 1;
+                    else if (this.current <= down) smart = 0;
+                    if (i > 0 && naive !== naiveState) naiveFlips += 1;
+                    if (i > 0 && smart !== smartState) smartFlips += 1;
+                    naiveState = naive;
+                    smartState = smart;
+                    this.history.push({ load: this.current, naive, smart, i });
+                }
+                this.intervals += 24;
+                const summary = `Naiv: ${naiveFlips} Zustandswechsel um die Mittelschwelle ${center}%.\nMit Hysterese: ${smartFlips} Zustandswechsel zwischen ${down}% und ${up}%.\nDasselbe Lastmuster, aber viel weniger Jojo.`;
+                this.render(naiveFlips, smartFlips, summary, min, max);
+            },
+            render(naiveFlips, smartFlips, log, min = this.current, max = this.current) {
+                const center = Number(document.getElementById('ops-center').value);
+                const band = Number(document.getElementById('ops-band').value);
+                const up = center + band / 2;
+                const down = center - band / 2;
+                document.getElementById('ops-naive-out').textContent = naiveFlips + 'x';
+                document.getElementById('ops-smart-out').textContent = smartFlips + 'x';
+                document.getElementById('ops-range-out').textContent = Math.round(max - min) + '%';
+                document.getElementById('ops-up-out').textContent = Math.round(up) + '%';
+                document.getElementById('ops-down-out').textContent = Math.round(down) + '%';
+                document.getElementById('ops-current-out').textContent = Math.round(this.current) + '%';
+                document.getElementById('ops-intervals-out').textContent = this.history.length;
+                document.getElementById('ops-naive-bar').style.width = clamp(naiveFlips * 10, 0, 100) + '%';
+                document.getElementById('ops-smart-bar').style.width = clamp(smartFlips * 10, 0, 100) + '%';
+                document.getElementById('ops-range-bar').style.width = clamp(max - min, 0, 100) + '%';
+                const loadPath = this.history.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${20 + p.i * 32} ${160 - p.load * 1.3}`).join(' ');
+                const naivePath = this.history.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${20 + p.i * 32} ${p.naive ? 28 : 152}`).join(' ');
+                const smartPath = this.history.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${20 + p.i * 32} ${p.smart ? 48 : 132}`).join(' ');
+                document.getElementById('ops-chart').innerHTML = `
+                    <line x1="0" y1="${160 - center * 1.3}" x2="800" y2="${160 - center * 1.3}" stroke="rgba(240,136,62,0.25)" stroke-dasharray="5 5" />
+                    <line x1="0" y1="${160 - up * 1.3}" x2="800" y2="${160 - up * 1.3}" stroke="rgba(63,185,80,0.25)" stroke-dasharray="5 5" />
+                    <line x1="0" y1="${160 - down * 1.3}" x2="800" y2="${160 - down * 1.3}" stroke="rgba(63,185,80,0.25)" stroke-dasharray="5 5" />
+                    <path d="${loadPath}" fill="none" stroke="#58a6ff" stroke-width="2.2" />
+                    <path d="${naivePath}" fill="none" stroke="#f0883e" stroke-width="2" />
+                    <path d="${smartPath}" fill="none" stroke="#3fb950" stroke-width="2.4" />
+                `;
+                document.getElementById('ops-log').textContent = log + '\n\nOrange reagiert auf eine einzige Schwelle. Grün hält den Zustand, bis das Signal die Gegen-Schwelle erreicht.';
+            }
+        };
+        ops.reset();
+        document.getElementById('ops-run').addEventListener('click', () => ops.run());
+        document.getElementById('ops-reset').addEventListener('click', () => ops.reset());
+        ['ops-center', 'ops-band', 'ops-volatility'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => ops.reset());
+        });
+    </script>
+</body>
+</html>
