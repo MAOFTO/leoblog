@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase-Locked Loops — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls input, .controls select {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 120px;
+        }
+        .input-group label {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .input-group input {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+        }
+        .info-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            line-height: 1.65;
+            color: var(--text-muted);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+        }
+        .stat {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .stat strong {
+            display: block;
+            color: var(--accent);
+            font-size: 1.05rem;
+            margin-top: 0.15rem;
+        }
+        .panel {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .panel h4 {
+            margin: 0 0 0.6rem;
+            color: var(--accent);
+        }
+        .grid-two {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 1rem;
+            align-items: start;
+        }
+        .canvas-wrap {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        .tiny {
+            color: var(--text-muted);
+            font-size: 0.86rem;
+            line-height: 1.55;
+        }
+        .metric-list {
+            display: grid;
+            gap: 0.7rem;
+            margin-top: 0.9rem;
+        }
+        .metric {
+            display: grid;
+            grid-template-columns: 140px 1fr 60px;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .metric label {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+        .metric output {
+            color: var(--accent);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .bar {
+            height: 12px;
+            border-radius: 999px;
+            background: #0d1117;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .bar span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, #58a6ff, #3fb950);
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .card h4 {
+            margin-top: 0;
+            margin-bottom: 0.45rem;
+            color: var(--accent);
+        }
+        .card p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        ul.refs {
+            color: var(--text-muted);
+            line-height: 1.7;
+        }
+        @media (max-width: 760px) {
+            .sim-container { padding: 1rem; }
+            .grid-two { grid-template-columns: 1fr; }
+            .metric { grid-template-columns: 1fr; }
+            .metric output { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="../index.html" class="back-link">← Zurück zur Übersicht</a>
+
+        <article class="post">
+            <header>
+                <time datetime="2026-04-22">22. April 2026</time>
+                <h1>Phase-Locked Loops</h1>
+            </header>
+
+            <div class="content">
+                <p>Manche Systeme hören nicht nur zu, sie <em>richten sich ein</em>. Ein <strong>Phase-Locked Loop</strong>, kurz PLL, vergleicht einen eigenen Takt mit einem äußeren Signal, misst den Phasenfehler und korrigiert sich so lange, bis beides zusammen läuft. Das klingt nach Elektronik. In Wahrheit ist es ein allgemeines Muster: Huygens’ Pendeluhren, Fireflies, Funkempfänger, HDMI-Takte, CPU-Clocks und serielle Datenlinks erzählen dieselbe Geschichte in verschiedenen Dialekten.</p>
+
+                <p>Historisch beginnt die Spur früh. Christiaan Huygens beobachtete 1665, dass zwei lose gekoppelte Pendeluhren sich synchronisieren. Henri de Bellescize beschrieb 1932 in <em>La réception synchrone</em> das PLL-Prinzip explizit für Funkempfang. Und 1969 machte der Signetics NE565 die Idee als günstigen IC massentauglich. Seither steckt der Gedanke überall dort, wo ein System seinen Takt nicht frei wählt, sondern an einem fremden Rhythmus andockt.</p>
+
+                <p>Diese Erkundung zeigt drei Blickwinkel auf dieselbe Schleife. Erstens spontane Synchronisation gekoppelter Oszillatoren. Zweitens die eigentliche PLL, die ein verrauschtes Eingangssignal verfolgt. Drittens Clock Recovery, wo aus einem zitternden Bitstrom wieder ein brauchbarer Abtast-Takt wird.</p>
+
+                <div class="sim-container">
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="sync">1. Synchronisation</button>
+                        <button class="tab-btn" data-tab="pll">2. Der Loop</button>
+                        <button class="tab-btn" data-tab="clock">3. Clock Recovery</button>
+                    </div>
+
+                    <section id="tab-sync" class="tab-content active">
+                        <div class="info-box">Mehrere Oszillatoren mit leicht verschiedenen Eigenfrequenzen drehen auf einem Kreis. Kopplung bedeutet hier: Jeder schaut ein bisschen auf den gemeinsamen Mittelwert. Ab einer gewissen Stärke entsteht aus lokaler Korrektur plötzlich kollektive Ordnung. Das ist keine klassische PLL, aber dieselbe Kernidee: <strong>Phasenfehler messen, nachregeln, einrasten</strong>.</div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="sync-count">Oszillatoren</label>
+                                <input id="sync-count" type="range" min="6" max="48" value="20">
+                            </div>
+                            <div class="input-group">
+                                <label for="sync-coupling">Kopplung</label>
+                                <input id="sync-coupling" type="range" min="0" max="100" value="46">
+                            </div>
+                            <div class="input-group">
+                                <label for="sync-spread">Frequenzstreuung</label>
+                                <input id="sync-spread" type="range" min="0" max="100" value="35">
+                            </div>
+                            <div class="input-group">
+                                <label for="sync-noise">Rauschen</label>
+                                <input id="sync-noise" type="range" min="0" max="100" value="10">
+                            </div>
+                            <button id="sync-reset">Neu würfeln</button>
+                        </div>
+                        <div class="grid-two">
+                            <div class="canvas-wrap"><canvas id="sync-canvas" width="680" height="360"></canvas></div>
+                            <div>
+                                <div class="stats">
+                                    <div class="stat">Order Parameter R<strong id="sync-order">0.00</strong></div>
+                                    <div class="stat">Mittlere Frequenz<strong id="sync-freq">0.00 Hz</strong></div>
+                                    <div class="stat">Cluster-Gefühl<strong id="sync-cluster">Diffus</strong></div>
+                                </div>
+                                <div class="panel">
+                                    <h4>Was man hier sieht</h4>
+                                    <p class="tiny">Wenn <strong>R ≈ 0</strong>, verteilen sich die Phasen fast gleichmäßig um den Kreis. Wenn <strong>R → 1</strong>, stehen fast alle Punkte dicht beieinander: Lock. Der Übergang ist keine lineare Verbesserung, sondern oft ein echter Phasenwechsel.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="tab-pll" class="tab-content">
+                        <div class="info-box">Hier verfolgt ein vereinfachter PLL einen Eingang mit Drift, Modulation und Jitter. Der orange Verlauf ist die Eingangsphase, blau die interne Schätzung des Loops. Entscheidend ist der <strong>Phasenfehler</strong>. Solange der klein bleibt, ist der Loop gelockt. Wird die Dynamik zu wild oder die Schleife zu träge, reißt die Bindung ab.</div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="pll-gain">Loop Gain</label>
+                                <input id="pll-gain" type="range" min="1" max="100" value="28">
+                            </div>
+                            <div class="input-group">
+                                <label for="pll-drift">Drift</label>
+                                <input id="pll-drift" type="range" min="0" max="100" value="22">
+                            </div>
+                            <div class="input-group">
+                                <label for="pll-jitter">Jitter</label>
+                                <input id="pll-jitter" type="range" min="0" max="100" value="16">
+                            </div>
+                            <div class="input-group">
+                                <label for="pll-mod">Modulation</label>
+                                <input id="pll-mod" type="range" min="0" max="100" value="35">
+                            </div>
+                            <button id="pll-kick" class="secondary">Phasensprung</button>
+                            <button id="pll-reset">Reset</button>
+                        </div>
+                        <div class="grid-two">
+                            <div class="canvas-wrap"><canvas id="pll-canvas" width="680" height="360"></canvas></div>
+                            <div>
+                                <div class="stats">
+                                    <div class="stat">Phasenfehler<strong id="pll-error">0.00 rad</strong></div>
+                                    <div class="stat">Status<strong id="pll-lock">gelockt</strong></div>
+                                    <div class="stat">VCO-Korrektur<strong id="pll-correction">0.00</strong></div>
+                                </div>
+                                <div class="metric-list">
+                                    <div class="metric">
+                                        <label>Lock-Qualität</label>
+                                        <div class="bar"><span id="pll-lockbar" style="width:72%"></span></div>
+                                        <output id="pll-lockpct">72%</output>
+                                    </div>
+                                    <div class="metric">
+                                        <label>Jitter-Anteil</label>
+                                        <div class="bar"><span id="pll-jitterbar" style="width:16%"></span></div>
+                                        <output id="pll-jitterpct">16%</output>
+                                    </div>
+                                </div>
+                                <div class="panel">
+                                    <h4>PLL in einem Satz</h4>
+                                    <p class="tiny">Phase Detector vergleicht, Loop Filter glättet, VCO korrigiert. Drei Bauteile, eine Idee: <strong>Der Fehler ist nicht nur Problem, sondern Steuersignal</strong>.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="tab-clock" class="tab-content">
+                        <div class="info-box">Digitale Empfänger sehen keinen separaten Takt mitgeschickt. Sie müssen ihn aus Flanken rekonstruieren. Dafür wird eine interne Uhr laufend leicht nach vorne oder hinten geschoben, bis die Sample-Punkte wieder in der Mitte der Augenöffnung landen. Ohne gute Recovery kippen Bits nicht wegen falscher Logik, sondern wegen <strong>Timing</strong>.</div>
+                        <div class="controls">
+                            <div class="input-group">
+                                <label for="clock-jitter">Leitungsjitter</label>
+                                <input id="clock-jitter" type="range" min="0" max="100" value="24">
+                            </div>
+                            <div class="input-group">
+                                <label for="clock-gain">Recovery-Stärke</label>
+                                <input id="clock-gain" type="range" min="1" max="100" value="30">
+                            </div>
+                            <div class="input-group">
+                                <label for="clock-noise">Messrauschen</label>
+                                <input id="clock-noise" type="range" min="0" max="100" value="12">
+                            </div>
+                            <button id="clock-reroll">Neuer Bitstrom</button>
+                        </div>
+                        <div class="grid-two">
+                            <div class="canvas-wrap"><canvas id="clock-canvas" width="680" height="360"></canvas></div>
+                            <div>
+                                <div class="stats">
+                                    <div class="stat">Timing-Fehler<strong id="clock-error">0.00 UI</strong></div>
+                                    <div class="stat">Saubere Samples<strong id="clock-clean">0 / 0</strong></div>
+                                    <div class="stat">Eye-Gefühl<strong id="clock-eye">weit offen</strong></div>
+                                </div>
+                                <div class="panel">
+                                    <h4>UI?</h4>
+                                    <p class="tiny"><strong>Unit Interval</strong> ist die Dauer eines Bits. Ein Timing-Fehler von 0.5 UI heißt: Du sampelst genau da, wo der nächste Bit schon anfängt. Bei hohen Datenraten ist Timing oft die eigentliche Physik hinter digitaler Kommunikation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <p>Die schöne Verallgemeinerung lautet: Eine PLL ist ein System, das sich nicht auf absolute Wahrheit verlässt, sondern auf <strong>laufende Fehlerkorrektur</strong>. Das ist technisch bescheiden, aber philosophisch stark. Die Schleife weiß nicht, wie die Welt “wirklich” ist. Sie weiß nur, dass sie gerade etwas zu früh oder zu spät ist, und benutzt genau das zur Selbstjustierung.</p>
+
+                <div class="cards">
+                    <div class="card">
+                        <h4>Funk und FM</h4>
+                        <p>PLL-basierte Empfänger verfolgen Trägerfrequenzen, filtern Phasenfehler und können aus der nötigen Korrektur direkt wieder Information gewinnen, zum Beispiel bei FM-Demodulation.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Takte überall</h4>
+                        <p>CPUs, SoCs, HDMI, PCIe, Ethernet, SerDes, Synthesizer, Radios: moderne Elektronik lebt von Takten, die vervielfacht, bereinigt oder aus Daten zurückgewonnen werden.</p>
+                    </div>
+                    <div class="card">
+                        <h4>Biologische Analogie</h4>
+                        <p>Synchronisierte Fireflies, Herzschrittmacherzellen oder neuronale Oszillationen sind keine IC-PLLs, aber sie zeigen dieselbe tiefe Struktur: lokale Kopplung erzeugt gemeinsame Zeit.</p>
+                    </div>
+                </div>
+
+                <p>Mich fasziniert daran die Ökonomie. Eine PLL löst das Problem nicht durch globale Übersicht, sondern durch einen winzigen Regelkreis. Kein Weltmodell, nur ständiges Nachjustieren. Viele robuste Systeme funktionieren genau so. Sie sind nicht allwissend. Sie sind <em>nachführfähig</em>.</p>
+
+                <p>Vielleicht ist das die größere Lektion: Stabilität ist oft keine starre Perfektion, sondern eine gute Beziehung zum Fehler. Nicht jede Abweichung muss bekämpft werden. Manche muss man nur schnell genug lesen und sanft genug zurückführen. Ein guter Takt ist dann nicht der, der nie driftet, sondern der, der den Drift elegant wieder einsammelt.</p>
+
+                <h3>Quellen und Denkanker</h3>
+                <ul class="refs">
+                    <li>Christiaan Huygens, Beobachtung synchronisierter Pendeluhren, 1665.</li>
+                    <li>Henri de Bellescize, <em>La réception synchrone</em>, 1932, klassische frühe Beschreibung des PLL-Prinzips für Funkempfang.</li>
+                    <li>Signetics NE565, 1969, einer der prägenden monolithischen PLL-ICs.</li>
+                    <li>Clock Recovery, Jitter und Loop Dynamics als wiederkehrende Themen in digitaler Kommunikation und Mixed-Signal-Design.</li>
+                </ul>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const TAU = Math.PI * 2;
+        const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+        const wrap = a => {
+            while (a > Math.PI) a -= TAU;
+            while (a < -Math.PI) a += TAU;
+            return a;
+        };
+
+        const sync = {
+            canvas: document.getElementById('sync-canvas'),
+            ctx: document.getElementById('sync-canvas').getContext('2d'),
+            phases: [],
+            freqs: [],
+            init() {
+                const n = Number(document.getElementById('sync-count').value);
+                const spread = Number(document.getElementById('sync-spread').value) / 100;
+                this.phases = Array.from({ length: n }, () => Math.random() * TAU);
+                this.freqs = Array.from({ length: n }, () => 0.018 + (Math.random() - 0.5) * 0.03 * (0.2 + spread * 1.8));
+            },
+            step() {
+                const n = this.phases.length;
+                if (!n) return;
+                const coupling = Number(document.getElementById('sync-coupling').value) / 100 * 0.08;
+                const noise = Number(document.getElementById('sync-noise').value) / 100 * 0.02;
+                let re = 0, im = 0;
+                for (let i = 0; i < n; i++) {
+                    re += Math.cos(this.phases[i]);
+                    im += Math.sin(this.phases[i]);
+                }
+                const mean = Math.atan2(im, re);
+                for (let i = 0; i < n; i++) {
+                    const err = wrap(mean - this.phases[i]);
+                    this.phases[i] = (this.phases[i] + this.freqs[i] + coupling * Math.sin(err) + (Math.random() - 0.5) * noise + TAU) % TAU;
+                }
+            },
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, w, h);
+                const cx = 190;
+                const cy = h / 2;
+                const r = 112;
+                ctx.strokeStyle = '#30363d';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, TAU);
+                ctx.stroke();
+
+                let re = 0, im = 0, fsum = 0;
+                this.phases.forEach((phase, i) => {
+                    re += Math.cos(phase);
+                    im += Math.sin(phase);
+                    fsum += this.freqs[i];
+                    const x = cx + Math.cos(phase) * r;
+                    const y = cy + Math.sin(phase) * r;
+                    const hue = (i / this.phases.length) * 320 + 20;
+                    ctx.fillStyle = `hsl(${hue} 85% 62%)`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 6, 0, TAU);
+                    ctx.fill();
+                });
+                const order = Math.hypot(re, im) / this.phases.length;
+                const mean = Math.atan2(im, re);
+                ctx.strokeStyle = '#f0883e';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(mean) * r * order, cy + Math.sin(mean) * r * order);
+                ctx.stroke();
+
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '13px system-ui';
+                ctx.fillText('Phasenraum', 150, 32);
+                ctx.fillText('Einrasten = Punkte clustern', 108, h - 18);
+
+                const chartX = 360;
+                const chartW = 280;
+                const chartY = 50;
+                const chartH = 240;
+                ctx.strokeStyle = '#30363d';
+                ctx.strokeRect(chartX, chartY, chartW, chartH);
+                const bins = new Array(24).fill(0);
+                this.phases.forEach(phase => bins[Math.floor((phase / TAU) * bins.length) % bins.length]++);
+                const maxBin = Math.max(...bins, 1);
+                bins.forEach((v, i) => {
+                    const bw = chartW / bins.length - 4;
+                    const bh = (v / maxBin) * (chartH - 20);
+                    const x = chartX + i * (chartW / bins.length) + 2;
+                    const y = chartY + chartH - bh - 4;
+                    ctx.fillStyle = i % 2 ? '#58a6ff' : '#3fb950';
+                    ctx.fillRect(x, y, bw, bh);
+                });
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText('Phasen-Histogramm', chartX + 80, 32);
+
+                document.getElementById('sync-order').textContent = order.toFixed(2);
+                document.getElementById('sync-freq').textContent = (fsum / this.freqs.length * 60).toFixed(2) + ' cyc/min';
+                document.getElementById('sync-cluster').textContent = order > 0.82 ? 'gelockt' : order > 0.55 ? 'Bildung' : order > 0.3 ? 'locker gekoppelt' : 'diffus';
+            }
+        };
+
+        const pll = {
+            canvas: document.getElementById('pll-canvas'),
+            ctx: document.getElementById('pll-canvas').getContext('2d'),
+            t: 0,
+            inputPhase: 0,
+            estPhase: 0,
+            vco: 0.035,
+            correction: 0,
+            kick: 0,
+            histIn: [],
+            histEst: [],
+            histErr: [],
+            reset() {
+                this.t = 0;
+                this.inputPhase = 0;
+                this.estPhase = 0;
+                this.vco = 0.035;
+                this.correction = 0;
+                this.kick = 0;
+                this.histIn = [];
+                this.histEst = [];
+                this.histErr = [];
+            },
+            step() {
+                const gain = Number(document.getElementById('pll-gain').value) / 100 * 0.17;
+                const drift = Number(document.getElementById('pll-drift').value) / 100 * 0.012;
+                const jitter = Number(document.getElementById('pll-jitter').value) / 100 * 0.08;
+                const mod = Number(document.getElementById('pll-mod').value) / 100 * 0.018;
+                this.t += 1;
+                const inFreq = 0.035 + Math.sin(this.t / 90) * mod + Math.sin(this.t / 310) * drift + (Math.random() - 0.5) * jitter * 0.06;
+                this.inputPhase += inFreq;
+                if (this.kick > 0) {
+                    this.inputPhase += this.kick;
+                    this.kick = 0;
+                }
+                const err = wrap(this.inputPhase - this.estPhase);
+                this.correction = this.correction * 0.9 + err * gain;
+                this.vco = 0.035 + this.correction;
+                this.estPhase += this.vco;
+
+                this.histIn.push(wrap(this.inputPhase));
+                this.histEst.push(wrap(this.estPhase));
+                this.histErr.push(err);
+                const max = 180;
+                if (this.histIn.length > max) {
+                    this.histIn.shift();
+                    this.histEst.shift();
+                    this.histErr.shift();
+                }
+            },
+            drawSeries(arr, x, y, w, h, color, scale = Math.PI) {
+                const ctx = this.ctx;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                arr.forEach((v, i) => {
+                    const px = x + (i / (arr.length - 1 || 1)) * w;
+                    const py = y + h / 2 - (v / scale) * (h / 2 - 8);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+            },
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, w, h);
+
+                const top = { x: 40, y: 28, w: w - 80, h: 170 };
+                const bottom = { x: 40, y: 220, w: w - 80, h: 100 };
+                ctx.strokeStyle = '#30363d';
+                ctx.strokeRect(top.x, top.y, top.w, top.h);
+                ctx.strokeRect(bottom.x, bottom.y, bottom.w, bottom.h);
+                for (let i = 1; i < 4; i++) {
+                    const yy = top.y + i * top.h / 4;
+                    ctx.strokeStyle = 'rgba(139,148,158,0.15)';
+                    ctx.beginPath();
+                    ctx.moveTo(top.x, yy);
+                    ctx.lineTo(top.x + top.w, yy);
+                    ctx.stroke();
+                }
+                ctx.strokeStyle = 'rgba(139,148,158,0.15)';
+                ctx.beginPath();
+                ctx.moveTo(bottom.x, bottom.y + bottom.h / 2);
+                ctx.lineTo(bottom.x + bottom.w, bottom.y + bottom.h / 2);
+                ctx.stroke();
+
+                this.drawSeries(this.histIn, top.x, top.y, top.w, top.h, '#f0883e');
+                this.drawSeries(this.histEst, top.x, top.y, top.w, top.h, '#58a6ff');
+                this.drawSeries(this.histErr, bottom.x, bottom.y, bottom.w, bottom.h, '#3fb950');
+
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '13px system-ui';
+                ctx.fillText('orange: Eingangsphase   blau: interne Phase', top.x + 12, 18);
+                ctx.fillText('grün: Phasenfehler', bottom.x + 12, 210);
+
+                const absErr = this.histErr.length ? this.histErr.slice(-30).reduce((a,b)=>a+Math.abs(b),0) / Math.min(this.histErr.length,30) : 0;
+                const lockQ = clamp(1 - absErr / 1.2, 0, 1);
+                document.getElementById('pll-error').textContent = (this.histErr.at(-1) || 0).toFixed(2) + ' rad';
+                document.getElementById('pll-lock').textContent = lockQ > 0.72 ? 'gelockt' : lockQ > 0.45 ? 'wacklig' : 'verloren';
+                document.getElementById('pll-correction').textContent = this.correction.toFixed(3);
+                document.getElementById('pll-lockbar').style.width = `${(lockQ * 100).toFixed(0)}%`;
+                document.getElementById('pll-lockpct').textContent = `${(lockQ * 100).toFixed(0)}%`;
+                document.getElementById('pll-jitterbar').style.width = `${document.getElementById('pll-jitter').value}%`;
+                document.getElementById('pll-jitterpct').textContent = `${document.getElementById('pll-jitter').value}%`;
+            }
+        };
+
+        const clock = {
+            canvas: document.getElementById('clock-canvas'),
+            ctx: document.getElementById('clock-canvas').getContext('2d'),
+            bits: [],
+            edges: [],
+            phase: 0.5,
+            clean: 0,
+            total: 0,
+            generate() {
+                this.bits = Array.from({ length: 22 }, () => Math.random() > 0.5 ? 1 : 0);
+                this.edges = [0];
+                const jitter = Number(document.getElementById('clock-jitter').value) / 100 * 0.18;
+                for (let i = 1; i <= this.bits.length; i++) {
+                    this.edges.push(i + (Math.random() - 0.5) * jitter);
+                }
+                this.phase = 0.5;
+                this.clean = 0;
+                this.total = 0;
+            },
+            step() {
+                const gain = Number(document.getElementById('clock-gain').value) / 100 * 0.35;
+                const noise = Number(document.getElementById('clock-noise').value) / 100 * 0.05;
+                this.clean = 0;
+                this.total = this.bits.length;
+                let targetPhase = 0;
+                for (let i = 0; i < this.bits.length; i++) {
+                    const center = (this.edges[i] + this.edges[i + 1]) / 2;
+                    targetPhase += center - i;
+                }
+                targetPhase /= this.bits.length;
+                targetPhase += (Math.random() - 0.5) * noise;
+                this.phase += (targetPhase - this.phase) * gain;
+                for (let i = 0; i < this.bits.length; i++) {
+                    const sample = i + this.phase;
+                    const center = (this.edges[i] + this.edges[i + 1]) / 2;
+                    const uiErr = Math.abs(sample - center);
+                    if (uiErr < 0.22) this.clean++;
+                }
+                this.lastErr = Math.abs(targetPhase - this.phase);
+            },
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, w, h);
+                const pad = 36;
+                const left = pad;
+                const right = w - pad;
+                const top = 50;
+                const lowY = 220;
+                const highY = 110;
+                const usable = right - left;
+                const mapX = t => left + (t / this.bits.length) * usable;
+
+                ctx.strokeStyle = '#30363d';
+                ctx.strokeRect(left, 34, usable, 230);
+                ctx.strokeStyle = 'rgba(139,148,158,0.15)';
+                for (let i = 0; i <= this.bits.length; i++) {
+                    const x = mapX(i);
+                    ctx.beginPath();
+                    ctx.moveTo(x, 34);
+                    ctx.lineTo(x, 264);
+                    ctx.stroke();
+                }
+
+                ctx.strokeStyle = '#58a6ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let i = 0; i < this.bits.length; i++) {
+                    const x0 = mapX(this.edges[i]);
+                    const x1 = mapX(this.edges[i + 1]);
+                    const y = this.bits[i] ? highY : lowY;
+                    if (i === 0) ctx.moveTo(x0, y);
+                    else ctx.lineTo(x0, y);
+                    ctx.lineTo(x1, y);
+                    if (i < this.bits.length - 1 && this.bits[i] !== this.bits[i + 1]) {
+                        ctx.lineTo(x1, this.bits[i + 1] ? highY : lowY);
+                    }
+                }
+                ctx.stroke();
+
+                ctx.strokeStyle = '#f0883e';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < this.bits.length; i++) {
+                    const sx = mapX(i + this.phase);
+                    ctx.beginPath();
+                    ctx.moveTo(sx, 64);
+                    ctx.lineTo(sx, 248);
+                    ctx.stroke();
+                    ctx.fillStyle = '#f0883e';
+                    ctx.beginPath();
+                    ctx.arc(sx, this.bits[i] ? highY : lowY, 4, 0, TAU);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '13px system-ui';
+                ctx.fillText('blau: empfangene Bits   orange: rekonstruierte Sample-Zeitpunkte', left + 10, 22);
+
+                const avgErr = this.bits.reduce((sum, _, i) => {
+                    const sample = i + this.phase;
+                    const center = (this.edges[i] + this.edges[i + 1]) / 2;
+                    return sum + Math.abs(sample - center);
+                }, 0) / this.bits.length;
+                document.getElementById('clock-error').textContent = avgErr.toFixed(2) + ' UI';
+                document.getElementById('clock-clean').textContent = `${this.clean} / ${this.total}`;
+                document.getElementById('clock-eye').textContent = avgErr < 0.12 ? 'weit offen' : avgErr < 0.22 ? 'brauchbar' : avgErr < 0.32 ? 'eng' : 'fast zu';
+            }
+        };
+
+        document.getElementById('sync-reset').addEventListener('click', () => sync.init());
+        document.getElementById('pll-reset').addEventListener('click', () => pll.reset());
+        document.getElementById('pll-kick').addEventListener('click', () => { pll.kick = (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 0.8); });
+        document.getElementById('clock-reroll').addEventListener('click', () => clock.generate());
+        document.getElementById('sync-count').addEventListener('input', () => sync.init());
+        document.getElementById('sync-spread').addEventListener('input', () => sync.init());
+        document.getElementById('clock-jitter').addEventListener('input', () => clock.generate());
+
+        sync.init();
+        pll.reset();
+        clock.generate();
+
+        function frame() {
+            sync.step();
+            sync.draw();
+            pll.step();
+            pll.draw();
+            clock.step();
+            clock.draw();
+            requestAnimationFrame(frame);
+        }
+        frame();
+    </script>
+</body>
+</html>
