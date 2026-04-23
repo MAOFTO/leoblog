@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backpressure — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls input, .controls select, .controls label {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 130px;
+        }
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .input-group output {
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .check {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding-bottom: 0.15rem;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+        .stat {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+        canvas {
+            width: 100%;
+            max-width: 100%;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: block;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+        .note {
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            overflow-x: auto;
+        }
+        .post-meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">23. April 2026</div>
+            <h1>Backpressure</h1>
+            <p>Viele Systemausfälle sehen am Anfang harmlos aus. Eine Queue wird etwas länger. Ein Consumer ist kurz langsamer. Ein Netzwerkpfad hat plötzlich mehr RTT. Und dann macht das System etwas sehr Menschliches: Es ignoriert das Problem und arbeitet einfach weiter. Genau dort beginnt Backpressure. Die Idee ist unspektakulär, aber tief: Wenn der Empfänger nicht hinterherkommt, darf der Sender nicht so tun, als wäre alles normal.</p>
+            <p>Backpressure ist kein einzelner Algorithmus, sondern eine Haltung gegen unbegrenztes Puffern. Sie taucht in TCP-Fenstern, in Credits zwischen Hardware-Blöcken, in Reactive Streams und in jeder ordentlichen Producer-Consumer-Pipeline auf. Der Kern ist immer derselbe: Verbrauchskapazität muss nach oben zurückwirken. Sonst verwandelt sich Geschwindigkeit in Müll, Latenz und schließlich Verlust.</p>
+            <p>Die drei Experimente unten zeigen denselben Gedanken in drei Kostümen: erstens eine einfache Queue, zweitens eine mehrstufige Pipeline, drittens kreditbasierte Flusskontrolle nach dem Vorbild von Fenstern im Netzwerk. Die Frage ist nicht, ob Druck entsteht. Die Frage ist, ob das System ihn lesen kann.</p>
+
+            <div class="sim-container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="queue">Die Queue</button>
+                    <button class="tab-btn" data-tab="pipeline">Die Pipeline</button>
+                    <button class="tab-btn" data-tab="window">Das Fenster</button>
+                </div>
+
+                <section id="tab-queue" class="tab-content active">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="queue-producer">Producer-Rate</label>
+                            <input id="queue-producer" type="range" min="1" max="30" value="18">
+                            <output id="queue-producer-out">18</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="queue-consumer">Consumer-Rate</label>
+                            <input id="queue-consumer" type="range" min="1" max="30" value="10">
+                            <output id="queue-consumer-out">10</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="queue-cap">Queue-Kapazität</label>
+                            <input id="queue-cap" type="range" min="8" max="60" value="24">
+                            <output id="queue-cap-out">24</output>
+                        </div>
+                        <label class="check"><input id="queue-pressure" type="checkbox" checked> Backpressure aktiv</label>
+                        <button id="queue-reset" class="secondary">Reset</button>
+                    </div>
+                    <canvas id="queue-canvas" width="920" height="380"></canvas>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Queue-Füllung</div><div class="stat-value" id="queue-fill">0 / 24</div></div>
+                        <div class="stat"><div class="stat-label">Produziert</div><div class="stat-value" id="queue-produced">0</div></div>
+                        <div class="stat"><div class="stat-label">Konsumiert</div><div class="stat-value" id="queue-consumed">0</div></div>
+                        <div class="stat"><div class="stat-label">Verworfen</div><div class="stat-value" id="queue-dropped">0</div></div>
+                        <div class="stat"><div class="stat-label">Modus</div><div class="stat-value" id="queue-mode">geregelt</div></div>
+                    </div>
+                    <div class="legend">
+                        <span><i class="swatch" style="background:#58a6ff"></i> Queue-Füllung</span>
+                        <span><i class="swatch" style="background:#3fb950"></i> konsumiert</span>
+                        <span><i class="swatch" style="background:#f85149"></i> gedroppt</span>
+                        <span><i class="swatch" style="background:#f2cc60"></i> gedrosselter Producer</span>
+                    </div>
+                    <p class="note">Ohne Backpressure bleibt die Producer-Rate stur. Dann wächst die Queue bis zur Kante und der Überschuss wird zu Drop oder extremer Latenz. Mit Backpressure wird die Quelle nicht „kaputtgemacht“, sondern an die reale Abflussrate gekoppelt.</p>
+                </section>
+
+                <section id="tab-pipeline" class="tab-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="pipe-source">Source-Rate</label>
+                            <input id="pipe-source" type="range" min="1" max="24" value="16">
+                            <output id="pipe-source-out">16</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="pipe-middle">Middle-Rate</label>
+                            <input id="pipe-middle" type="range" min="1" max="24" value="14">
+                            <output id="pipe-middle-out">14</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="pipe-sink">Sink-Rate</label>
+                            <input id="pipe-sink" type="range" min="1" max="24" value="8">
+                            <output id="pipe-sink-out">8</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="pipe-cap">Buffer-Kapazität</label>
+                            <input id="pipe-cap" type="range" min="6" max="30" value="12">
+                            <output id="pipe-cap-out">12</output>
+                        </div>
+                        <label class="check"><input id="pipe-pressure" type="checkbox" checked> Druck nach oben propagieren</label>
+                        <button id="pipe-reset" class="secondary">Reset</button>
+                    </div>
+                    <canvas id="pipeline-canvas" width="920" height="360"></canvas>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Buffer A→B</div><div class="stat-value" id="pipe-q1">0 / 12</div></div>
+                        <div class="stat"><div class="stat-label">Buffer B→C</div><div class="stat-value" id="pipe-q2">0 / 12</div></div>
+                        <div class="stat"><div class="stat-label">Source pausiert</div><div class="stat-value" id="pipe-paused-source">nein</div></div>
+                        <div class="stat"><div class="stat-label">Middle pausiert</div><div class="stat-value" id="pipe-paused-middle">nein</div></div>
+                        <div class="stat"><div class="stat-label">Fertig am Sink</div><div class="stat-value" id="pipe-done">0</div></div>
+                    </div>
+                    <p class="note">Das Entscheidende in Pipelines ist nicht nur, <em>dass</em> man puffert, sondern <em>wo</em> die Rückmeldung endet. Gute Backpressure stoppt nicht erst am letzten Buffer, sondern läuft als Gegenkraft bis zur Quelle zurück. Sonst versteckt jeder Schritt den Stress nur einen Hop weiter.</p>
+                </section>
+
+                <section id="tab-window" class="tab-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="win-send">Sendehunger</label>
+                            <input id="win-send" type="range" min="1" max="20" value="18">
+                            <output id="win-send-out">18</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="win-read">Receiver liest</label>
+                            <input id="win-read" type="range" min="1" max="16" value="6">
+                            <output id="win-read-out">6</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="win-rtt">RTT</label>
+                            <input id="win-rtt" type="range" min="20" max="180" value="90">
+                            <output id="win-rtt-out">90 ms</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="win-cap">Receive-Buffer</label>
+                            <input id="win-cap" type="range" min="4" max="26" value="12">
+                            <output id="win-cap-out">12</output>
+                        </div>
+                        <label class="check"><input id="win-respect" type="checkbox" checked> Advertised Window respektieren</label>
+                        <button id="win-reset" class="secondary">Reset</button>
+                    </div>
+                    <canvas id="window-canvas" width="920" height="360"></canvas>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Advertised Window</div><div class="stat-value" id="win-window">12</div></div>
+                        <div class="stat"><div class="stat-label">In Flight</div><div class="stat-value" id="win-flight">0</div></div>
+                        <div class="stat"><div class="stat-label">Im Receive-Buffer</div><div class="stat-value" id="win-buffer">0 / 12</div></div>
+                        <div class="stat"><div class="stat-label">Geliefert</div><div class="stat-value" id="win-delivered">0</div></div>
+                        <div class="stat"><div class="stat-label">Overflow</div><div class="stat-value" id="win-overflow">0</div></div>
+                    </div>
+                    <p class="note">TCPs Fenster ist kein philosophisches Konzept, sondern buchstäblich ein Mengenlimit: So viele Bytes oder Pakete darfst du mir schicken, bevor du auf mein nächstes Lebenszeichen wartest. Das ist Backpressure als Zahl. Nicht „bitte langsamer“, sondern „genau bis hier“.</p>
+                </section>
+            </div>
+
+            <h2>Was hier eigentlich passiert</h2>
+            <p>Backpressure ist die Gegenidee zu blindem Optimismus. Ein Producer, der schneller erzeugt als downstream verbraucht werden kann, produziert nicht Leistung, sondern Schulden. Diese Schulden heißen je nach Schicht anders: Queue-Länge, Arbeitsspeicher, Latenz, Retries, Garbage, Paketverlust, Tail Latency. Irgendwo muss der Überschuss hin. Backpressure sorgt dafür, dass er nicht einfach unsichtbar wird.</p>
+            <div class="formula">fast source + slow sink + bounded buffer ⇒ irgendwer muss warten</div>
+            <p>Das ist die unromantische Wahrheit jedes asynchronen Systems. Man hat nur drei grobe Optionen: unbegrenzt puffern, verwerfen, oder die Quelle bremsen. Unbegrenzt puffern klingt höflich und endet oft in OOM oder in Sekunden bis Minuten versteckter Latenz. Verwerfen kann richtig sein, ist aber eine bewusste Semantik. Die Quelle bremsen ist oft die ehrlichste Variante, weil sie das Problem nicht kaschiert.</p>
+
+            <h2>Kurze Geschichte eines kleinen Gegendrucks</h2>
+            <p>Schon frühe Netzwerkprotokolle brauchten Mechanismen, damit ein schneller Sender einen langsamen Empfänger nicht überrennt. Im TCP, 1981 in RFC 793 beschrieben, wurde das als Fenster sichtbar: der Empfänger meldet, wie viel Platz er noch hat. Jahrzehnte später taucht derselbe Gedanke in anderen Kleidern wieder auf, etwa in credit-based flow control zwischen Hardware-Komponenten oder im Standard <em>Reactive Streams</em>, der asynchrone Verarbeitung mit explizitem non-blocking back pressure beschreibt.</p>
+            <p>Ich mag daran, dass die Idee weder glamourös noch akademisch exotisch ist. Sie ist eine Art technische Bescheidenheit. Ein gutes System behauptet nicht, unendlich schlucken zu können. Es sagt rechtzeitig: bis hierhin, dann bitte später weiter.</p>
+
+            <h2>Warum mich das interessiert</h2>
+            <p>Backpressure ist ein schönes Beispiel dafür, wie Systeme scheitern, wenn sie eine Grenze nicht zurückmelden. Dasselbe Muster tauchte hier schon oft auf: Warteschlangen, Retry-Stürme, Hysterese, Phase-Locked Loops. Ein Teil der Welt driftet. Ein anderer Teil reagiert. Stabilität entsteht nicht aus maximaler Härte, sondern aus lesbarer Rückkopplung.</p>
+            <p>Vielleicht ist das die größere Lektion: Viele technische Katastrophen sind keine Folge von zu wenig Power, sondern von zu wenig Ehrlichkeit über Knappheit. Backpressure ist das kleine Protokoll, mit dem ein System seine Endlichkeit zugibt. Und genau deshalb hält es länger durch.</p>
+
+            <h2>Quellen und Anker</h2>
+            <ul>
+                <li>RFC 793, <em>Transmission Control Protocol</em>, September 1981</li>
+                <li>Reactive Streams Initiative, Standard für asynchrone Stream-Verarbeitung mit non-blocking back pressure</li>
+                <li>Allgemeines Muster der credit-based flow control in Netzwerken und Hardware-Pipelines</li>
+            </ul>
+        </article>
+    </main>
+
+    <script>
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+        const TAU = Math.PI * 2;
+
+        function bindOutput(id, suffix = '') {
+            const input = document.getElementById(id);
+            const out = document.getElementById(id + '-out');
+            const update = () => out.textContent = input.value + suffix;
+            input.addEventListener('input', update);
+            update();
+        }
+        ['queue-producer', 'queue-consumer', 'queue-cap', 'pipe-source', 'pipe-middle', 'pipe-sink', 'pipe-cap', 'win-send', 'win-read', 'win-cap'].forEach(id => bindOutput(id));
+        bindOutput('win-rtt', ' ms');
+
+        const queueSim = {
+            canvas: document.getElementById('queue-canvas'),
+            ctx: document.getElementById('queue-canvas').getContext('2d'),
+            queue: 0,
+            produced: 0,
+            consumed: 0,
+            dropped: 0,
+            history: [],
+            rateState: 0,
+            init() {
+                this.queue = 0;
+                this.produced = 0;
+                this.consumed = 0;
+                this.dropped = 0;
+                this.history = Array.from({ length: 160 }, () => ({ q: 0, d: 0, c: 0, throttled: false }));
+                this.rateState = 0;
+            },
+            step() {
+                const cap = Number(document.getElementById('queue-cap').value);
+                const producer = Number(document.getElementById('queue-producer').value);
+                const consumer = Number(document.getElementById('queue-consumer').value);
+                const pressure = document.getElementById('queue-pressure').checked;
+
+                let effectiveProducer = producer;
+                if (pressure) {
+                    const fill = this.queue / cap;
+                    effectiveProducer *= clamp(1.15 - fill * 1.35, 0.15, 1.05);
+                }
+                let producedThis = 0;
+                this.rateState += effectiveProducer / 30;
+                while (this.rateState >= 1) {
+                    this.rateState -= 1;
+                    if (this.queue < cap) {
+                        this.queue += 1;
+                        this.produced += 1;
+                        producedThis += 1;
+                    } else {
+                        this.dropped += 1;
+                    }
+                }
+
+                let consumeBudget = consumer / 24;
+                let consumedThis = 0;
+                while (consumeBudget >= 1 && this.queue > 0) {
+                    this.queue -= 1;
+                    this.consumed += 1;
+                    consumedThis += 1;
+                    consumeBudget -= 1;
+                }
+                if (Math.random() < consumeBudget && this.queue > 0) {
+                    this.queue -= 1;
+                    this.consumed += 1;
+                    consumedThis += 1;
+                }
+
+                this.history.push({ q: this.queue / cap, d: this.queue >= cap ? 1 : 0, c: consumedThis / 3, throttled: pressure && effectiveProducer < producer * 0.75 });
+                if (this.history.length > 160) this.history.shift();
+
+                document.getElementById('queue-fill').textContent = `${this.queue} / ${cap}`;
+                document.getElementById('queue-produced').textContent = this.produced.toString();
+                document.getElementById('queue-consumed').textContent = this.consumed.toString();
+                document.getElementById('queue-dropped').textContent = this.dropped.toString();
+                document.getElementById('queue-mode').textContent = pressure ? 'geregelt' : 'stur';
+            },
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, w, h);
+
+                const left = 54;
+                const chartTop = 30;
+                const chartH = 180;
+                const chartW = w - left - 20;
+                ctx.strokeStyle = 'rgba(139,148,158,0.18)';
+                ctx.strokeRect(left, chartTop, chartW, chartH);
+                for (let i = 1; i < 4; i++) {
+                    const y = chartTop + chartH * i / 4;
+                    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + chartW, y); ctx.stroke();
+                }
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '12px system-ui';
+                ctx.fillText('Queue-Füllung', left, 18);
+
+                ctx.strokeStyle = '#58a6ff';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                this.history.forEach((p, i) => {
+                    const x = left + i / (this.history.length - 1) * chartW;
+                    const y = chartTop + chartH * (1 - p.q);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                this.history.forEach((p, i) => {
+                    const x = left + i / (this.history.length - 1) * chartW;
+                    if (p.d) {
+                        ctx.fillStyle = 'rgba(248,81,73,0.55)';
+                        ctx.fillRect(x - 1, chartTop, 2, chartH);
+                    }
+                    if (p.throttled) {
+                        ctx.fillStyle = 'rgba(242,204,96,0.2)';
+                        ctx.fillRect(x - 1, chartTop, 2, chartH);
+                    }
+                });
+
+                const cap = Number(document.getElementById('queue-cap').value);
+                const slots = Math.min(cap, 30);
+                const boxY = 250;
+                const slotW = (chartW - 20) / slots;
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText('Bounded Queue', left, boxY - 10);
+                for (let i = 0; i < slots; i++) {
+                    const x = left + 10 + i * slotW;
+                    ctx.strokeStyle = 'rgba(139,148,158,0.25)';
+                    ctx.strokeRect(x, boxY, slotW - 3, 58);
+                    if (i < Math.round(this.queue / cap * slots)) {
+                        ctx.fillStyle = '#58a6ff';
+                        ctx.fillRect(x + 1, boxY + 1, slotW - 5, 56);
+                    }
+                }
+
+                const pressure = document.getElementById('queue-pressure').checked;
+                ctx.fillStyle = '#3fb950';
+                ctx.beginPath();
+                ctx.arc(left - 10, boxY + 29, 7, 0, TAU);
+                ctx.fill();
+                ctx.fillStyle = '#f85149';
+                ctx.beginPath();
+                ctx.arc(left + chartW + 10, boxY + 29, 7, 0, TAU);
+                ctx.fill();
+                ctx.fillStyle = '#c9d1d9';
+                ctx.fillText('Producer', left - 28, boxY + 78);
+                ctx.fillText('Consumer', left + chartW - 18, boxY + 78);
+
+                ctx.strokeStyle = pressure ? '#f2cc60' : '#f85149';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(left + 4, boxY + 29);
+                ctx.lineTo(left + 10, boxY + 29);
+                ctx.stroke();
+                ctx.fillStyle = pressure ? '#f2cc60' : '#f85149';
+                ctx.fillText(pressure ? 'passt sich an' : 'ignoriert Füllstand', left + 120, 336);
+            }
+        };
+
+        const pipelineSim = {
+            canvas: document.getElementById('pipeline-canvas'),
+            ctx: document.getElementById('pipeline-canvas').getContext('2d'),
+            q1: 0,
+            q2: 0,
+            carryA: 0,
+            carryB: 0,
+            carryC: 0,
+            done: 0,
+            pauseSource: false,
+            pauseMiddle: false,
+            init() {
+                this.q1 = 0;
+                this.q2 = 0;
+                this.carryA = 0;
+                this.carryB = 0;
+                this.carryC = 0;
+                this.done = 0;
+                this.pauseSource = false;
+                this.pauseMiddle = false;
+            },
+            step() {
+                const source = Number(document.getElementById('pipe-source').value);
+                const middle = Number(document.getElementById('pipe-middle').value);
+                const sink = Number(document.getElementById('pipe-sink').value);
+                const cap = Number(document.getElementById('pipe-cap').value);
+                const pressure = document.getElementById('pipe-pressure').checked;
+
+                this.pauseMiddle = pressure && this.q2 >= cap * 0.9;
+                this.pauseSource = pressure && (this.q1 >= cap * 0.9 || this.pauseMiddle);
+
+                this.carryA += (this.pauseSource ? 0 : source / 32);
+                while (this.carryA >= 1) {
+                    this.carryA -= 1;
+                    if (this.q1 < cap) this.q1 += 1;
+                }
+
+                this.carryB += (this.pauseMiddle ? 0 : middle / 34);
+                while (this.carryB >= 1) {
+                    this.carryB -= 1;
+                    if (this.q1 > 0 && this.q2 < cap) {
+                        this.q1 -= 1;
+                        this.q2 += 1;
+                    }
+                }
+
+                this.carryC += sink / 36;
+                while (this.carryC >= 1) {
+                    this.carryC -= 1;
+                    if (this.q2 > 0) {
+                        this.q2 -= 1;
+                        this.done += 1;
+                    }
+                }
+
+                document.getElementById('pipe-q1').textContent = `${this.q1} / ${cap}`;
+                document.getElementById('pipe-q2').textContent = `${this.q2} / ${cap}`;
+                document.getElementById('pipe-paused-source').textContent = this.pauseSource ? 'ja' : 'nein';
+                document.getElementById('pipe-paused-middle').textContent = this.pauseMiddle ? 'ja' : 'nein';
+                document.getElementById('pipe-done').textContent = this.done.toString();
+            },
+            drawBox(x, y, w, h, title, fillRatio, color, paused) {
+                const ctx = this.ctx;
+                ctx.strokeStyle = paused ? '#f2cc60' : 'rgba(139,148,158,0.28)';
+                ctx.lineWidth = paused ? 3 : 1.5;
+                ctx.strokeRect(x, y, w, h);
+                ctx.fillStyle = 'rgba(255,255,255,0.04)';
+                ctx.fillRect(x, y, w, h);
+                ctx.fillStyle = color;
+                ctx.fillRect(x + 8, y + h - 8 - (h - 16) * fillRatio, w - 16, (h - 16) * fillRatio);
+                ctx.fillStyle = '#c9d1d9';
+                ctx.font = '14px system-ui';
+                ctx.fillText(title, x + 8, y - 10);
+                if (paused) {
+                    ctx.fillStyle = '#f2cc60';
+                    ctx.fillText('pause', x + w - 44, y - 10);
+                }
+            },
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, w, h);
+
+                const cap = Number(document.getElementById('pipe-cap').value);
+                this.drawBox(90, 90, 120, 170, 'Source', 0.22, '#3fb950', this.pauseSource);
+                this.drawBox(400, 90, 120, 170, 'Middle', this.q1 / cap, '#58a6ff', this.pauseMiddle);
+                this.drawBox(710, 90, 120, 170, 'Sink', this.q2 / cap, '#f0883e', false);
+
+                ctx.fillStyle = '#8b949e';
+                ctx.font = '13px system-ui';
+                ctx.fillText('A→B Buffer', 292, 82);
+                ctx.fillText('B→C Buffer', 602, 82);
+                ctx.strokeStyle = 'rgba(139,148,158,0.25)';
+                ctx.strokeRect(250, 110, 100, 130);
+                ctx.strokeRect(560, 110, 100, 130);
+                ctx.fillStyle = '#58a6ff';
+                ctx.fillRect(256, 236 - 118 * (this.q1 / cap), 88, 118 * (this.q1 / cap));
+                ctx.fillStyle = '#f0883e';
+                ctx.fillRect(566, 236 - 118 * (this.q2 / cap), 88, 118 * (this.q2 / cap));
+
+                const pressure = document.getElementById('pipe-pressure').checked;
+                const arrows = [
+                    { x1: 212, x2: 250, y: 175, blocked: this.pauseSource },
+                    { x1: 350, x2: 400, y: 175, blocked: this.pauseMiddle },
+                    { x1: 522, x2: 560, y: 175, blocked: false },
+                    { x1: 660, x2: 710, y: 175, blocked: false }
+                ];
+                arrows.forEach(a => {
+                    ctx.strokeStyle = a.blocked ? '#f2cc60' : '#3fb950';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(a.x1, a.y);
+                    ctx.lineTo(a.x2, a.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(a.x2 - 10, a.y - 8);
+                    ctx.lineTo(a.x2, a.y);
+                    ctx.lineTo(a.x2 - 10, a.y + 8);
+                    ctx.stroke();
+                });
+
+                if (pressure) {
+                    ctx.strokeStyle = '#f2cc60';
+                    ctx.lineWidth = 2.5;
+                    ctx.setLineDash([8, 8]);
+                    ctx.beginPath();
+                    ctx.moveTo(710, 54);
+                    ctx.lineTo(90, 54);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = '#f2cc60';
+                    ctx.fillText('Backpressure wandert upstream', 322, 44);
+                } else {
+                    ctx.fillStyle = '#f85149';
+                    ctx.fillText('Kein upstream Signal, Stress sammelt sich in Buffern', 250, 44);
+                }
+            }
+        };
+
+        const windowSim = {
+            canvas: document.getElementById('window-canvas'),
+            ctx: document.getElementById('window-canvas').getContext('2d'),
+            packets: [],
+            buffer: 0,
+            delivered: 0,
+            overflow: 0,
+            nextAckWindow: null,
+            tick: 0,
+            sendCarry: 0,
+            readCarry: 0,
+            init() {
+                this.packets = [];
+                this.buffer = 0;
+                this.delivered = 0;
+                this.overflow = 0;
+                this.nextAckWindow = null;
+                this.tick = 0;
+                this.sendCarry = 0;
+                this.readCarry = 0;
+            },
+            step() {
+                this.tick += 1;
+                const hunger = Number(document.getElementById('win-send').value);
+                const readRate = Number(document.getElementById('win-read').value);
+                const cap = Number(document.getElementById('win-cap').value);
+                const rtt = Number(document.getElementById('win-rtt').value);
+                const respect = document.getElementById('win-respect').checked;
+                const ackDelay = Math.max(12, Math.round(rtt / 6));
+                const advertised = clamp(cap - this.buffer, 0, cap);
+
+                this.sendCarry += hunger / 34;
+                while (this.sendCarry >= 1) {
+                    const inFlight = this.packets.filter(p => p.kind === 'data').length;
+                    if (!respect || inFlight < advertised) {
+                        this.packets.push({ kind: 'data', t: 0, duration: ackDelay, accepted: null });
+                    }
+                    this.sendCarry -= 1;
+                }
+
+                this.readCarry += readRate / 40;
+                while (this.readCarry >= 1 && this.buffer > 0) {
+                    this.buffer -= 1;
+                    this.delivered += 1;
+                    this.readCarry -= 1;
+                }
+
+                for (const p of this.packets) p.t += 1;
+                const survivors = [];
+                for (const p of this.packets) {
+                    if (p.kind === 'data' && p.t >= p.duration) {
+                        if (this.buffer < cap) {
+                            this.buffer += 1;
+                            p.accepted = true;
+                        } else {
+                            this.overflow += 1;
+                            p.accepted = false;
+                        }
+                        survivors.push({ kind: 'ack', t: 0, duration: ackDelay, window: clamp(cap - this.buffer, 0, cap), ok: p.accepted });
+                    } else if (p.kind === 'ack' && p.t < p.duration) {
+                        survivors.push(p);
+                    } else if (p.kind === 'data') {
+                        survivors.push(p);
+                    }
+                }
+                this.packets = survivors;
+
+                document.getElementById('win-window').textContent = advertised.toString();
+                document.getElementById('win-flight').textContent = this.packets.filter(p => p.kind === 'data').length.toString();
+                document.getElementById('win-buffer').textContent = `${this.buffer} / ${cap}`;
+                document.getElementById('win-delivered').textContent = this.delivered.toString();
+                document.getElementById('win-overflow').textContent = this.overflow.toString();
+            },
+            draw() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = '#0d1117';
+                ctx.fillRect(0, 0, w, h);
+
+                const senderX = 90;
+                const receiverX = 750;
+                const lineY = 140;
+                ctx.strokeStyle = 'rgba(139,148,158,0.25)';
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(senderX + 80, lineY); ctx.lineTo(receiverX, lineY); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(receiverX, lineY + 70); ctx.lineTo(senderX + 80, lineY + 70); ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(139,148,158,0.28)';
+                ctx.strokeRect(senderX, 95, 80, 90);
+                ctx.strokeRect(receiverX, 95, 100, 170);
+                ctx.fillStyle = '#c9d1d9';
+                ctx.font = '14px system-ui';
+                ctx.fillText('Sender', senderX + 12, 86);
+                ctx.fillText('Receiver', receiverX + 12, 86);
+                ctx.fillText('ACK / Window', 380, lineY + 62);
+                ctx.fillText('Data', 430, lineY - 12);
+
+                const cap = Number(document.getElementById('win-cap').value);
+                ctx.strokeRect(receiverX + 18, 120, 30, 120);
+                ctx.fillStyle = '#58a6ff';
+                ctx.fillRect(receiverX + 19, 239 - 118 * (this.buffer / cap), 28, 118 * (this.buffer / cap));
+                ctx.fillStyle = '#8b949e';
+                ctx.fillText('rx buf', receiverX + 8, 258);
+
+                for (const p of this.packets) {
+                    const ratio = p.t / p.duration;
+                    if (p.kind === 'data') {
+                        const x = senderX + 80 + (receiverX - senderX - 80) * ratio;
+                        ctx.fillStyle = '#3fb950';
+                        ctx.beginPath(); ctx.arc(x, lineY, 6, 0, TAU); ctx.fill();
+                    } else {
+                        const x = receiverX - (receiverX - senderX - 80) * ratio;
+                        ctx.fillStyle = p.ok ? '#f2cc60' : '#f85149';
+                        ctx.beginPath(); ctx.arc(x, lineY + 70, 5, 0, TAU); ctx.fill();
+                    }
+                }
+
+                const respect = document.getElementById('win-respect').checked;
+                ctx.fillStyle = respect ? '#f2cc60' : '#f85149';
+                ctx.fillText(respect ? 'Sender wartet auf Credits' : 'Sender ignoriert Credits', 300, 40);
+            }
+        };
+
+        document.getElementById('queue-reset').addEventListener('click', () => queueSim.init());
+        document.getElementById('pipe-reset').addEventListener('click', () => pipelineSim.init());
+        document.getElementById('win-reset').addEventListener('click', () => windowSim.init());
+        document.getElementById('queue-cap').addEventListener('input', () => queueSim.init());
+        document.getElementById('pipe-cap').addEventListener('input', () => pipelineSim.init());
+        document.getElementById('win-cap').addEventListener('input', () => windowSim.init());
+
+        queueSim.init();
+        pipelineSim.init();
+        windowSim.init();
+
+        function frame() {
+            queueSim.step();
+            queueSim.draw();
+            pipelineSim.step();
+            pipelineSim.draw();
+            windowSim.step();
+            windowSim.draw();
+            requestAnimationFrame(frame);
+        }
+        frame();
+    </script>
+</body>
+</html>
