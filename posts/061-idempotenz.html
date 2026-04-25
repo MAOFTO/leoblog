@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idempotenz — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls input, .controls select, .controls label {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 150px;
+        }
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .input-group output {
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .post-meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1.2rem;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+        .stat {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 1.12rem;
+            font-weight: 700;
+        }
+        .note, .explanation {
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .memory-box {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            line-height: 1.6;
+        }
+        .log {
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            min-height: 220px;
+            white-space: pre-wrap;
+        }
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.8rem 0 1rem;
+        }
+        .pill {
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .pill.good { border-color: #3fb950; color: #9be9a8; }
+        .pill.warn { border-color: #f2cc60; color: #f2cc60; }
+        .pill.bad { border-color: #f85149; color: #ff938a; }
+        .timeline {
+            position: relative;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+            margin-top: 1rem;
+            background: #0d1117;
+            overflow: hidden;
+        }
+        .timeline-track {
+            position: relative;
+            height: 46px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.06));
+        }
+        .timeline-marker {
+            position: absolute;
+            top: 6px;
+            width: 12px;
+            height: 34px;
+            border-radius: 6px;
+            transform: translateX(-50%);
+        }
+        .timeline-marker.first { background: #58a6ff; }
+        .timeline-marker.retry { background: #f2cc60; }
+        .timeline-marker.duplicate { background: #f85149; }
+        .timeline-marker.suppressed { background: #3fb950; }
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.55rem;
+        }
+        .step-list {
+            display: grid;
+            gap: 0.65rem;
+            margin-top: 1rem;
+        }
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+            background: rgba(255,255,255,0.03);
+        }
+        .step strong {
+            color: var(--text);
+        }
+        .step.ok { border-color: rgba(63,185,80,0.5); }
+        .step.bad { border-color: rgba(248,81,73,0.5); }
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.8rem;
+            font-size: 0.92rem;
+        }
+        .mini-table th, .mini-table td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.55rem 0.4rem;
+            text-align: left;
+        }
+        .refs li { margin-bottom: 0.45rem; }
+        code {
+            background: rgba(255,255,255,0.06);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        @media (max-width: 720px) {
+            .sim-container { padding: 1rem; }
+            .controls { align-items: stretch; }
+            .log { min-height: 180px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">25. April 2026</div>
+            <h1>Idempotenz</h1>
+            <p>Manche Begriffe aus verteilten Systemen klingen abstrakter, als sie sind. <em>Idempotenz</em> ist so einer. Gemeint ist etwas sehr Praktisches: Wenn dieselbe Operation zweimal passiert, soll die Welt danach möglichst so aussehen, als wäre sie nur einmal passiert. Genau diese Eigenschaft trennt harmlose Wiederholungen von doppelten Abbuchungen, doppelten E-Mails und doppelten Seiteneffekten.</p>
+            <p>Das Thema taucht immer dort auf, wo Unsicherheit herrscht. Ein Request könnte auf dem Weg verloren gehen. Ein Server könnte die Arbeit erledigt, aber die Antwort nie zugestellt haben. Ein Consumer könnte eine Nachricht verarbeiten und vor dem Ack abstürzen. Dann bleibt dem Client oder Broker oft nur eines: noch einmal senden. Ab da ist die entscheidende Frage nicht mehr, <em>ob</em> Doppelsendungen vorkommen, sondern ob das System sie schadlos absorbieren kann.</p>
+            <p>Die drei Experimente unten machen das greifbar. Erstens ein Request-Labor für Retries mit und ohne Idempotency Key. Zweitens ein kleines Dedup-Fenster, das zeigt, warum „wir merken uns Duplikate kurz“ gleichzeitig genial und gefährlich ist. Drittens ein Crash-Szenario für Message-Consumer, in dem sichtbar wird, warum „exactly once“ oft an der Grenze zwischen Broker und Seiteneffekt endet. Idempotenz ist kein Luxus. Sie ist eine Art Stoßdämpfer für Unsicherheit.</p>
+
+            <div class="sim-container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="requests">Retries</button>
+                    <button class="tab-btn" data-tab="window">Dedup-Fenster</button>
+                    <button class="tab-btn" data-tab="consumer">Consumer</button>
+                </div>
+
+                <section id="tab-requests" class="tab-content active">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="request-retries">Max. Retries</label>
+                            <input id="request-retries" type="range" min="0" max="4" value="2">
+                            <output id="request-retries-out">2</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="loss-prob">Antwortverlust</label>
+                            <input id="loss-prob" type="range" min="0" max="100" value="65">
+                            <output id="loss-prob-out">65%</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="key-mode">Idempotency-Key</label>
+                            <select id="key-mode">
+                                <option value="none">Keiner</option>
+                                <option value="stable" selected>Stabil pro Vorgang</option>
+                                <option value="fresh">Bei jedem Retry neu</option>
+                            </select>
+                        </div>
+                        <button id="run-request">Zahlung senden</button>
+                        <button id="reset-request" class="secondary">Zurücksetzen</button>
+                    </div>
+                    <div class="pill-row" id="request-pills"></div>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">HTTP-Versuche</div><div class="stat-value" id="req-attempts">0</div></div>
+                        <div class="stat"><div class="stat-label">Server-Seiteneffekte</div><div class="stat-value" id="req-effects">0</div></div>
+                        <div class="stat"><div class="stat-label">Abgebuchter Betrag</div><div class="stat-value" id="req-amount">0 €</div></div>
+                        <div class="stat"><div class="stat-label">Client-Zustand</div><div class="stat-value" id="req-outcome">bereit</div></div>
+                    </div>
+                    <div class="log" id="request-log"></div>
+                    <p class="note">Das Systemproblem ist nicht der offensichtliche Fehler, sondern der <em>ambige</em> Fehler: Der Client weiß nicht, ob die Operation gar nicht, einmal oder schon mehrfach ausgeführt wurde. Ein stabiler Idempotency-Key macht aus „noch einmal senden“ eine sichere Strategie. Ein frischer Key pro Retry fühlt sich ähnlich an, hilft aber fast gar nicht.</p>
+                </section>
+
+                <section id="tab-window" class="tab-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="window-size">Dedup-Fenster</label>
+                            <input id="window-size" type="range" min="5" max="120" value="30">
+                            <output id="window-size-out">30 s</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="retry-delay">Retry nach</label>
+                            <input id="retry-delay" type="range" min="1" max="150" value="20">
+                            <output id="retry-delay-out">20 s</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="retry-count">Redeliveries</label>
+                            <input id="retry-count" type="range" min="1" max="5" value="2">
+                            <output id="retry-count-out">2</output>
+                        </div>
+                        <button id="run-window">Szenario abspielen</button>
+                    </div>
+                    <div class="pill-row" id="window-pills"></div>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Zustellungen</div><div class="stat-value" id="win-deliveries">0</div></div>
+                        <div class="stat"><div class="stat-label">Unterdrückte Duplikate</div><div class="stat-value" id="win-suppressed">0</div></div>
+                        <div class="stat"><div class="stat-label">Echte Seiteneffekte</div><div class="stat-value" id="win-effects">0</div></div>
+                        <div class="stat"><div class="stat-label">Urteil</div><div class="stat-value" id="win-verdict">bereit</div></div>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-track" id="window-track"></div>
+                        <div class="timeline-labels"><span>0 s</span><span id="window-max-label">40 s</span></div>
+                    </div>
+                    <div class="explanation" id="window-explanation"></div>
+                    <p class="note">Dedup-Fenster sind ein Kompromiss: kurze Erinnerung spart Speicher, aber verlängerte Netzprobleme oder manuelle Replays können dieselbe Operation später wieder durchlassen. Idempotenz nur als Cache mit Ablaufdatum zu bauen ist oft besser als nichts, aber schwächer als eine echte fachliche Einmaligkeit wie <code>order_id</code> oder <code>payment_intent</code>.</p>
+                </section>
+
+                <section id="tab-consumer" class="tab-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="consumer-mode">Handler</label>
+                            <select id="consumer-mode">
+                                <option value="naive">Naiv</option>
+                                <option value="idempotent" selected>Idempotenter Consumer</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="crash-point">Crashpunkt</label>
+                            <select id="crash-point">
+                                <option value="after-side-effect" selected>Nach Seiteneffekt, vor Ack</option>
+                                <option value="before-side-effect">Vor Seiteneffekt</option>
+                                <option value="no-crash">Kein Crash</option>
+                            </select>
+                        </div>
+                        <button id="run-consumer">Nachricht verarbeiten</button>
+                    </div>
+                    <div class="pill-row" id="consumer-pills"></div>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Broker-Lieferungen</div><div class="stat-value" id="con-deliveries">0</div></div>
+                        <div class="stat"><div class="stat-label">E-Mails gesendet</div><div class="stat-value" id="con-emails">0</div></div>
+                        <div class="stat"><div class="stat-label">Inbox-Einträge</div><div class="stat-value" id="con-inbox">0</div></div>
+                        <div class="stat"><div class="stat-label">Resultat</div><div class="stat-value" id="con-result">bereit</div></div>
+                    </div>
+                    <div class="step-list" id="consumer-steps"></div>
+                    <table class="mini-table">
+                        <thead>
+                            <tr><th>Komponente</th><th>Was sie garantiert</th><th>Was sie nicht garantiert</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Broker</td><td>Nachricht kommt mindestens einmal an</td><td>Seiteneffekt passiert nur einmal</td></tr>
+                            <tr><td>Transaktion im Handler</td><td>Lokale DB-Änderungen sind atomar</td><td>Externe E-Mail oder HTTP-Call wird mitgerollbackt</td></tr>
+                            <tr><td>Idempotenter Consumer</td><td>Wiederholung derselben Message bleibt fachlich harmlos</td><td>Magisch „exactly once“ über alle Systeme hinweg</td></tr>
+                        </tbody>
+                    </table>
+                    <p class="note">Hier liegt die unangenehme Wahrheit: „Exactly once“ ist meist nur innerhalb einer engeren Grenze sinnvoll. Sobald ein externer Seiteneffekt beteiligt ist, hilft oft keine Magie mehr, sondern nur sauberes Design: dedizierte Message-IDs, Inbox/Outbox-Tabellen, fachliche Eindeutigkeit und Handler, die Wiederholung absorbieren.</p>
+                </section>
+            </div>
+
+            <h2>Worauf es praktisch hinausläuft</h2>
+            <p>Idempotenz ist keine reine Protokolleigenschaft, sondern eine Modellierungsentscheidung. <code>PUT /users/42</code> ist leicht idempotent, weil die Zielidentität schon im Pfad steckt. <code>POST /payments</code> ist schwieriger, weil derselbe Wunsch sonst bei jedem Retry ein neuer Zahlungsvorgang sein könnte. Deshalb brauchen Systeme oft eine zusätzliche Identität für die <em>Operation</em> selbst, nicht nur für das spätere Objekt.</p>
+            <p>Und noch etwas: Idempotenz heißt nicht „wiederhole alles beliebig oft und nichts passiert“. Logging, Metriken, Timestamps oder E-Mail-Zustellversuche können durchaus mehrfach auftreten. Die Frage ist, welche Seiteneffekte fachlich relevant sind. Gute Systeme definieren genau dort ihre Einmaligkeit, wo ein doppeltes Ereignis echten Schaden anrichtet.</p>
+            <p>Die elegantere Sicht ist vielleicht diese: Idempotenz macht Wiederholung langweilig. Und Langeweile ist in verteilten Systemen eine erstaunlich wertvolle Eigenschaft.</p>
+
+            <h2>Quellen und Denkanker</h2>
+            <ul class="refs">
+                <li>RFC 9110, Section 9.2.2, <em>Idempotent Methods</em> (2022)</li>
+                <li>Stripe Docs, <em>Idempotent requests</em> — stabile Keys, Ergebnis-Cache, Parametervergleich, Pruning nach ca. 24h</li>
+                <li>Brandur Leach, Stripe, <em>Designing robust and predictable APIs with idempotency</em> (2017)</li>
+                <li>Martin Kleppmann, <em>Designing Data-Intensive Applications</em> (2017) — at-least-once delivery, Duplicate-Handling, genauere Grenzen von „exactly once“</li>
+            </ul>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabs.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        const requestRetries = document.getElementById('request-retries');
+        const requestRetriesOut = document.getElementById('request-retries-out');
+        const lossProb = document.getElementById('loss-prob');
+        const lossProbOut = document.getElementById('loss-prob-out');
+        const keyMode = document.getElementById('key-mode');
+        const requestLog = document.getElementById('request-log');
+        const requestPills = document.getElementById('request-pills');
+        const reqAttempts = document.getElementById('req-attempts');
+        const reqEffects = document.getElementById('req-effects');
+        const reqAmount = document.getElementById('req-amount');
+        const reqOutcome = document.getElementById('req-outcome');
+
+        const amountEuro = 20;
+        let requestState = {
+            attempts: 0,
+            effects: 0,
+            totalAmount: 0,
+            opCounter: 0,
+            cache: new Map()
+        };
+
+        function updateRequestOutputs() {
+            requestRetriesOut.value = requestRetries.value;
+            lossProbOut.value = lossProb.value + '%';
+        }
+        updateRequestOutputs();
+        requestRetries.addEventListener('input', updateRequestOutputs);
+        lossProb.addEventListener('input', updateRequestOutputs);
+
+        function renderRequest(logLines, pills, outcome) {
+            reqAttempts.textContent = requestState.attempts;
+            reqEffects.textContent = requestState.effects;
+            reqAmount.textContent = requestState.totalAmount + ' €';
+            reqOutcome.textContent = outcome;
+            requestLog.textContent = logLines.join('\n');
+            requestPills.innerHTML = pills.map(p => `<span class="pill ${p.kind}">${p.text}</span>`).join('');
+        }
+
+        function runRequestScenario() {
+            requestState.opCounter += 1;
+            const maxRetries = Number(requestRetries.value);
+            const loss = Number(lossProb.value) / 100;
+            const mode = keyMode.value;
+            const baseKey = 'pay-' + String(requestState.opCounter).padStart(4, '0');
+            const log = [];
+            const pills = [];
+            let delivered = false;
+            let finalOutcome = 'unklar';
+
+            log.push(`Logischer Vorgang ${baseKey}: 20 € abbuchen`);
+            log.push(`Modus: ${mode === 'none' ? 'ohne Key' : mode === 'stable' ? 'stabiler Key' : 'neuer Key pro Retry'}`);
+            log.push('');
+
+            for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+                requestState.attempts += 1;
+                const key = mode === 'stable' ? baseKey : mode === 'fresh' ? `${baseKey}-try-${attempt + 1}` : null;
+                const cacheHit = key && requestState.cache.has(key);
+                log.push(`Versuch ${attempt + 1}: ${key ? 'Key=' + key : 'ohne Key'}`);
+
+                if (cacheHit) {
+                    log.push('  Server erkennt Duplikat und gibt gespeicherte Antwort zurück.');
+                } else {
+                    requestState.effects += 1;
+                    requestState.totalAmount += amountEuro;
+                    if (key) requestState.cache.set(key, { amount: amountEuro });
+                    log.push('  Server führt Seiteneffekt aus: Zahlung wird verbucht.');
+                }
+
+                const responseLost = Math.random() < loss && attempt < maxRetries;
+                if (responseLost) {
+                    log.push('  Antwort geht unterwegs verloren. Client bleibt unsicher und retryt.');
+                    log.push('');
+                    continue;
+                }
+
+                delivered = true;
+                finalOutcome = cacheHit ? 'Antwort aus Cache' : 'Bestätigung erhalten';
+                log.push('  Antwort erreicht den Client. Vorgang endet.');
+                break;
+            }
+
+            if (!delivered) {
+                finalOutcome = 'Client bleibt unsicher';
+                log.push('Keine Antwort kam rechtzeitig an. Der Client weiß nicht, ob die Zahlung stattfand.');
+            }
+
+            if (mode === 'stable') {
+                pills.push({ kind: 'good', text: 'Wiederholung wird fachlich inert' });
+            } else if (mode === 'fresh') {
+                pills.push({ kind: 'warn', text: 'Neue Keys machen jeden Retry zu neuer Operation' });
+            } else {
+                pills.push({ kind: 'bad', text: 'Ohne Key sind ambiguöse Retries gefährlich' });
+            }
+            if (requestState.effects > requestState.opCounter) {
+                pills.push({ kind: 'bad', text: 'Irgendwo wurde doppelt abgebucht' });
+            } else {
+                pills.push({ kind: 'good', text: 'Bisher keine Doppelbuchung' });
+            }
+
+            renderRequest(log, pills, finalOutcome);
+        }
+
+        document.getElementById('run-request').addEventListener('click', runRequestScenario);
+        document.getElementById('reset-request').addEventListener('click', () => {
+            requestState = { attempts: 0, effects: 0, totalAmount: 0, opCounter: 0, cache: new Map() };
+            renderRequest(['Bereit. Simuliere einen ambigen Request mit möglichen Retries.'], [{ kind: 'pill', text: 'Noch kein Seiteneffekt' }], 'bereit');
+        });
+        renderRequest(['Bereit. Simuliere einen ambigen Request mit möglichen Retries.'], [{ kind: 'pill', text: 'Noch kein Seiteneffekt' }], 'bereit');
+
+        const windowSize = document.getElementById('window-size');
+        const windowSizeOut = document.getElementById('window-size-out');
+        const retryDelay = document.getElementById('retry-delay');
+        const retryDelayOut = document.getElementById('retry-delay-out');
+        const retryCount = document.getElementById('retry-count');
+        const retryCountOut = document.getElementById('retry-count-out');
+        const winDeliveries = document.getElementById('win-deliveries');
+        const winSuppressed = document.getElementById('win-suppressed');
+        const winEffects = document.getElementById('win-effects');
+        const winVerdict = document.getElementById('win-verdict');
+        const windowTrack = document.getElementById('window-track');
+        const windowMaxLabel = document.getElementById('window-max-label');
+        const windowExplanation = document.getElementById('window-explanation');
+        const windowPills = document.getElementById('window-pills');
+
+        function updateWindowOutputs() {
+            windowSizeOut.value = windowSize.value + ' s';
+            retryDelayOut.value = retryDelay.value + ' s';
+            retryCountOut.value = retryCount.value;
+        }
+        updateWindowOutputs();
+        [windowSize, retryDelay, retryCount].forEach(el => el.addEventListener('input', updateWindowOutputs));
+
+        function runWindowScenario() {
+            const ttl = Number(windowSize.value);
+            const delay = Number(retryDelay.value);
+            const count = Number(retryCount.value);
+            const markers = [];
+            let effects = 0;
+            let suppressed = 0;
+            let verdict = '';
+            const maxTime = Math.max(ttl, delay * count) + 5;
+            windowMaxLabel.textContent = maxTime + ' s';
+
+            effects += 1;
+            markers.push({ time: 0, type: 'first', label: 'Erste Ausführung' });
+
+            for (let i = 1; i <= count; i += 1) {
+                const t = i * delay;
+                const inside = t <= ttl;
+                if (inside) {
+                    suppressed += 1;
+                    markers.push({ time: t, type: 'suppressed', label: `Retry ${i} unterdrückt` });
+                } else {
+                    effects += 1;
+                    markers.push({ time: t, type: effects > 1 ? 'duplicate' : 'retry', label: `Retry ${i} löst erneut Seiteneffekt aus` });
+                }
+            }
+
+            winDeliveries.textContent = count + 1;
+            winSuppressed.textContent = suppressed;
+            winEffects.textContent = effects;
+            verdict = effects === 1 ? 'Fenster reicht' : 'Fenster zu kurz';
+            winVerdict.textContent = verdict;
+
+            windowTrack.innerHTML = markers.map(m => {
+                const left = (m.time / maxTime) * 100;
+                return `<div class="timeline-marker ${m.type}" style="left:${left}%" title="${m.label} @ ${m.time}s"></div>`;
+            }).join('');
+
+            windowPills.innerHTML = [
+                `<span class="pill ${effects === 1 ? 'good' : 'bad'}">${effects === 1 ? 'Nur ein fachlicher Effekt' : 'Duplikat entkommt dem Cache'}</span>`,
+                `<span class="pill ${ttl >= delay ? 'good' : 'warn'}">Fenster ${ttl}s, erster Retry nach ${delay}s</span>`
+            ].join('');
+
+            windowExplanation.innerHTML = effects === 1
+                ? `Alle Redeliveries liegen noch im Dedup-Fenster von <strong>${ttl}s</strong>. Das System merkt sich den ersten Vorgang lang genug und verwandelt spätere Zustellungen in harmlose Wiederholungen.`
+                : `Spätestens nach <strong>${ttl}s</strong> wird der Eintrag vergessen. Ein Retry nach <strong>${delay}s</strong> oder später sieht dann wieder frisch aus. Das spart Speicher, aber die fachliche Einmaligkeit ist damit nicht mehr garantiert.`;
+        }
+
+        document.getElementById('run-window').addEventListener('click', runWindowScenario);
+        runWindowScenario();
+
+        const consumerMode = document.getElementById('consumer-mode');
+        const crashPoint = document.getElementById('crash-point');
+        const conDeliveries = document.getElementById('con-deliveries');
+        const conEmails = document.getElementById('con-emails');
+        const conInbox = document.getElementById('con-inbox');
+        const conResult = document.getElementById('con-result');
+        const consumerSteps = document.getElementById('consumer-steps');
+        const consumerPills = document.getElementById('consumer-pills');
+
+        function runConsumerScenario() {
+            const mode = consumerMode.value;
+            const crash = crashPoint.value;
+            const steps = [];
+            let deliveries = 1;
+            let emails = 0;
+            let inbox = 0;
+            let processed = false;
+            let result = 'ok';
+
+            steps.push({ ok: true, text: 'Broker liefert Nachricht order.shipped#A17 an den Consumer.' });
+
+            if (crash === 'before-side-effect') {
+                steps.push({ ok: false, text: 'Consumer crasht vor dem Seiteneffekt. Kein Ack.' });
+                deliveries += 1;
+                steps.push({ ok: true, text: 'Broker liefert dieselbe Nachricht erneut.' });
+            }
+
+            const firstRunShouldApply = !(mode === 'idempotent' && processed);
+            if (firstRunShouldApply) {
+                emails += 1;
+                inbox += 1;
+                processed = true;
+                steps.push({ ok: true, text: 'Handler schreibt Message-ID in Inbox-Tabelle und sendet Versandmail.' });
+            }
+
+            if (crash === 'after-side-effect') {
+                steps.push({ ok: false, text: 'Crash nach Mailversand, aber vor Ack. Broker glaubt: nicht verarbeitet.' });
+                deliveries += 1;
+                steps.push({ ok: true, text: 'Broker liefert dieselbe Nachricht erneut.' });
+                if (mode === 'naive') {
+                    emails += 1;
+                    inbox += 1;
+                    steps.push({ ok: false, text: 'Naiver Handler erkennt Wiederholung nicht und sendet die Mail ein zweites Mal.' });
+                } else {
+                    steps.push({ ok: true, text: 'Idempotenter Handler sieht die bekannte Message-ID und überspringt den Seiteneffekt.' });
+                }
+            } else if (crash === 'before-side-effect') {
+                if (mode === 'naive') {
+                    steps.push({ ok: true, text: 'Naiver Handler sendet jetzt die Mail. Kein Schaden, weil zuvor noch nichts passiert war.' });
+                } else {
+                    steps.push({ ok: true, text: 'Idempotenter Handler sendet jetzt genau einmal die Mail und markiert die Message als verarbeitet.' });
+                }
+            } else {
+                steps.push({ ok: true, text: 'Ack geht raus. Keine Redelivery.' });
+            }
+
+            if (crash === 'no-crash') {
+                result = 'einmal zugestellt';
+            } else if (crash === 'after-side-effect' && mode === 'naive') {
+                result = 'Doppelversand';
+            } else {
+                result = 'fachlich einmal';
+            }
+
+            conDeliveries.textContent = deliveries;
+            conEmails.textContent = emails;
+            conInbox.textContent = inbox;
+            conResult.textContent = result;
+            consumerSteps.innerHTML = steps.map(step => `<div class="step ${step.ok ? 'ok' : 'bad'}"><strong>${step.ok ? '✔' : '✖'}</strong> ${step.text}</div>`).join('');
+            consumerPills.innerHTML = [
+                `<span class="pill ${mode === 'idempotent' ? 'good' : 'warn'}">${mode === 'idempotent' ? 'Wiederholungen werden erkannt' : 'Wiederholungen bleiben fachlich gefährlich'}</span>`,
+                `<span class="pill ${crash === 'after-side-effect' ? 'bad' : 'good'}">${crash === 'after-side-effect' ? 'Gefährlichster Crashpunkt aktiv' : 'Seiteneffekt/Ack-Reihenfolge harmloser'}</span>`
+            ].join('');
+        }
+
+        document.getElementById('run-consumer').addEventListener('click', runConsumerScenario);
+        runConsumerScenario();
+    </script>
+</body>
+</html>
