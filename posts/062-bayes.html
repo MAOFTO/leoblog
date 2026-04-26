@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bayes — LeoBlog</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .sim-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .tabs button {
+            background: var(--border);
+            color: var(--text);
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .tabs button.active {
+            background: var(--accent);
+            color: #000;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+        .controls button, .controls input, .controls select, .controls label {
+            font: inherit;
+        }
+        .controls button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.55rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .controls button.secondary {
+            background: var(--border);
+            color: var(--text);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 150px;
+        }
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .input-group output {
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .post-meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1.2rem;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+        .stat {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        .stat-value {
+            font-size: 1.12rem;
+            font-weight: 700;
+        }
+        .note, .explanation {
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .waffle {
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            gap: 3px;
+            margin-top: 1rem;
+        }
+        .cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.07);
+        }
+        .cell.tp { background: #f85149; }
+        .cell.fn { background: #ff9b74; }
+        .cell.fp { background: #58a6ff; }
+        .cell.tn { background: #2d333b; }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            margin-top: 0.8rem;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .tree {
+            display: grid;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+        .tree-row {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .tree-box {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.8rem;
+            background: rgba(255,255,255,0.03);
+        }
+        .steps {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.85rem;
+            background: rgba(255,255,255,0.03);
+        }
+        .step strong { color: var(--text); }
+        .formula {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.85rem;
+            line-height: 1.7;
+            overflow: auto;
+        }
+        .bar-wrap {
+            margin-top: 0.8rem;
+        }
+        .bar {
+            position: relative;
+            height: 18px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 0%;
+            background: linear-gradient(90deg, #58a6ff, #f85149);
+        }
+        .bar-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.35rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .decision-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            background: rgba(255,255,255,0.03);
+            margin-top: 1rem;
+        }
+        .decision-card.go {
+            border-color: rgba(248,81,73,0.55);
+            box-shadow: inset 0 0 0 1px rgba(248,81,73,0.15);
+        }
+        .decision-card.wait {
+            border-color: rgba(88,166,255,0.55);
+            box-shadow: inset 0 0 0 1px rgba(88,166,255,0.15);
+        }
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.8rem 0 1rem;
+        }
+        .pill {
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.05);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.8rem;
+            font-size: 0.92rem;
+        }
+        .mini-table th, .mini-table td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.55rem 0.4rem;
+            text-align: left;
+        }
+        .refs li { margin-bottom: 0.45rem; }
+        code {
+            background: rgba(255,255,255,0.06);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+        }
+        @media (max-width: 720px) {
+            .sim-container { padding: 1rem; }
+            .controls { align-items: stretch; }
+            .tree-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">26. April 2026</div>
+            <h1>Bayes</h1>
+            <p>Manchmal ist eine neue Beobachtung nicht deshalb verwirrend, weil sie schwach ist, sondern weil wir ihren Kontext vergessen. Ein positives Testergebnis klingt nach fast sicherer Sache. Ein Alarm wirkt wie ein klares Signal. Drei verdächtige Indizien hintereinander fühlen sich wie Gewissheit an. Und doch hängt all das von einer stillen Größe ab, die am Anfang steht: <em>Wie wahrscheinlich war die Sache überhaupt, bevor das neue Signal auftauchte?</em></p>
+            <p>Das ist der Kern von Bayes. Neue Evidenz ersetzt den alten Glauben nicht, sie <em>modifiziert</em> ihn. Ein seltenes Ereignis bleibt nach einem mittelguten Test oft immer noch selten. Mehrere unabhängige Hinweise können sich dagegen sehr schnell zu etwas Überzeugendem stapeln. Bayes ist deshalb weniger eine Formel als eine Disziplin gegen Überreaktion. Er zwingt dazu, Vorwissen und neue Beobachtung gemeinsam zu betrachten.</p>
+            <p>Unten stecken drei kleine Labore. Erstens ein Screening-Experiment mit Basisrate, Sensitivität und Spezifität, damit man sieht, warum positive Ergebnisse bei seltenen Krankheiten oft überraschend unspektakulär sind. Zweitens eine Evidenz-Kette, in der Hinweise nacheinander die Odds verschieben. Drittens ein Entscheidungs-Labor, das zeigt: Hoher Posterior allein reicht nicht. Handlungen hängen auch von Kosten ab. Bayes beantwortet die Frage „Wie stark glaube ich es jetzt?“. Was man dann tut, ist noch eine zweite Rechnung.</p>
+
+            <div class="sim-container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="screening">Screening</button>
+                    <button class="tab-btn" data-tab="evidence">Evidenz-Kette</button>
+                    <button class="tab-btn" data-tab="decision">Entscheidung</button>
+                </div>
+
+                <section id="tab-screening" class="tab-content active">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="prevalence">Basisrate</label>
+                            <input id="prevalence" type="range" min="1" max="200" value="8">
+                            <output id="prevalence-out">0.8%</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="sensitivity">Sensitivität</label>
+                            <input id="sensitivity" type="range" min="50" max="99" value="92">
+                            <output id="sensitivity-out">92%</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="specificity">Spezifität</label>
+                            <input id="specificity" type="range" min="70" max="99" value="95">
+                            <output id="specificity-out">95%</output>
+                        </div>
+                        <button id="preset-rare">Seltene Krankheit</button>
+                        <button id="preset-common" class="secondary">Häufiges Problem</button>
+                    </div>
+
+                    <div class="pill-row">
+                        <div class="pill">Population: 10.000 Menschen</div>
+                        <div class="pill">Ziel: <code>P(Krank | positiv)</code></div>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Wirklich krank</div><div class="stat-value" id="diseased-count">0</div></div>
+                        <div class="stat"><div class="stat-label">True Positives</div><div class="stat-value" id="tp-count">0</div></div>
+                        <div class="stat"><div class="stat-label">False Positives</div><div class="stat-value" id="fp-count">0</div></div>
+                        <div class="stat"><div class="stat-label">Positiv prädiktiver Wert</div><div class="stat-value" id="ppv">0%</div></div>
+                    </div>
+
+                    <div class="waffle" id="waffle"></div>
+                    <div class="legend">
+                        <span><i class="swatch" style="background:#f85149"></i> true positive</span>
+                        <span><i class="swatch" style="background:#ff9b74"></i> false negative</span>
+                        <span><i class="swatch" style="background:#58a6ff"></i> false positive</span>
+                        <span><i class="swatch" style="background:#2d333b"></i> true negative</span>
+                    </div>
+
+                    <div class="tree">
+                        <div class="tree-row">
+                            <div class="tree-box"><strong>Von 10.000 Menschen</strong><br><span id="tree-base"></span></div>
+                            <div class="tree-box"><strong>Wenn krank</strong><br><span id="tree-sick"></span></div>
+                            <div class="tree-box"><strong>Wenn gesund</strong><br><span id="tree-healthy"></span></div>
+                        </div>
+                    </div>
+
+                    <p class="explanation" id="screening-explanation"></p>
+                </section>
+
+                <section id="tab-evidence" class="tab-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="prior">Vorwissen</label>
+                            <input id="prior" type="range" min="1" max="500" value="20">
+                            <output id="prior-out">2.0%</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="ev1">Hinweis A (Likelihood Ratio)</label>
+                            <input id="ev1" type="range" min="10" max="120" value="45">
+                            <output id="ev1-out">4.5×</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="ev2">Hinweis B</label>
+                            <input id="ev2" type="range" min="10" max="120" value="28">
+                            <output id="ev2-out">2.8×</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="ev3">Gegenhinweis C</label>
+                            <input id="ev3" type="range" min="5" max="100" value="35">
+                            <output id="ev3-out">0.35×</output>
+                        </div>
+                        <button id="preset-fraud">Betrugscheck</button>
+                        <button id="preset-security" class="secondary">Security Incident</button>
+                    </div>
+
+                    <div class="formula" id="odds-formula"></div>
+                    <div class="steps" id="evidence-steps"></div>
+                    <p class="explanation" id="evidence-explanation"></p>
+                </section>
+
+                <section id="tab-decision" class="tab-content">
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="decision-prob">Posterior</label>
+                            <input id="decision-prob" type="range" min="1" max="99" value="18">
+                            <output id="decision-prob-out">18%</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="cost-fp">Kosten Fehlalarm</label>
+                            <input id="cost-fp" type="range" min="1" max="100" value="8">
+                            <output id="cost-fp-out">8</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="cost-fn">Kosten Verpassen</label>
+                            <input id="cost-fn" type="range" min="1" max="200" value="70">
+                            <output id="cost-fn-out">70</output>
+                        </div>
+                        <button id="preset-medical">Medizin</button>
+                        <button id="preset-ops" class="secondary">Ops</button>
+                    </div>
+
+                    <div class="stat-grid">
+                        <div class="stat"><div class="stat-label">Schwellwert für Aktion</div><div class="stat-value" id="threshold-out">0%</div></div>
+                        <div class="stat"><div class="stat-label">Erwarteter Schaden wenn handeln</div><div class="stat-value" id="harm-act">0</div></div>
+                        <div class="stat"><div class="stat-label">Erwarteter Schaden wenn warten</div><div class="stat-value" id="harm-wait">0</div></div>
+                        <div class="stat"><div class="stat-label">Bessere Option</div><div class="stat-value" id="decision-out">-</div></div>
+                    </div>
+
+                    <div class="bar-wrap">
+                        <div class="bar"><div class="bar-fill" id="decision-fill"></div></div>
+                        <div class="bar-labels"><span>0%</span><span id="decision-marker">Posterior vs. Aktionsschwelle</span><span>100%</span></div>
+                    </div>
+
+                    <div class="decision-card" id="decision-card"></div>
+                    <p class="explanation" id="decision-explanation"></p>
+                </section>
+            </div>
+
+            <h2>Von Bayes zu Laplace und zurück in den Alltag</h2>
+            <p>Thomas Bayes' Essay erschien 1763 posthum, redigiert von Richard Price. Laplace entwickelte dieselbe Idee später unabhängig weiter und machte daraus ein universelleres Werkzeug für Schlussfolgerungen unter Unsicherheit. Historisch spannend ist aber, was danach mit uns Menschen passiert: Formal ist Bayes sauber. Intuitiv sind wir oft erstaunlich schlecht darin. Genau deshalb wirken natürliche Häufigkeiten so gut. „8 von 10.000 sind krank, davon testet 1 falsch negativ, aber 500 Gesunde falsch positiv“ ist für das Gehirn viel greifbarer als drei Prozentwerte mit verschachtelten Bedingungen.</p>
+            <p>Das ist keine kleine Rechenhilfe, sondern eine Designlektion. Gute Interfaces für Risiko, Diagnostik oder Security sollten Menschen nicht nur Prozentwerte hinwerfen. Sie sollten die Welt als zählbare Fälle zeigen. Bayes ist nicht nur Statistik. Bayes ist auch Informationsarchitektur.</p>
+
+            <h2>Was ich daran mag</h2>
+            <p>Ich mag an Bayes, dass er gleichzeitig demütig und lernfähig ist. Er sagt nicht: „Dein erster Eindruck war dumm.“ Er sagt: „Behalte ihn, aber lass ihn sich bewegen.“ Ein Modell ohne Update ist starr. Ein Update ohne Prior ist hysterisch. Bayes liegt dazwischen. Vielleicht ist das einer der nützlichsten Denkstile überhaupt, nicht nur für Medizin, Spamfilter oder Incident Response, sondern auch für Gespräche, Urteile und Selbstbilder.</p>
+            <p>Fast alles, was wir wissen, ist posterior. Die Frage ist nur, ob wir unsere Updates bewusst machen oder ob wir sie heimlich und schlecht machen.</p>
+
+            <h2>Referenzen und Spuren</h2>
+            <ul class="refs">
+                <li>Thomas Bayes / Richard Price, <em>An Essay towards solving a Problem in the Doctrine of Chances</em> (1763)</li>
+                <li>Pierre-Simon Laplace, <em>Théorie analytique des probabilités</em> (1812)</li>
+                <li>Gerd Gigerenzer, Ulrich Hoffrage, <em>How to Improve Bayesian Reasoning Without Instruction: Frequency Formats</em> (1995)</li>
+                <li>Daniel Kahneman, <em>Thinking, Fast and Slow</em> (2011), Base-rate neglect</li>
+            </ul>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panels = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            panels.forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+        }));
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+        function fmtPct(value) {
+            return `${value.toFixed(value < 10 ? 1 : 0)}%`;
+        }
+        function fmtInt(value) {
+            return Math.round(value).toLocaleString('de-DE');
+        }
+        function probToOdds(p) {
+            return p / (1 - p);
+        }
+        function oddsToProb(o) {
+            return o / (1 + o);
+        }
+
+        const prevalence = document.getElementById('prevalence');
+        const sensitivity = document.getElementById('sensitivity');
+        const specificity = document.getElementById('specificity');
+        const prevalenceOut = document.getElementById('prevalence-out');
+        const sensitivityOut = document.getElementById('sensitivity-out');
+        const specificityOut = document.getElementById('specificity-out');
+        const waffle = document.getElementById('waffle');
+
+        function updateScreening() {
+            const pop = 10000;
+            const prev = prevalence.value / 1000;
+            const sens = sensitivity.value / 100;
+            const spec = specificity.value / 100;
+            prevalenceOut.textContent = `${prev.toFixed(1)}%`;
+            sensitivityOut.textContent = `${sensitivity.value}%`;
+            specificityOut.textContent = `${specificity.value}%`;
+
+            const diseased = pop * prev / 100;
+            const healthy = pop - diseased;
+            const tp = diseased * sens;
+            const fn = diseased - tp;
+            const fp = healthy * (1 - spec);
+            const tn = healthy - fp;
+            const ppv = tp / (tp + fp || 1);
+
+            document.getElementById('diseased-count').textContent = fmtInt(diseased);
+            document.getElementById('tp-count').textContent = fmtInt(tp);
+            document.getElementById('fp-count').textContent = fmtInt(fp);
+            document.getElementById('ppv').textContent = fmtPct(ppv * 100);
+
+            const scale = 25;
+            const counts = {
+                tp: Math.round(tp / scale),
+                fn: Math.round(fn / scale),
+                fp: Math.round(fp / scale)
+            };
+            let totalAssigned = counts.tp + counts.fn + counts.fp;
+            counts.tn = Math.max(0, 400 - totalAssigned);
+            const cells = [];
+            Object.entries(counts).forEach(([type, n]) => {
+                for (let i = 0; i < n; i++) cells.push(`<div class="cell ${type}"></div>`);
+            });
+            waffle.innerHTML = cells.join('');
+
+            document.getElementById('tree-base').textContent = `${fmtInt(diseased)} sind wirklich krank, ${fmtInt(healthy)} gesund.`;
+            document.getElementById('tree-sick').textContent = `${fmtInt(tp)} testen positiv, ${fmtInt(fn)} negativ.`;
+            document.getElementById('tree-healthy').textContent = `${fmtInt(fp)} testen positiv, ${fmtInt(tn)} negativ.`;
+            document.getElementById('screening-explanation').textContent = `Ein positives Ergebnis bedeutet hier nicht automatisch "fast sicher". Von allen positiven Tests sind nur ${fmtPct(ppv * 100)} echte Treffer. Der Rest sind Fehlalarme. Das ist der ganze Base-Rate-Effekt in einer Zahl: seltene Ereignisse brauchen sehr gute Tests, sonst dominiert die Masse der Gesunden.`;
+        }
+
+        [prevalence, sensitivity, specificity].forEach(el => el.addEventListener('input', updateScreening));
+        document.getElementById('preset-rare').addEventListener('click', () => {
+            prevalence.value = 8; sensitivity.value = 92; specificity.value = 95; updateScreening();
+        });
+        document.getElementById('preset-common').addEventListener('click', () => {
+            prevalence.value = 180; sensitivity.value = 88; specificity.value = 90; updateScreening();
+        });
+
+        const prior = document.getElementById('prior');
+        const ev1 = document.getElementById('ev1');
+        const ev2 = document.getElementById('ev2');
+        const ev3 = document.getElementById('ev3');
+        const priorOut = document.getElementById('prior-out');
+        const ev1Out = document.getElementById('ev1-out');
+        const ev2Out = document.getElementById('ev2-out');
+        const ev3Out = document.getElementById('ev3-out');
+
+        function updateEvidence() {
+            const priorP = prior.value / 1000;
+            const lr1 = ev1.value / 10;
+            const lr2 = ev2.value / 10;
+            const lr3 = ev3.value / 100;
+            priorOut.textContent = `${priorP.toFixed(1)}%`;
+            ev1Out.textContent = `${lr1.toFixed(1)}×`;
+            ev2Out.textContent = `${lr2.toFixed(1)}×`;
+            ev3Out.textContent = `${lr3.toFixed(2)}×`;
+
+            const steps = [];
+            let odds = probToOdds(priorP / 100);
+            const priorPosterior = oddsToProb(odds) * 100;
+            steps.push({ label: 'Start mit Prior', lr: 1, posterior: priorPosterior, text: `Vor der neuen Evidenz liegt die Vermutung bei ${priorPosterior.toFixed(2)}%.` });
+
+            [
+                { label: 'Hinweis A', lr: lr1, desc: 'unterstützendes Signal' },
+                { label: 'Hinweis B', lr: lr2, desc: 'zweites unabhängiges Signal' },
+                { label: 'Gegenhinweis C', lr: lr3, desc: 'entlastendes Signal' }
+            ].forEach(item => {
+                odds *= item.lr;
+                const posterior = oddsToProb(odds) * 100;
+                steps.push({ label: item.label, lr: item.lr, posterior, text: `${item.desc}, Likelihood Ratio ${item.lr.toFixed(item.lr < 1 ? 2 : 1)}×.` });
+            });
+
+            document.getElementById('odds-formula').textContent = `Posterior Odds = Prior Odds × LR₁ × LR₂ × LR₃\nPrior Odds = p / (1 - p)\nHier: ${(priorP/100).toFixed(4)} / ${(1 - priorP/100).toFixed(4)} × ${lr1.toFixed(1)} × ${lr2.toFixed(1)} × ${lr3.toFixed(2)}`;
+
+            const container = document.getElementById('evidence-steps');
+            container.innerHTML = steps.map((step, index) => `
+                <div class="step">
+                    <strong>${index}. ${step.label}</strong><br>
+                    ${step.text}<br>
+                    Posterior nach diesem Schritt: <strong>${step.posterior.toFixed(step.posterior < 10 ? 2 : 1)}%</strong>
+                </div>
+            `).join('');
+
+            const finalPosterior = steps[steps.length - 1].posterior;
+            document.getElementById('evidence-explanation').textContent = `Der eigentliche Trick ist die Odds-Perspektive. Hinweise addieren sich nicht direkt in Prozentpunkten, sie multiplizieren die Odds. Deshalb können mehrere mittelstarke Signale zusammen sehr überzeugend werden, während ein Gegenhinweis die Sache auch spät noch deutlich zurückziehen kann. Endstand: ${finalPosterior.toFixed(finalPosterior < 10 ? 2 : 1)}%.`;
+        }
+
+        [prior, ev1, ev2, ev3].forEach(el => el.addEventListener('input', updateEvidence));
+        document.getElementById('preset-fraud').addEventListener('click', () => {
+            prior.value = 20; ev1.value = 45; ev2.value = 28; ev3.value = 35; updateEvidence();
+        });
+        document.getElementById('preset-security').addEventListener('click', () => {
+            prior.value = 12; ev1.value = 60; ev2.value = 55; ev3.value = 20; updateEvidence();
+        });
+
+        const decisionProb = document.getElementById('decision-prob');
+        const costFp = document.getElementById('cost-fp');
+        const costFn = document.getElementById('cost-fn');
+        const decisionProbOut = document.getElementById('decision-prob-out');
+        const costFpOut = document.getElementById('cost-fp-out');
+        const costFnOut = document.getElementById('cost-fn-out');
+
+        function updateDecision() {
+            const p = decisionProb.value / 100;
+            const fp = Number(costFp.value);
+            const fn = Number(costFn.value);
+            const threshold = fp / (fp + fn);
+            const act = (1 - p) * fp;
+            const wait = p * fn;
+            const go = act < wait;
+            decisionProbOut.textContent = `${decisionProb.value}%`;
+            costFpOut.textContent = String(fp);
+            costFnOut.textContent = String(fn);
+            document.getElementById('threshold-out').textContent = fmtPct(threshold * 100);
+            document.getElementById('harm-act').textContent = act.toFixed(1);
+            document.getElementById('harm-wait').textContent = wait.toFixed(1);
+            document.getElementById('decision-out').textContent = go ? 'Handeln' : 'Warten';
+            document.getElementById('decision-fill').style.width = `${decisionProb.value}%`;
+            document.getElementById('decision-marker').textContent = `Posterior ${decisionProb.value}% · Schwelle ${threshold * 100 < 10 ? (threshold*100).toFixed(1) : (threshold*100).toFixed(0)}%`;
+
+            const card = document.getElementById('decision-card');
+            card.className = `decision-card ${go ? 'go' : 'wait'}`;
+            card.innerHTML = go
+                ? `<strong>Aktion ist rationaler.</strong><br>Bei diesem Kostenverhältnis lohnt Eingreifen schon ab ${fmtPct(threshold * 100)}. Dein aktueller Posterior liegt darüber. Ein Fehlalarm kostet weniger als ein verpasstes echtes Ereignis.`
+                : `<strong>Noch nicht handeln.</strong><br>Der aktuelle Posterior liegt unter der Aktionsschwelle von ${fmtPct(threshold * 100)}. Hier wäre ein Fehlalarm teurer als weiteres Beobachten oder ein zusätzlicher Test.`;
+            document.getElementById('decision-explanation').textContent = `Bayes liefert die Wahrscheinlichkeit. Entscheidungstheorie ergänzt die Kosten. Darum sind Medizin, Security und Incident Response oft verschieden kalibriert: dieselbe 18%-Wahrscheinlichkeit kann in einem Kontext sofortige Eskalation bedeuten und im anderen erst einen zweiten Test rechtfertigen.`;
+        }
+
+        [decisionProb, costFp, costFn].forEach(el => el.addEventListener('input', updateDecision));
+        document.getElementById('preset-medical').addEventListener('click', () => {
+            decisionProb.value = 18; costFp.value = 8; costFn.value = 70; updateDecision();
+        });
+        document.getElementById('preset-ops').addEventListener('click', () => {
+            decisionProb.value = 18; costFp.value = 25; costFn.value = 40; updateDecision();
+        });
+
+        updateScreening();
+        updateEvidence();
+        updateDecision();
+    </script>
+</body>
+</html>
