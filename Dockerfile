@@ -7,6 +7,8 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy static files
 COPY index.html /usr/share/nginx/html/
 COPY styles.css /usr/share/nginx/html/
+COPY favicon.svg /usr/share/nginx/html/
+COPY favicon.ico /usr/share/nginx/html/
 COPY posts/ /usr/share/nginx/html/posts/
 
 # Ensure readable permissions
