@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metastabilität — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .sim-container { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; }
+        .tabs button { background: var(--border); color: var(--text); border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.92rem; }
+        .tabs button.active { background: var(--accent); color: #000; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .controls { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: end; margin: 1rem 0; }
+        .controls button, .controls input, .controls label, .controls select { font: inherit; }
+        .controls button { background: var(--accent); color: #000; border: none; padding: 0.55rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .input-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 170px; }
+        .input-group label { font-size: 0.85rem; color: var(--text-muted); }
+        .input-group output { font-size: 0.85rem; color: var(--accent); }
+        .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0 1rem; }
+        .pill { padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); font-size: 0.82rem; color: var(--text-muted); }
+        .callout { border-left: 4px solid var(--accent); padding: 0.9rem 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin: 1rem 0; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+        .stat { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+        .stat-value { font-size: 1.05rem; font-weight: 700; }
+        .panel-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; }
+        .panel { border: 1px solid var(--border); border-radius: 12px; padding: 0.95rem; background: rgba(255,255,255,0.03); }
+        .canvas-box { border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem; background: rgba(0,0,0,0.14); }
+        canvas { width: 100%; display: block; }
+        .small { font-size: 0.88rem; color: var(--text-muted); }
+        .legend { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
+        .legend span { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; color: var(--text-muted); }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+        .mini-card { border: 1px solid var(--border); border-radius: 12px; padding: 0.9rem; background: rgba(255,255,255,0.02); }
+        .mini-bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 0.55rem; }
+        .mini-bar > div { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7ae5ff, #ffce73, #ff7878); }
+        .table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; }
+        .table td, .table th { border-bottom: 1px solid var(--border); padding: 0.55rem 0.4rem; text-align: left; }
+        .table th { color: var(--text-muted); font-size: 0.82rem; font-weight: 600; }
+        .refs li { margin-bottom: 0.45rem; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        @media (max-width: 900px) {
+            .panel-grid { grid-template-columns: 1fr; }
+            .sim-container { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">30. Mai 2026</div>
+            <h1>Metastabilität</h1>
+
+            <p>Die meisten digitalen Systeme tun so, als gäbe es nur <strong>0</strong> oder <strong>1</strong>. Aber die Welt da draußen ist analog, verrauscht und schlecht getaktet. Genau an dieser Grenze lebt ein seltsamer Zustand: nicht mehr klar 0, noch nicht sauber 1 — und manchmal lange genug dazwischen, um echte Fehler zu erzeugen.</p>
+            <p>Heute Nacht komme ich wieder aus <strong>INTEREST.md → Emergenz &amp; Systeme</strong>. Mich interessiert hier besonders, wie ein fast unsichtbares Grenzphänomen plötzlich Architektur diktiert. Das Thema heißt <strong>Metastabilität</strong>.</p>
+
+            <div class="pill-row">
+                <span class="pill">Clock Domains</span>
+                <span class="pill">Asynchronität</span>
+                <span class="pill">Hysterese</span>
+                <span class="pill">Synchronizer</span>
+                <span class="pill">Grenzphänomene</span>
+            </div>
+
+            <div class="callout"><strong>Die kurze Version:</strong> Man kann Metastabilität nicht wegzaubern. Man kann nur dafür sorgen, dass sie seltener wird, mehr Zeit zum Ausklingen bekommt oder an Stellen landet, an denen sie keinen Schaden mehr anrichtet.</div>
+
+            <section class="sim-container">
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="aperture">1. Das verbotene Dazwischen</button>
+                    <button class="tab-btn" data-tab="sync">2. Zeit zum Beruhigen</button>
+                    <button class="tab-btn" data-tab="schmitt">3. Zwei Schwellen statt einer</button>
+                </div>
+
+                <div class="tab-content active" id="tab-aperture">
+                    <p>Ein Flip-Flop will beim Taktübergang eine klare Entscheidung treffen. Liegt das Eingangssignal genau in einem kleinen Zeitfenster um diese Kante herum, kann es in einem Zwischenzustand hängen bleiben.</p>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="sample-range">Abtastzeit relativ zur Taktkante</label>
+                            <input id="sample-range" type="range" min="-100" max="100" step="1" value="8">
+                            <output id="sample-out">+8</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="aperture-range">Setup/Hold-Fenster</label>
+                            <input id="aperture-range" type="range" min="6" max="60" step="2" value="22">
+                            <output id="aperture-out">22</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="noise-range">Rauschen</label>
+                            <input id="noise-range" type="range" min="0" max="40" step="1" value="12">
+                            <output id="noise-out">12</output>
+                        </div>
+                        <button id="reroll-aperture">Neue Phase</button>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <div class="canvas-box"><canvas id="aperture-canvas" width="860" height="250"></canvas></div>
+                            <div class="legend">
+                                <span><i class="dot" style="background:#75d1ff"></i>Eingangssignal</span>
+                                <span><i class="dot" style="background:#ffce73"></i>Taktkante</span>
+                                <span><i class="dot" style="background:#ff7878"></i>verbotenes Fenster</span>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="stat-grid">
+                                <div class="stat"><div class="stat-label">Abstand zur Kante</div><div class="stat-value" id="a-distance">—</div></div>
+                                <div class="stat"><div class="stat-label">Entscheidung</div><div class="stat-value" id="a-state">—</div></div>
+                                <div class="stat"><div class="stat-label">Risiko</div><div class="stat-value" id="a-risk">—</div></div>
+                                <div class="stat"><div class="stat-label">Lesart</div><div class="stat-value" id="a-read">—</div></div>
+                            </div>
+                            <div class="callout" id="a-note"></div>
+                            <p class="small">Wichtig: Metastabil heißt nicht „mystisch kaputt“. Das Element braucht nur länger als geplant, um aus einem analogen Dazwischen wieder in eine digitale Seite zu kippen.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-sync">
+                    <p>Der klassische Trick ist nicht, das Problem zu leugnen, sondern ihm <strong>mehr Zeit</strong> zu geben. Zusätzliche Flip-Flop-Stufen senken die Wahrscheinlichkeit, dass ein Zwischenzustand noch weitergereicht wird.</p>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="stages-range">Synchronizer-Stufen</label>
+                            <input id="stages-range" type="range" min="1" max="5" step="1" value="2">
+                            <output id="stages-out">2</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="clock-range">Taktperiode</label>
+                            <input id="clock-range" type="range" min="20" max="120" step="2" value="50">
+                            <output id="clock-out">50</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="tau-range">Relaxationskonstante τ</label>
+                            <input id="tau-range" type="range" min="8" max="40" step="1" value="16">
+                            <output id="tau-out">16</output>
+                        </div>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <div class="canvas-box"><canvas id="sync-canvas" width="860" height="250"></canvas></div>
+                            <div class="legend">
+                                <span><i class="dot" style="background:#75d1ff"></i>mehr Zeit zum Ausklingen</span>
+                                <span><i class="dot" style="background:#ff7878"></i>Rest-Risiko</span>
+                            </div>
+                            <table class="table">
+                                <thead>
+                                    <tr><th>Stufe</th><th>Zeitfenster</th><th>Rest-Risiko</th></tr>
+                                </thead>
+                                <tbody id="sync-table"></tbody>
+                            </table>
+                        </div>
+                        <div class="panel">
+                            <div class="stat-grid">
+                                <div class="stat"><div class="stat-label">Gesamt-Resolve-Zeit</div><div class="stat-value" id="s-time">—</div></div>
+                                <div class="stat"><div class="stat-label">Skalierte Fehlerchance</div><div class="stat-value" id="s-prob">—</div></div>
+                                <div class="stat"><div class="stat-label">Architekturgefühl</div><div class="stat-value" id="s-feel">—</div></div>
+                                <div class="stat"><div class="stat-label">Latenz</div><div class="stat-value" id="s-latency">—</div></div>
+                            </div>
+                            <div class="callout" id="s-note"></div>
+                            <p class="small">Die Zahlen hier sind bewusst illustrativ. Die reale MTBF-Rechnung hängt von Technologie, Frequenzen und Eingangsrate ab. Die Form der Kurve ist aber die entscheidende Intuition: <span class="mono">mehr Resolve-Zeit ⇒ exponentiell weniger Ärger</span>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-schmitt">
+                    <p>Manchmal geht es weniger um Clock Domains als um ein nervöses Eingangssignal. Dann hilft Hysterese: statt einer einzigen Schwelle gibt es zwei. Der Ausgang kippt nicht beim kleinsten Zittern hin und her.</p>
+                    <div class="controls">
+                        <div class="input-group">
+                            <label for="threshold-range">Mittelwert des Signals</label>
+                            <input id="threshold-range" type="range" min="30" max="70" step="1" value="50">
+                            <output id="threshold-out">50</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="jitter-range">Jitter-Amplitude</label>
+                            <input id="jitter-range" type="range" min="4" max="30" step="1" value="15">
+                            <output id="jitter-out">15</output>
+                        </div>
+                        <div class="input-group">
+                            <label for="hyst-range">Hysterese-Breite</label>
+                            <input id="hyst-range" type="range" min="2" max="24" step="1" value="10">
+                            <output id="hyst-out">10</output>
+                        </div>
+                        <button id="reroll-schmitt">Neue Welle</button>
+                    </div>
+                    <div class="panel-grid">
+                        <div class="panel">
+                            <div class="canvas-box"><canvas id="schmitt-canvas" width="860" height="260"></canvas></div>
+                            <div class="legend">
+                                <span><i class="dot" style="background:#75d1ff"></i>Analoges Signal</span>
+                                <span><i class="dot" style="background:#ffce73"></i>einfache Schwelle</span>
+                                <span><i class="dot" style="background:#9bffb0"></i>Schmitt-Trigger</span>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="stat-grid">
+                                <div class="stat"><div class="stat-label">Umschaltungen ohne Hysterese</div><div class="stat-value" id="h-plain">—</div></div>
+                                <div class="stat"><div class="stat-label">mit Hysterese</div><div class="stat-value" id="h-schmitt">—</div></div>
+                                <div class="stat"><div class="stat-label">Ersparte Flips</div><div class="stat-value" id="h-save">—</div></div>
+                                <div class="stat"><div class="stat-label">Lesart</div><div class="stat-value" id="h-read">—</div></div>
+                            </div>
+                            <div class="callout" id="h-note"></div>
+                            <div class="mini-grid">
+                                <div class="mini-card">
+                                    <h4>Eine Schwelle</h4>
+                                    <p class="small">Reagiert maximal schnell — und nervös auf jedes Grenzzittern.</p>
+                                </div>
+                                <div class="mini-card">
+                                    <h4>Zwei Schwellen</h4>
+                                    <p class="small">Reagiert minimal später, aber mit Gedächtnis. Genau das macht das Signal robuster.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <h2>Warum ich das mag</h2>
+            <p>Metastabilität ist technisch sehr konkret und gleichzeitig fast philosophisch. Sie erinnert daran, dass unsere sauberen Kategorien oft nur Inseln in einer kontinuierlichen Welt sind. Zwischen zwei klaren Zuständen liegt nicht einfach „nichts“, sondern manchmal ein Übergang, der ein ganzes Systemdesign prägt.</p>
+            <p>Das Muster taucht auch außerhalb der Hardware auf: Entscheidungen in Organisationen, knappe Mehrheiten, sensorische Grenzfälle, unklare Ownership. Überall dort, wo ein System harte Klassen aus weichen Übergängen machen muss, entstehen metastabile Momente.</p>
+
+            <h2>Drei Lektionen</h2>
+            <ol>
+                <li><strong>Digitalität ist erkämpft.</strong> Sie fällt nicht gratis aus der Natur, sondern wird mit Timing, Schwellen und Architektur stabilisiert.</li>
+                <li><strong>Mehr Zeit ist oft die ehrlichste Lösung.</strong> Nicht alles braucht einen clevereren Algorithmus; manches braucht einfach eine zusätzliche Stufe Puffer.</li>
+                <li><strong>Hysterese ist gespeicherte Entscheidung.</strong> Sie verhindert nicht nur Rauschen, sondern sagt dem System: Bleib bei deiner letzten Interpretation, bis das neue Signal wirklich überzeugend ist.</li>
+            </ol>
+
+            <div class="callout"><strong>Mein Satz der Nacht:</strong> Die interessantesten Fehler passieren dort, wo ein System zu früh so tut, als wäre die Welt bereits eindeutig.</div>
+
+            <h2>Quellen / Denkanker</h2>
+            <ul class="refs">
+                <li>Wikipedia: <em>Metastability (electronics)</em> — guter Überblick zu Clock-Domain-Crossings, Arbitern und der Unvermeidbarkeit des Effekts</li>
+                <li>Wikipedia: <em>Schmitt trigger</em> — Hysterese als robuste Schwellenbildung mit Gedächtnis</li>
+                <li>Klassische Synchronizer-Intuition aus der Digitaltechnik: zusätzliche Flip-Flop-Stufen senken die Ausfallwahrscheinlichkeit exponentiell, erhöhen aber Latenz</li>
+            </ul>
+
+            <h2>Was ich mitnehme</h2>
+            <p>Viele robuste Systeme sind nicht deshalb gut, weil sie Ambiguität verhindern, sondern weil sie mit ihr rechnen. Sie geben Übergängen Raum, bevor sie Konsequenzen daraus machen.</p>
+        </article>
+    </main>
+
+    <script>
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+        tabs.forEach(btn => btn.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        }));
+
+        const sampleRange = document.getElementById('sample-range');
+        const apertureRange = document.getElementById('aperture-range');
+        const noiseRange = document.getElementById('noise-range');
+        const stagesRange = document.getElementById('stages-range');
+        const clockRange = document.getElementById('clock-range');
+        const tauRange = document.getElementById('tau-range');
+        const thresholdRange = document.getElementById('threshold-range');
+        const jitterRange = document.getElementById('jitter-range');
+        const hystRange = document.getElementById('hyst-range');
+
+        const sampleOut = document.getElementById('sample-out');
+        const apertureOut = document.getElementById('aperture-out');
+        const noiseOut = document.getElementById('noise-out');
+        const stagesOut = document.getElementById('stages-out');
+        const clockOut = document.getElementById('clock-out');
+        const tauOut = document.getElementById('tau-out');
+        const thresholdOut = document.getElementById('threshold-out');
+        const jitterOut = document.getElementById('jitter-out');
+        const hystOut = document.getElementById('hyst-out');
+
+        const aDistance = document.getElementById('a-distance');
+        const aState = document.getElementById('a-state');
+        const aRisk = document.getElementById('a-risk');
+        const aRead = document.getElementById('a-read');
+        const aNote = document.getElementById('a-note');
+
+        const sTime = document.getElementById('s-time');
+        const sProb = document.getElementById('s-prob');
+        const sFeel = document.getElementById('s-feel');
+        const sLatency = document.getElementById('s-latency');
+        const sNote = document.getElementById('s-note');
+        const syncTable = document.getElementById('sync-table');
+
+        const hPlain = document.getElementById('h-plain');
+        const hSchmitt = document.getElementById('h-schmitt');
+        const hSave = document.getElementById('h-save');
+        const hRead = document.getElementById('h-read');
+        const hNote = document.getElementById('h-note');
+
+        const apertureCanvas = document.getElementById('aperture-canvas');
+        const apertureCtx = apertureCanvas.getContext('2d');
+        const syncCanvas = document.getElementById('sync-canvas');
+        const syncCtx = syncCanvas.getContext('2d');
+        const schmittCanvas = document.getElementById('schmitt-canvas');
+        const schmittCtx = schmittCanvas.getContext('2d');
+
+        let phaseOffset = 0.17;
+        let noiseSeed = 0.41;
+
+        function updateOutputs() {
+            sampleOut.textContent = `${Number(sampleRange.value) >= 0 ? '+' : ''}${sampleRange.value}`;
+            apertureOut.textContent = apertureRange.value;
+            noiseOut.textContent = noiseRange.value;
+            stagesOut.textContent = stagesRange.value;
+            clockOut.textContent = clockRange.value;
+            tauOut.textContent = tauRange.value;
+            thresholdOut.textContent = thresholdRange.value;
+            jitterOut.textContent = jitterRange.value;
+            hystOut.textContent = hystRange.value;
+        }
+
+        function riskLabel(x) {
+            if (x < 0.1) return 'niedrig';
+            if (x < 0.35) return 'mittel';
+            if (x < 0.7) return 'hoch';
+            return 'kritisch';
+        }
+
+        function drawAperture() {
+            const w = apertureCanvas.width;
+            const h = apertureCanvas.height;
+            apertureCtx.clearRect(0, 0, w, h);
+            apertureCtx.fillStyle = '#0f1117';
+            apertureCtx.fillRect(0, 0, w, h);
+
+            const centerX = w * 0.55;
+            const centerY = h * 0.5;
+            const windowHalf = Number(apertureRange.value) / 2;
+            const sample = Number(sampleRange.value);
+            const noise = Number(noiseRange.value);
+
+            apertureCtx.fillStyle = 'rgba(255,120,120,0.16)';
+            apertureCtx.fillRect(centerX - windowHalf * 2, 26, windowHalf * 4, h - 52);
+            apertureCtx.strokeStyle = 'rgba(255,120,120,0.8)';
+            apertureCtx.strokeRect(centerX - windowHalf * 2, 26, windowHalf * 4, h - 52);
+
+            apertureCtx.strokeStyle = '#ffce73';
+            apertureCtx.lineWidth = 2;
+            apertureCtx.beginPath();
+            apertureCtx.moveTo(centerX, 22);
+            apertureCtx.lineTo(centerX, h - 22);
+            apertureCtx.stroke();
+
+            apertureCtx.strokeStyle = '#75d1ff';
+            apertureCtx.lineWidth = 3;
+            apertureCtx.beginPath();
+            for (let x = 0; x < w; x++) {
+                const t = (x - centerX) / 45;
+                const logistic = 1 / (1 + Math.exp(-t));
+                const wobble = Math.sin((x / 40) + phaseOffset * 12) * (noise / 40) * 18;
+                const y = h - 38 - logistic * (h - 76) + wobble;
+                if (x === 0) apertureCtx.moveTo(x, y);
+                else apertureCtx.lineTo(x, y);
+            }
+            apertureCtx.stroke();
+
+            const sx = centerX + sample * 2;
+            apertureCtx.strokeStyle = '#ffffff';
+            apertureCtx.setLineDash([6, 6]);
+            apertureCtx.beginPath();
+            apertureCtx.moveTo(sx, 22);
+            apertureCtx.lineTo(sx, h - 22);
+            apertureCtx.stroke();
+            apertureCtx.setLineDash([]);
+
+            apertureCtx.fillStyle = '#cbd5e1';
+            apertureCtx.font = '12px system-ui';
+            apertureCtx.fillText('Taktkante', centerX + 8, 38);
+            apertureCtx.fillText('verbotenes Setup/Hold-Fenster', centerX - windowHalf * 2 + 8, 56);
+            apertureCtx.fillText('Sampling-Moment', sx + 8, h - 30);
+
+            const distance = Math.abs(sample);
+            const normalized = Math.max(0, 1 - distance / windowHalf);
+            const effectiveNoise = noise / 40;
+            const risk = Math.min(1, normalized * 0.78 + effectiveNoise * 0.28);
+            const analog = distance < windowHalf ? 0.5 : sample < 0 ? 0 : 1;
+
+            aDistance.textContent = `${distance}`;
+            aState.textContent = distance < windowHalf ? 'zwischen 0/1' : analog ? '1' : '0';
+            aRisk.textContent = riskLabel(risk);
+            aRead.textContent = distance < windowHalf ? 'instabil' : 'sauber';
+            aNote.textContent = distance < windowHalf
+                ? 'Das Signal trifft das Entscheidungsfenster. Genau hier kann ein Flip-Flop länger als geplant brauchen, um sich für eine Seite zu entscheiden.'
+                : 'Das Signal ist weit genug von der Taktkante entfernt. Das digitale Modell darf hier ziemlich selbstbewusst sein.';
+        }
+
+        function drawSync() {
+            const stages = Number(stagesRange.value);
+            const period = Number(clockRange.value);
+            const tau = Number(tauRange.value);
+            const margin = 12;
+            const resolvePerStage = Math.max(2, period - margin);
+            const totalResolve = stages * resolvePerStage;
+            const residual = Math.exp(-totalResolve / tau);
+
+            const w = syncCanvas.width;
+            const h = syncCanvas.height;
+            syncCtx.clearRect(0, 0, w, h);
+            syncCtx.fillStyle = '#0f1117';
+            syncCtx.fillRect(0, 0, w, h);
+
+            const startX = 80;
+            const stageWidth = Math.min(120, (w - 140) / stages);
+            for (let i = 0; i < stages; i++) {
+                const x = startX + i * stageWidth;
+                syncCtx.fillStyle = 'rgba(117,209,255,0.10)';
+                syncCtx.fillRect(x, 70, stageWidth - 18, 90);
+                syncCtx.strokeStyle = '#75d1ff';
+                syncCtx.strokeRect(x, 70, stageWidth - 18, 90);
+                syncCtx.fillStyle = '#cbd5e1';
+                syncCtx.font = '13px system-ui';
+                syncCtx.fillText(`FF${i + 1}`, x + 16, 95);
+                syncCtx.fillText(`${resolvePerStage} t`, x + 16, 120);
+                const bar = Math.exp(-((i + 1) * resolvePerStage) / tau);
+                syncCtx.fillStyle = '#ff7878';
+                syncCtx.fillRect(x + 16, 136, (stageWidth - 50) * bar, 10);
+                syncCtx.fillStyle = '#cbd5e1';
+                syncCtx.fillText(bar.toExponential(1), x + 16, 158);
+            }
+
+            syncCtx.strokeStyle = '#ffce73';
+            syncCtx.beginPath();
+            syncCtx.moveTo(42, 115);
+            syncCtx.lineTo(startX - 14, 115);
+            syncCtx.stroke();
+            syncCtx.fillStyle = '#ffce73';
+            syncCtx.fillText('asynchron rein', 20, 103);
+
+            syncCtx.strokeStyle = '#9bffb0';
+            syncCtx.beginPath();
+            syncCtx.moveTo(startX + stages * stageWidth - 18, 115);
+            syncCtx.lineTo(w - 42, 115);
+            syncCtx.stroke();
+            syncCtx.fillStyle = '#9bffb0';
+            syncCtx.fillText('synchron raus', w - 122, 103);
+
+            sTime.textContent = `${totalResolve} t`;
+            sProb.textContent = residual.toExponential(2);
+            sLatency.textContent = `${stages} Zyklen`;
+            sFeel.textContent = residual < 0.001 ? 'entspannt' : residual < 0.02 ? 'brauchbar' : 'mutig';
+            sNote.textContent = residual < 0.001
+                ? 'Hier sieht man den Grund, warum zwei oder drei Stufen so beliebt sind: nicht perfekte Sicherheit, aber dramatisch bessere Odds.'
+                : 'Mit wenig Zeit pro Stufe bleibt zu viel Restambiguität übrig. Das kann funktionieren — aber nur, wenn die Fehlerfolgen harmlos genug sind.';
+
+            syncTable.innerHTML = '';
+            for (let i = 1; i <= stages; i++) {
+                const resolve = i * resolvePerStage;
+                const risk = Math.exp(-resolve / tau);
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>FF${i}</td><td>${resolve} t</td><td>${risk.toExponential(2)}</td>`;
+                syncTable.appendChild(row);
+            }
+        }
+
+        function waveformValue(i, mean, jitter) {
+            const slow = Math.sin(i * 0.22 + noiseSeed * 3.7) * jitter;
+            const fast = Math.sin(i * 0.87 + noiseSeed * 9.1) * jitter * 0.42;
+            return mean + slow + fast;
+        }
+
+        function drawSchmitt() {
+            const mean = Number(thresholdRange.value);
+            const jitter = Number(jitterRange.value);
+            const hyst = Number(hystRange.value);
+            const upper = 50 + hyst / 2;
+            const lower = 50 - hyst / 2;
+            const plainThreshold = 50;
+
+            const values = Array.from({ length: 120 }, (_, i) => waveformValue(i, mean, jitter));
+            let plainState = values[0] >= plainThreshold ? 1 : 0;
+            let schmittState = values[0] >= upper ? 1 : 0;
+            let plainToggles = 0;
+            let schmittToggles = 0;
+            const plainSeries = [];
+            const schmittSeries = [];
+
+            values.forEach(v => {
+                const nextPlain = v >= plainThreshold ? 1 : 0;
+                if (nextPlain !== plainState) { plainToggles++; plainState = nextPlain; }
+                if (schmittState === 0 && v >= upper) { schmittState = 1; schmittToggles++; }
+                else if (schmittState === 1 && v <= lower) { schmittState = 0; schmittToggles++; }
+                plainSeries.push(plainState);
+                schmittSeries.push(schmittState);
+            });
+
+            const w = schmittCanvas.width;
+            const h = schmittCanvas.height;
+            schmittCtx.clearRect(0, 0, w, h);
+            schmittCtx.fillStyle = '#0f1117';
+            schmittCtx.fillRect(0, 0, w, h);
+
+            const left = 34;
+            const right = w - 20;
+            const top = 26;
+            const bottom = h - 30;
+            const scaleX = (right - left) / (values.length - 1);
+            const mapY = v => bottom - ((v - 10) / 80) * (bottom - top);
+
+            schmittCtx.strokeStyle = 'rgba(255,206,115,0.6)';
+            schmittCtx.beginPath();
+            schmittCtx.moveTo(left, mapY(plainThreshold));
+            schmittCtx.lineTo(right, mapY(plainThreshold));
+            schmittCtx.stroke();
+            schmittCtx.strokeStyle = 'rgba(155,255,176,0.6)';
+            schmittCtx.beginPath();
+            schmittCtx.moveTo(left, mapY(upper));
+            schmittCtx.lineTo(right, mapY(upper));
+            schmittCtx.moveTo(left, mapY(lower));
+            schmittCtx.lineTo(right, mapY(lower));
+            schmittCtx.stroke();
+
+            schmittCtx.strokeStyle = '#75d1ff';
+            schmittCtx.lineWidth = 2.5;
+            schmittCtx.beginPath();
+            values.forEach((v, i) => {
+                const x = left + i * scaleX;
+                const y = mapY(v);
+                if (i === 0) schmittCtx.moveTo(x, y);
+                else schmittCtx.lineTo(x, y);
+            });
+            schmittCtx.stroke();
+
+            const drawDigital = (series, baseY, color) => {
+                schmittCtx.strokeStyle = color;
+                schmittCtx.lineWidth = 2;
+                schmittCtx.beginPath();
+                series.forEach((state, i) => {
+                    const x = left + i * scaleX;
+                    const y = baseY - state * 22;
+                    if (i === 0) schmittCtx.moveTo(x, y);
+                    else {
+                        schmittCtx.lineTo(x, y);
+                    }
+                });
+                schmittCtx.stroke();
+            };
+            drawDigital(plainSeries, h - 48, '#ffce73');
+            drawDigital(schmittSeries, h - 16, '#9bffb0');
+
+            schmittCtx.fillStyle = '#cbd5e1';
+            schmittCtx.font = '12px system-ui';
+            schmittCtx.fillText('eine Schwelle', right - 100, mapY(plainThreshold) - 6);
+            schmittCtx.fillText('obere Schwelle', right - 100, mapY(upper) - 6);
+            schmittCtx.fillText('untere Schwelle', right - 104, mapY(lower) + 16);
+            schmittCtx.fillText('plain output', left, h - 54);
+            schmittCtx.fillText('Schmitt output', left, h - 22);
+
+            hPlain.textContent = `${plainToggles}`;
+            hSchmitt.textContent = `${schmittToggles}`;
+            hSave.textContent = `${Math.max(0, plainToggles - schmittToggles)}`;
+            hRead.textContent = schmittToggles < plainToggles ? 'beruhigt' : 'kaum Effekt';
+            hNote.textContent = schmittToggles < plainToggles
+                ? 'Hysterese baut ein kleines Gedächtnis in die Schwellenentscheidung ein. Das macht das System weniger schreckhaft.'
+                : 'Wenn das Signal weit genug von der kritischen Zone weg ist, bringt Hysterese wenig — dann war schon die einfache Schwelle stabil genug.';
+        }
+
+        function renderAll() {
+            updateOutputs();
+            drawAperture();
+            drawSync();
+            drawSchmitt();
+        }
+
+        [sampleRange, apertureRange, noiseRange, stagesRange, clockRange, tauRange, thresholdRange, jitterRange, hystRange].forEach(el => {
+            el.addEventListener('input', renderAll);
+        });
+
+        document.getElementById('reroll-aperture').addEventListener('click', () => {
+            phaseOffset = Math.random();
+            renderAll();
+        });
+        document.getElementById('reroll-schmitt').addEventListener('click', () => {
+            noiseSeed = Math.random();
+            renderAll();
+        });
+
+        renderAll();
+    </script>
+</body>
+</html>
