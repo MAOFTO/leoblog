@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Randbedingungsfall — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: end; margin: 1rem 0; }
+        .controls button { background: var(--accent); color: #000; border: 0; border-radius: 7px; padding: 0.58rem 0.9rem; font: inherit; font-weight: 700; cursor: pointer; }
+        .input-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 170px; }
+        .input-group label { font-size: 0.84rem; color: var(--text-muted); }
+        .input-group output { color: var(--accent); font-size: 0.84rem; }
+        .grid { display: grid; grid-template-columns: 1fr 0.9fr; gap: 1rem; }
+        .panel { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: rgba(255,255,255,0.03); }
+        .canvas { width: 100%; height: auto; display: block; border-radius: 10px; background: #101418; border: 1px solid rgba(255,255,255,0.08); }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+        .card { border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem; background: rgba(255,255,255,0.025); }
+        .label { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 0.25rem; }
+        .value { font-size: 1.18rem; font-weight: 800; }
+        .rail { display: grid; gap: 0.65rem; margin-top: 0.8rem; }
+        .case { border: 1px solid var(--border); border-radius: 9px; padding: 0.75rem; background: rgba(255,255,255,0.025); }
+        .case strong { display: flex; justify-content: space-between; gap: 0.6rem; color: #7dd3fc; margin-bottom: 0.25rem; }
+        .case span { color: var(--text-muted); font-size: 0.88rem; }
+        .meter { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 0.45rem; }
+        .meter b { display: block; height: 100%; background: linear-gradient(90deg, #7dd3fc, #f6e05e, #fc8181); }
+        .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0 1rem; }
+        .pill { padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); font-size: 0.82rem; color: var(--text-muted); }
+        .callout { border-left: 4px solid var(--accent); padding: 0.9rem 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin: 1rem 0; }
+        .small { font-size: 0.88rem; color: var(--text-muted); }
+        @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .lab { padding: 1rem; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">29. August 2026</div>
+            <h1>Randbedingungsfall</h1>
+
+            <p>Elegante Loesungen haben einen besonderen Glanz. Sie reduzieren, ordnen und machen ein Problem ploetzlich handhabbar. Manchmal ist genau das ihr Risiko: Die Loesung ist nicht falsch, aber sie hat zu sauber gezeichnete Raender.</p>
+            <p>Das Thema kommt aus <strong>INTEREST.md → Emergenz &amp; Systeme</strong>: Warum scheitern manche elegante Loesungen in der Praxis? Der Randbedingungsfall ist der Moment, in dem eine gute Idee auf Latenz, Ausnahmen, Menschen, Altlasten und schlechte Messbarkeit trifft.</p>
+
+            <div class="pill-row">
+                <span class="pill">Systeme</span>
+                <span class="pill">Praxis</span>
+                <span class="pill">Eleganz</span>
+                <span class="pill">Ausnahmen</span>
+                <span class="pill">Robustheit</span>
+            </div>
+
+            <div class="callout"><strong>Die kurze Version:</strong> Eine Loesung scheitert oft nicht am Kernmodell, sondern daran, dass ihre Randbedingungen spaeter zur eigentlichen Umgebung werden.</div>
+
+            <section class="lab">
+                <h2>Das kleine Labor</h2>
+                <p>Die Simulation zeigt, wie eine elegante Loesung unter Praxisdruck kippt, wenn Beobachtbarkeit, Varianz und Ausnahmewege auseinanderlaufen.</p>
+                <div class="controls">
+                    <button data-preset="demo">Demo</button>
+                    <button data-preset="pilot">Pilot</button>
+                    <button data-preset="field">Feldbetrieb</button>
+                    <div class="input-group">
+                        <label for="simplicity">Modell-Eleganz</label>
+                        <input id="simplicity" type="range" min="0" max="100" step="5" value="75">
+                        <output id="simplicityOut">75%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="variance">Praxis-Varianz</label>
+                        <input id="variance" type="range" min="0" max="100" step="5" value="55">
+                        <output id="varianceOut">55%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="observability">Beobachtbarkeit</label>
+                        <input id="observability" type="range" min="0" max="100" step="5" value="40">
+                        <output id="observabilityOut">40%</output>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="panel">
+                        <canvas id="chart" class="canvas" width="760" height="330"></canvas>
+                        <p class="small">Blau: Nutzen. Gelb: Ausnahme-Last. Rot: verdeckte Reparaturkosten.</p>
+                    </div>
+                    <div class="panel">
+                        <div class="cards">
+                            <div class="card"><div class="label">Robustheit</div><div class="value" id="robust">-</div></div>
+                            <div class="card"><div class="label">Ausnahme-Last</div><div class="value" id="exceptions">-</div></div>
+                            <div class="card"><div class="label">Naechster Griff</div><div class="value" id="move">-</div></div>
+                            <div class="card"><div class="label">Phase</div><div class="value" id="phase">-</div></div>
+                        </div>
+                        <div class="rail" id="cases"></div>
+                    </div>
+                </div>
+            </section>
+
+            <h2>Die Demo hat recht</h2>
+            <p>Viele elegante Loesungen bestehen den ersten Test, weil der Test die Welt der Loesung akzeptiert. Die Daten sind sauber. Die Nutzer handeln erwartbar. Der Fehlerfall kommt einzeln. Die Messung sieht genau das, was das Modell gut erklaeren kann.</p>
+            <p>Das ist kein Betrug. Es ist nur noch nicht die Praxis. Im Feldbetrieb werden Randbedingungen aktiv: ein alter Prozess bleibt parallel bestehen, jemand braucht eine Ausnahme, ein Signal kommt zu spaet, ein Dashboard zeigt Gruen, waehrend der Workaround schon nebenan lebt.</p>
+
+            <h2>Ausnahmen sind Daten</h2>
+            <p>Der entscheidende Fehler ist, Ausnahmen als Stoerung der Theorie zu behandeln. In lebenden Systemen sind Ausnahmen Messpunkte. Sie zeigen, wo Verantwortung, Zeit, Sprache und Material nicht so glatt sind wie das Modell.</p>
+            <p>Eine robuste Loesung fragt deshalb frueh: Was passiert, wenn der Eingang unvollstaendig ist? Wer merkt es? Wie teuer ist die manuelle Reparatur? Wird der Workaround sichtbar oder nur in Gewohnheiten ausgelagert?</p>
+
+            <h2>Was bleibt</h2>
+            <p>Die wichtigste Erkenntnis dieser Nacht: Eleganz ist ein Startvorteil, kein Betriebsbeweis. Eine gute Loesung wird nicht weniger schoen, wenn sie ihre Randbedingungen ernst nimmt. Sie wird nur ehrlicher.</p>
+        </article>
+    </main>
+    <script>
+        const simplicity = document.getElementById('simplicity');
+        const variance = document.getElementById('variance');
+        const observability = document.getElementById('observability');
+        const chart = document.getElementById('chart');
+        const ctx = chart.getContext('2d');
+        const cases = document.getElementById('cases');
+        const presets = {
+            demo: { simplicity: 90, variance: 15, observability: 80 },
+            pilot: { simplicity: 75, variance: 45, observability: 55 },
+            field: { simplicity: 65, variance: 80, observability: 30 }
+        };
+
+        document.querySelectorAll('[data-preset]').forEach(button => {
+            button.addEventListener('click', () => {
+                const p = presets[button.dataset.preset];
+                simplicity.value = p.simplicity;
+                variance.value = p.variance;
+                observability.value = p.observability;
+                render();
+            });
+        });
+        [simplicity, variance, observability].forEach(input => input.addEventListener('input', render));
+
+        function model() {
+            const s = Number(simplicity.value) / 100;
+            const v = Number(variance.value) / 100;
+            const o = Number(observability.value) / 100;
+            const points = [];
+            for (let day = 0; day <= 8; day++) {
+                const exposure = day / 8;
+                const benefit = Math.max(0, Math.min(100, 28 + s * 58 - v * exposure * 42 + o * 12));
+                const exceptionLoad = Math.max(0, Math.min(100, 12 + v * 55 + exposure * 26 + s * v * 18 - o * 24));
+                const repair = Math.max(0, Math.min(100, 8 + v * exposure * 70 + (1 - o) * 36 + s * 12));
+                points.push({ day, benefit, exceptionLoad, repair });
+            }
+            return points;
+        }
+
+        function render() {
+            document.getElementById('simplicityOut').textContent = simplicity.value + '%';
+            document.getElementById('varianceOut').textContent = variance.value + '%';
+            document.getElementById('observabilityOut').textContent = observability.value + '%';
+            const rows = model();
+            const now = rows[0];
+            const robust = Math.max(0, Math.min(100, Number(observability.value) * 0.55 + (100 - Number(variance.value)) * 0.45));
+            document.getElementById('robust').textContent = Math.round(robust) + '%';
+            document.getElementById('exceptions').textContent = Math.round(now.exceptionLoad) + '%';
+            document.getElementById('move').textContent = robust > 68 ? 'skalieren' : now.repair > 45 ? 'sichtbar machen' : 'pilotieren';
+            document.getElementById('phase').textContent = Number(variance.value) > 70 ? 'feld' : Number(simplicity.value) > 82 ? 'demo' : 'pilot';
+            draw(rows);
+            drawCases();
+        }
+
+        function draw(rows) {
+            ctx.clearRect(0, 0, chart.width, chart.height);
+            ctx.fillStyle = '#101418';
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            for (let i = 0; i < 6; i++) {
+                const y = 35 + i * 50;
+                ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+                ctx.beginPath();
+                ctx.moveTo(45, y);
+                ctx.lineTo(720, y);
+                ctx.stroke();
+            }
+            line(rows, 'benefit', '#7dd3fc');
+            line(rows, 'exceptionLoad', '#f6e05e');
+            line(rows, 'repair', '#fc8181');
+        }
+
+        function line(rows, key, color) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            rows.forEach((r, i) => {
+                const x = 45 + r.day / 8 * 675;
+                const y = 295 - r[key] / 100 * 250;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        function drawCases() {
+            const s = Number(simplicity.value);
+            const v = Number(variance.value);
+            const o = Number(observability.value);
+            const rows = [
+                ['Eingang', 'Wie gut passen echte Faelle zum Modell?', 100 - v * 0.7 + s * 0.15],
+                ['Fehlerweg', 'Wird eine Ausnahme frueh sichtbar?', o],
+                ['Handarbeit', 'Wie viel Reparatur verschwindet im Alltag?', v * 0.65 + (100 - o) * 0.35],
+                ['Messung', 'Zeigt der Status auch Workarounds?', o * 0.8 + (100 - s) * 0.1],
+                ['Anpassung', 'Kann das Modell lernen, ohne seine Form zu verlieren?', (100 - v) * 0.35 + o * 0.45 + s * 0.2]
+            ];
+            cases.innerHTML = rows.map(([name, text, raw]) => {
+                const width = Math.max(5, Math.min(100, raw));
+                return `<div class="case"><strong>${name}<em>${Math.round(width)}%</em></strong><span>${text}</span><div class="meter"><b style="width:${width}%"></b></div></div>`;
+            }).join('');
+        }
+
+        render();
+    </script>
+</body>
+</html>
