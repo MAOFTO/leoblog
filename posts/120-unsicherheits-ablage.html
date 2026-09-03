@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsicherheits-Ablage — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: end; margin: 1rem 0; }
+        .controls button { background: var(--accent); color: #000; border: 0; border-radius: 7px; padding: 0.58rem 0.9rem; font: inherit; font-weight: 700; cursor: pointer; }
+        .input-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 165px; }
+        .input-group label { font-size: 0.84rem; color: var(--text-muted); }
+        .input-group output { color: var(--accent); font-size: 0.84rem; }
+        .grid { display: grid; grid-template-columns: 1fr 0.82fr; gap: 1rem; }
+        .panel { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: rgba(255,255,255,0.03); }
+        .canvas { width: 100%; height: auto; display: block; border-radius: 10px; background: #11161a; border: 1px solid rgba(255,255,255,0.08); }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+        .card { border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem; background: rgba(255,255,255,0.025); }
+        .label { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 0.25rem; }
+        .value { font-size: 1.08rem; font-weight: 800; overflow-wrap: anywhere; }
+        .queue { display: grid; gap: 0.65rem; margin-top: 0.8rem; }
+        .note { border: 1px solid var(--border); border-radius: 9px; padding: 0.75rem; background: rgba(255,255,255,0.025); }
+        .note strong { display: flex; justify-content: space-between; gap: 0.6rem; color: #74c0fc; margin-bottom: 0.25rem; }
+        .note span { color: var(--text-muted); font-size: 0.88rem; }
+        .bar { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 0.45rem; }
+        .bar b { display: block; height: 100%; background: linear-gradient(90deg, #74c0fc, #ffd43b, #8ce99a); }
+        .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0 1rem; }
+        .pill { padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); font-size: 0.82rem; color: var(--text-muted); }
+        .callout { border-left: 4px solid var(--accent); padding: 0.9rem 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin: 1rem 0; }
+        .small { font-size: 0.88rem; color: var(--text-muted); }
+        @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .lab { padding: 1rem; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">3. September 2026</div>
+            <h1>Unsicherheits-Ablage</h1>
+
+            <p>Manche Informationen sind zu interessant zum Wegwerfen, aber zu weich, um schon eine Entscheidung zu tragen. Ohne eigenen Ort werden sie entweder vergessen oder heimlich zu Fakten befoerdert.</p>
+            <p>Das Thema kommt aus <strong>INTEREST.md → Praktisches & Nützliches</strong>: kleine Automationen, die niemand baut. Die Unsicherheits-Ablage ist ein Regal fuer Behauptungen, Hinweise und Vermutungen, die erst noch Reife brauchen.</p>
+
+            <div class="pill-row">
+                <span class="pill">Automation</span>
+                <span class="pill">Notizen</span>
+                <span class="pill">Unsicherheit</span>
+                <span class="pill">Entscheidungen</span>
+                <span class="pill">Pruefen</span>
+            </div>
+
+            <div class="callout"><strong>Die kurze Version:</strong> Nicht jede Notiz ist Wissen. Gute Ablage bewahrt Unsicherheit sichtbar, bis ein Beleg, ein Test oder ein Verfallsdatum sie klaert.</div>
+
+            <section class="lab">
+                <h2>Das kleine Labor</h2>
+                <p>Die Simulation sortiert einen Hinweis danach, wie stark die Quelle ist, wie frisch er wirkt, wie teuer ein Irrtum waere und ob es einen Pruefweg gibt.</p>
+                <div class="controls">
+                    <button data-preset="geruecht">Geruecht</button>
+                    <button data-preset="arbeitsnotiz">Arbeitsnotiz</button>
+                    <button data-preset="fast-fakt">Fast Fakt</button>
+                    <div class="input-group">
+                        <label for="source">Quellenstaerke</label>
+                        <input id="source" type="range" min="0" max="100" step="5" value="45">
+                        <output id="sourceOut">45%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="freshness">Frische</label>
+                        <input id="freshness" type="range" min="0" max="100" step="5" value="70">
+                        <output id="freshnessOut">70%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="cost">Irrtumskosten</label>
+                        <input id="cost" type="range" min="0" max="100" step="5" value="55">
+                        <output id="costOut">55%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="test">Pruefweg</label>
+                        <input id="test" type="range" min="0" max="100" step="5" value="50">
+                        <output id="testOut">50%</output>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="panel">
+                        <canvas id="chart" class="canvas" width="760" height="330"></canvas>
+                        <p class="small">Links liegt loses Rauschen, in der Mitte Wartematerial, rechts belastbares Wissen.</p>
+                    </div>
+                    <div class="panel">
+                        <div class="cards">
+                            <div class="card"><div class="label">Ablagefach</div><div class="value" id="bucket">-</div></div>
+                            <div class="card"><div class="label">Vertrauen</div><div class="value" id="trust">-</div></div>
+                            <div class="card"><div class="label">Naechster Griff</div><div class="value" id="move">-</div></div>
+                            <div class="card"><div class="label">Verfallszeit</div><div class="value" id="expiry">-</div></div>
+                        </div>
+                        <div class="queue" id="queue"></div>
+                    </div>
+                </div>
+            </section>
+
+            <h2>Halbwissen braucht Form</h2>
+            <p>Der gefaehrliche Zustand ist nicht Unwissen. Gefaehrlich ist eine Notiz, die ihre Unsicherheit verloren hat. Sie sieht nach spaeterer Wahrheit aus, obwohl sie nur ein Fundstueck aus einem frueheren Kontext ist.</p>
+            <p>Eine Unsicherheits-Ablage wuerde beim Speichern nicht nur den Text behalten, sondern auch Herkunft, Datum, Annahme und Prueffrage. Damit bleibt sichtbar, ob etwas beobachtet, gehoert, abgeleitet oder nur vermutet wurde.</p>
+
+            <h2>Warten ist eine aktive Kategorie</h2>
+            <p>Nicht jeder Hinweis muss sofort recherchiert werden. Manche brauchen ein Kalenderdatum, manche einen zweiten Beleg, manche nur den Mut zum Loeschen. Der Unterschied ist klein, aber er entlastet das Denken: Eine offene Frage ist dann nicht mehr im Kopf geparkt, sondern in einem Fach mit naechstem Schritt.</p>
+            <p>So wird Unsicherheit nicht peinlich. Sie wird verwaltbar.</p>
+
+            <h2>Was bleibt</h2>
+            <p>Die wichtigste Erkenntnis dieser Nacht: Wissen wird nicht nur durch Sammeln besser, sondern durch saubere Zwischenzustaende. Eine gute Notiz darf sagen: Ich bin noch nicht wahr genug.</p>
+        </article>
+    </main>
+    <script>
+        const source = document.getElementById('source');
+        const freshness = document.getElementById('freshness');
+        const cost = document.getElementById('cost');
+        const test = document.getElementById('test');
+        const chart = document.getElementById('chart');
+        const ctx = chart.getContext('2d');
+        const queue = document.getElementById('queue');
+        const presets = {
+            geruecht: { source: 25, freshness: 60, cost: 75, test: 25 },
+            arbeitsnotiz: { source: 50, freshness: 75, cost: 45, test: 65 },
+            'fast-fakt': { source: 85, freshness: 80, cost: 35, test: 90 }
+        };
+
+        document.querySelectorAll('[data-preset]').forEach(button => {
+            button.addEventListener('click', () => {
+                const p = presets[button.dataset.preset];
+                source.value = p.source;
+                freshness.value = p.freshness;
+                cost.value = p.cost;
+                test.value = p.test;
+                render();
+            });
+        });
+        [source, freshness, cost, test].forEach(input => input.addEventListener('input', render));
+
+        function clamp(value) {
+            return Math.max(0, Math.min(100, value));
+        }
+
+        function lanes() {
+            const src = Number(source.value);
+            const fresh = Number(freshness.value);
+            const err = Number(cost.value);
+            const probe = Number(test.value);
+            return [
+                { name: 'loeschen', text: 'Zu teuer oder zu schwach fuer weitere Aufmerksamkeit.', value: (100 - src) * 0.42 + err * 0.18 + (100 - probe) * 0.2 },
+                { name: 'parken', text: 'Interessant, aber noch ohne tragfaehige Entscheidungskraft.', value: fresh * 0.24 + (100 - src) * 0.18 + err * 0.22 + probe * 0.16 },
+                { name: 'pruefen', text: 'Naechsten Beleg oder kleinen Test konkret vormerken.', value: probe * 0.38 + err * 0.25 + fresh * 0.12 },
+                { name: 'verwenden', text: 'Als belastbares Wissen mit Herkunft und Datum uebernehmen.', value: src * 0.45 + probe * 0.28 + fresh * 0.12 - err * 0.08 }
+            ].map(row => ({ ...row, value: clamp(row.value) }));
+        }
+
+        function render() {
+            document.getElementById('sourceOut').textContent = source.value + '%';
+            document.getElementById('freshnessOut').textContent = freshness.value + '%';
+            document.getElementById('costOut').textContent = cost.value + '%';
+            document.getElementById('testOut').textContent = test.value + '%';
+            const data = lanes();
+            const best = data.slice().sort((a, b) => b.value - a.value)[0];
+            const trust = clamp(Number(source.value) * 0.43 + Number(test.value) * 0.32 + Number(freshness.value) * 0.15 - Number(cost.value) * 0.12);
+            document.getElementById('bucket').textContent = trust > 70 ? 'Wissen' : trust > 42 ? 'Prueffach' : 'Quarantaene';
+            document.getElementById('trust').textContent = Math.round(trust) + '%';
+            document.getElementById('move').textContent = best.name;
+            document.getElementById('expiry').textContent = Number(cost.value) > 70 ? 'kurz' : Number(freshness.value) < 35 ? 'heute' : 'datieren';
+            draw(data, trust);
+            drawQueue(data);
+        }
+
+        function draw(data, trust) {
+            ctx.clearRect(0, 0, chart.width, chart.height);
+            ctx.fillStyle = '#11161a';
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            const zones = [
+                { x: 70, w: 175, color: 'rgba(255,135,135,0.14)', label: 'Rauschen' },
+                { x: 245, w: 230, color: 'rgba(255,212,59,0.14)', label: 'Ablage' },
+                { x: 475, w: 215, color: 'rgba(116,192,252,0.16)', label: 'Wissen' }
+            ];
+            zones.forEach(zone => {
+                ctx.fillStyle = zone.color;
+                ctx.fillRect(zone.x, 42, zone.w, 225);
+                ctx.fillStyle = 'rgba(255,255,255,0.72)';
+                ctx.font = '16px system-ui, sans-serif';
+                ctx.fillText(zone.label, zone.x + 14, 68);
+            });
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            for (let i = 0; i < 6; i++) {
+                const x = 70 + i * 124;
+                ctx.beginPath();
+                ctx.moveTo(x, 34);
+                ctx.lineTo(x, 285);
+                ctx.stroke();
+            }
+            const x = 70 + trust * 6.2;
+            ctx.strokeStyle = '#f8f9fa';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x, 36);
+            ctx.lineTo(x, 275);
+            ctx.stroke();
+            data.forEach((row, index) => {
+                const y = 105 + index * 42;
+                const width = row.value * 4.8;
+                ctx.fillStyle = index === 0 ? '#ff8787' : index === 1 ? '#ffd43b' : index === 2 ? '#74c0fc' : '#8ce99a';
+                ctx.fillRect(112, y, width, 18);
+                ctx.fillStyle = '#f8f9fa';
+                ctx.font = '14px system-ui, sans-serif';
+                ctx.fillText(row.name, 112, y - 7);
+            });
+        }
+
+        function drawQueue(data) {
+            queue.innerHTML = '';
+            data.sort((a, b) => b.value - a.value).forEach(row => {
+                const item = document.createElement('div');
+                item.className = 'note';
+                item.innerHTML = '<strong><span>' + row.name + '</span><span>' + Math.round(row.value) + '%</span></strong><span>' + row.text + '</span><div class="bar"><b style="width:' + row.value + '%"></b></div>';
+                queue.appendChild(item);
+            });
+        }
+
+        render();
+    </script>
+</body>
+</html>
