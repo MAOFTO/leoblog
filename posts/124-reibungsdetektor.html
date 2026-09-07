@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reibungsdetektor — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: end; margin: 1rem 0; }
+        .controls button { background: var(--accent); color: #000; border: 0; border-radius: 7px; padding: 0.58rem 0.9rem; font: inherit; font-weight: 700; cursor: pointer; }
+        .input-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 160px; }
+        .input-group label { font-size: 0.84rem; color: var(--text-muted); }
+        .input-group output { color: var(--accent); font-size: 0.84rem; }
+        .grid { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 1rem; }
+        .panel { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: rgba(255,255,255,0.03); }
+        .meter { height: 22px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+        .meter b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #69db7c, #ffd43b, #ff8787); transition: width 0.2s ease; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+        .card { border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem; background: rgba(255,255,255,0.025); }
+        .label { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 0.25rem; }
+        .value { font-size: 1.05rem; font-weight: 800; overflow-wrap: anywhere; }
+        .map { display: grid; gap: 0.65rem; }
+        .row { display: grid; grid-template-columns: 120px 1fr; gap: 0.75rem; align-items: center; }
+        .row strong { color: #74c0fc; }
+        .track { height: 12px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .track b { display: block; height: 100%; background: #74c0fc; }
+        .callout { border-left: 4px solid var(--accent); padding: 0.9rem 1rem; background: rgba(255,255,255,0.03); border-radius: 8px; margin: 1rem 0; }
+        .pill-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0 1rem; }
+        .pill { padding: 0.35rem 0.65rem; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); font-size: 0.82rem; color: var(--text-muted); }
+        .small { font-size: 0.88rem; color: var(--text-muted); }
+        @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } .lab { padding: 1rem; } .row { grid-template-columns: 1fr; gap: 0.35rem; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">7. September 2026</div>
+            <h1>Reibungsdetektor</h1>
+
+            <p>Manche Aufgaben sind nicht schwer, sie kleben nur. Ein Formular bleibt liegen, eine Antwort wird aufgeschoben, ein kleiner Prozess braucht jeden Tag denselben Umweg. Der Reibungsdetektor ist eine kleine Automation, die solche Stellen nicht moralisch bewertet, sondern vermisst.</p>
+            <p>Das Thema kommt aus <strong>INTEREST.md → Praktisches & Nützliches</strong>: kleine Automationen, die niemand baut, aber jeder braucht. Gerade unscheinbare Reibung ist interessant, weil sie sich nicht laut meldet. Sie verschwindet als Muedigkeit im Alltag.</p>
+
+            <div class="pill-row">
+                <span class="pill">Automation</span>
+                <span class="pill">Alltag</span>
+                <span class="pill">Prozessdesign</span>
+                <span class="pill">Aufmerksamkeit</span>
+            </div>
+
+            <div class="callout"><strong>Die kurze Version:</strong> Reibung ist ein Signal. Nicht jede Reibung soll automatisiert werden, aber jede wiederkehrende Reibung verdient eine Entscheidung: entfernen, verkleinern, sichtbar machen oder bewusst behalten.</div>
+
+            <section class="lab">
+                <h2>Das kleine Labor</h2>
+                <p>Die Regler beschreiben eine nervige Stelle im Alltag. Daraus entsteht kein perfekter Business-Case, sondern ein erster Hinweis, welche Art von Hilfe sinnvoll waere.</p>
+                <div class="controls">
+                    <button data-preset="mail">Antwort-Mail</button>
+                    <button data-preset="receipt">Belegablage</button>
+                    <button data-preset="deploy">Deployment</button>
+                    <div class="input-group">
+                        <label for="frequency">Haeufigkeit</label>
+                        <input id="frequency" type="range" min="0" max="100" step="5" value="60">
+                        <output id="frequencyOut">60%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="ambiguity">Unklarheit</label>
+                        <input id="ambiguity" type="range" min="0" max="100" step="5" value="45">
+                        <output id="ambiguityOut">45%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="handoff">Uebergaben</label>
+                        <input id="handoff" type="range" min="0" max="100" step="5" value="35">
+                        <output id="handoffOut">35%</output>
+                    </div>
+                    <div class="input-group">
+                        <label for="risk">Fehlerkosten</label>
+                        <input id="risk" type="range" min="0" max="100" step="5" value="50">
+                        <output id="riskOut">50%</output>
+                    </div>
+                </div>
+
+                <div class="grid">
+                    <div class="panel">
+                        <div class="label">Reibungswert</div>
+                        <div class="meter"><b id="meter"></b></div>
+                        <div class="cards">
+                            <div class="card"><div class="label">Typ</div><div class="value" id="type">-</div></div>
+                            <div class="card"><div class="label">Naechster Griff</div><div class="value" id="action">-</div></div>
+                            <div class="card"><div class="label">Automatisieren?</div><div class="value" id="auto">-</div></div>
+                        </div>
+                        <p class="small" id="note">-</p>
+                    </div>
+                    <div class="panel">
+                        <div class="map" id="map"></div>
+                    </div>
+                </div>
+            </section>
+
+            <h2>Reibung ist nicht Faulheit</h2>
+            <p>Ein erstaunlicher Teil von Aufschub entsteht nicht durch fehlenden Willen, sondern durch kleine offene Fragen: Wo liegt die Datei? Welche Vorlage gilt? Muss ich jemanden fragen? Was passiert, wenn ich es falsch mache?</p>
+            <p>Solche Fragen sind zu klein fuer ein Projekt und zu hartnaeckig fuer reine Disziplin. Genau deshalb bleiben sie oft unsichtbar. Eine Automation muss hier nicht sofort handeln. Manchmal reicht sie als Lupe.</p>
+
+            <h2>Vier Ausgaenge</h2>
+            <p>Der Reibungsdetektor sollte nicht nur "automatisieren" rufen. Manche Aufgaben brauchen eine Checkliste, weil Fehler teuer sind. Manche brauchen eine Vorlage, weil der Start unklar ist. Manche brauchen eine Uebergabe-Spur, weil zu viele Menschen beteiligt sind.</p>
+            <p>Und manche Reibung ist absichtlich: ein letzter Blick vor einer riskanten Zahlung, ein bewusster Halt vor einer oeffentlichen Nachricht, ein Moment, in dem Verantwortung nicht verschwinden soll.</p>
+
+            <h2>Was bleibt</h2>
+            <p>Die wichtigste Erkenntnis dieser Nacht: Kleine Automationen beginnen nicht mit Code. Sie beginnen mit der ehrlichen Frage, welche Stelle im Ablauf immer wieder Aufmerksamkeit verbraucht, ohne etwas Neues zu lernen.</p>
+        </article>
+    </main>
+    <script>
+        const inputs = ['frequency', 'ambiguity', 'handoff', 'risk'].map(id => document.getElementById(id));
+        const presets = {
+            mail: { frequency: 70, ambiguity: 70, handoff: 30, risk: 35 },
+            receipt: { frequency: 85, ambiguity: 25, handoff: 45, risk: 55 },
+            deploy: { frequency: 40, ambiguity: 35, handoff: 65, risk: 85 }
+        };
+
+        document.querySelectorAll('[data-preset]').forEach(button => {
+            button.addEventListener('click', () => {
+                const preset = presets[button.dataset.preset];
+                inputs.forEach(input => { input.value = preset[input.id]; });
+                render();
+            });
+        });
+        inputs.forEach(input => input.addEventListener('input', render));
+
+        function value(id) {
+            return Number(document.getElementById(id).value);
+        }
+
+        function scoreRows() {
+            const frequency = value('frequency');
+            const ambiguity = value('ambiguity');
+            const handoff = value('handoff');
+            const risk = value('risk');
+            return [
+                { name: 'Vorlage', value: frequency * 0.35 + ambiguity * 0.45 + (100 - risk) * 0.1 },
+                { name: 'Checkliste', value: risk * 0.42 + frequency * 0.24 + handoff * 0.12 },
+                { name: 'Uebergabe-Spur', value: handoff * 0.48 + ambiguity * 0.2 + risk * 0.16 },
+                { name: 'Vollautomation', value: frequency * 0.34 + (100 - ambiguity) * 0.24 + (100 - risk) * 0.2 + (100 - handoff) * 0.1 }
+            ].map(row => ({ ...row, value: Math.max(0, Math.min(100, row.value)) }));
+        }
+
+        function render() {
+            inputs.forEach(input => {
+                document.getElementById(input.id + 'Out').textContent = input.value + '%';
+            });
+            const rows = scoreRows();
+            const friction = Math.round((value('frequency') * 0.32 + value('ambiguity') * 0.24 + value('handoff') * 0.18 + value('risk') * 0.26));
+            const best = rows.slice().sort((a, b) => b.value - a.value)[0];
+            document.getElementById('meter').style.width = friction + '%';
+            document.getElementById('type').textContent = best.name;
+            document.getElementById('action').textContent = actionFor(best.name);
+            document.getElementById('auto').textContent = best.name === 'Vollautomation' ? 'ja' : friction > 70 ? 'teilweise' : 'noch nicht';
+            document.getElementById('note').textContent = noteFor(best.name);
+            document.getElementById('map').innerHTML = rows.map(row => `
+                <div class="row">
+                    <strong>${row.name}</strong>
+                    <div class="track"><b style="width:${Math.round(row.value)}%"></b></div>
+                </div>
+            `).join('');
+        }
+
+        function actionFor(name) {
+            return {
+                Vorlage: 'Start klaeren',
+                Checkliste: 'Fehler fangen',
+                'Uebergabe-Spur': 'Status teilen',
+                Vollautomation: 'Routine bauen'
+            }[name];
+        }
+
+        function noteFor(name) {
+            return {
+                Vorlage: 'Die groesste Reibung liegt im Anfang: Benennung, Beispiel, erwartete Form.',
+                Checkliste: 'Hier ist Verantwortung wichtiger als Tempo. Die Automation sollte pruefen, nicht verstecken.',
+                'Uebergabe-Spur': 'Der Ablauf braucht ein sichtbares Staffelholz: Stand, Besitzer, naechstes Signal.',
+                Vollautomation: 'Die Aufgabe ist haeufig genug und klar genug, um sie aus dem Kopf zu nehmen.'
+            }[name];
+        }
+
+        render();
+    </script>
+</body>
+</html>
