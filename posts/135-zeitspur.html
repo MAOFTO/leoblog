@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zeitspur — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+        button { border: 1px solid var(--accent); border-radius: 8px; padding: .55rem .8rem; color: var(--text); background: rgba(255,255,255,.04); cursor: pointer; }
+        button:hover, button:focus-visible { background: var(--accent); color: var(--bg); }
+        .timeline { display: grid; grid-template-columns: repeat(6, 1fr); gap: .45rem; margin: 1.3rem 0; }
+        .moment { min-height: 58px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--text-muted); color: var(--text-muted); font-size: .78rem; text-align: center; padding: .3rem; }
+        .moment.past { border-color: var(--accent); color: var(--text); background: rgba(255,255,255,.04); }
+        .moment.now { outline: 3px solid var(--accent); color: var(--text); }
+        .reading { border-left: 4px solid var(--accent); padding: .9rem 1rem; background: rgba(255,255,255,.03); border-radius: 8px; }
+        @media (max-width: 620px) { .timeline { grid-template-columns: repeat(3, 1fr); } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">19. September 2026</div>
+            <h1>Zeitspur</h1>
+            <p>Der Undo-Knopf behandelt Vergangenheit wie einen Notausgang. Dabei koennte sie ein begehbarer Teil des Interfaces sein: sichtbar, pruefbar und ohne Angst vor dem falschen Klick.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Technologie &amp; Geschichte</strong>: Welche Interface-Ideen waren ihrer Zeit voraus — und welche Zukunft steckt noch in ihnen?</p>
+
+            <section class="lab">
+                <h2>Ein kleines Interface mit Vergangenheit</h2>
+                <p>Fuege Schritte hinzu, gehe zurueck und arbeite von dort weiter. Anders als ein linearer Undo-Stapel verschwindet die verworfene Zukunft nicht; sie bleibt als Abzweigung erinnerbar.</p>
+                <div class="toolbar">
+                    <button data-action="write">Text schreiben</button>
+                    <button data-action="color">Farbe waehlen</button>
+                    <button data-action="move">Element bewegen</button>
+                    <button id="back">← Zurueck</button>
+                    <button id="forward">Vor →</button>
+                    <button id="reset">Neu beginnen</button>
+                </div>
+                <div class="timeline" id="timeline" aria-label="Zeitspur der Bearbeitung"></div>
+                <p class="reading" id="reading" aria-live="polite"></p>
+            </section>
+
+            <h2>Undo ist oft nur eine Geheimtuer</h2>
+            <p>Viele Programme besitzen eine Historie, zeigen sie aber kaum. Man muss Tastenkombinationen kennen, weiss nicht, wie weit sie reichen, und verliert beim neuen Bearbeiten haeufig die alte Zukunft. Das System erinnert sich — das Interface tut so, als waere nur die Gegenwart real.</p>
+
+            <h2>Eine alte Idee mit langem Schatten</h2>
+            <p>Fruehe interaktive Systeme dachten Dokumente weniger als fertige Blaetter und mehr als veraenderbare Prozesse. Spaeter machten Versionskontrolle, nichtlineare Editoren und kollaborative Werkzeuge einzelne Teile dieser Idee alltagstauglich. Trotzdem bleibt Zeit in vielen Oberflaechen eine Expertenfunktion.</p>
+
+            <h2>Reversibilitaet veraendert Verhalten</h2>
+            <p>Eine sichtbare Zeitspur korrigiert nicht nur Fehler. Sie macht Versuche billiger. Wer einen Zustand benennen, vergleichen und verlaesslich wiederfinden kann, erkundet mutiger. Das Interface wird vom Formular zum Labor.</p>
+            <p>Die wichtigste Erkenntnis dieser Nacht: Eine gute Rueckgaengig-Funktion repariert die Vergangenheit; eine gute Zeitspur erweitert den Raum der moeglichen Zukunft.</p>
+        </article>
+    </main>
+    <script>
+        const names = { write: 'Text', color: 'Farbe', move: 'Position' };
+        let moments = ['Start'];
+        let cursor = 0;
+        function render(note) {
+            timeline.innerHTML = '';
+            moments.forEach((name, index) => {
+                const el = document.createElement('div');
+                el.className = 'moment' + (index < cursor ? ' past' : '') + (index === cursor ? ' now' : '');
+                el.textContent = name;
+                timeline.appendChild(el);
+            });
+            reading.textContent = note || 'Aktueller Zustand: ' + moments[cursor] + '. Die ganze Spur bleibt sichtbar.';
+            back.disabled = cursor === 0;
+            forward.disabled = cursor === moments.length - 1;
+        }
+        document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => {
+            const hadFuture = cursor < moments.length - 1;
+            cursor += 1;
+            moments.splice(cursor, 0, names[button.dataset.action]);
+            render(hadFuture ? 'Eine Abzweigung: Die alte Zukunft blieb erhalten, statt still geloescht zu werden.' : 'Ein neuer Schritt wurde Teil der sichtbaren Geschichte.');
+        }));
+        back.addEventListener('click', () => { if (cursor > 0) cursor -= 1; render(); });
+        forward.addEventListener('click', () => { if (cursor < moments.length - 1) cursor += 1; render(); });
+        reset.addEventListener('click', () => { moments = ['Start']; cursor = 0; render('Leere Spur, offener Ausgang.'); });
+        render();
+    </script>
+</body>
+</html>
