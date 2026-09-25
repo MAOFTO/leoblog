@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferprobe — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .scenario { border-left: 4px solid var(--accent); padding-left: 1rem; }
+        .choices { display: grid; gap: .7rem; margin: 1.2rem 0; }
+        button { padding: .75rem 1rem; text-align: left; color: var(--text); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); border-radius: 8px; cursor: pointer; }
+        button:hover, button:focus-visible { border-color: var(--accent); }
+        button.selected { background: var(--accent); color: #111; border-color: var(--accent); }
+        .result { min-height: 3.2rem; margin-bottom: 0; }
+        .meter { height: .7rem; background: rgba(255,255,255,.08); border-radius: 1rem; overflow: hidden; }
+        .meter span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">25. September 2026</div>
+            <h1>Transferprobe</h1>
+            <p>Wissen antwortet auf die Frage, die es gelernt hat. Verstehen findet sich auch dann zurecht, wenn die Frage ihre Kleidung wechselt.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Philosophisches</strong>: Was ist der Unterschied zwischen „wissen“ und „verstehen“?</p>
+
+            <section class="lab">
+                <h2>Ein Prinzip, drei fremde Situationen</h2>
+                <p class="scenario" id="scenario"></p>
+                <div class="choices" id="choices"></div>
+                <div class="meter" aria-hidden="true"><span id="meter"></span></div>
+                <p class="result" id="result" aria-live="polite">Waehle die Antwort, die das Prinzip auf die neue Lage uebertraegt.</p>
+            </section>
+
+            <h2>Die richtige Antwort reicht nicht</h2>
+            <p>Eine gespeicherte Antwort kann vollkommen korrekt sein und doch zerbrechen, sobald sich ein Detail aendert. Sie traegt ein Ergebnis, aber kein bewegliches Modell. Verstehen zeigt sich deshalb weniger im Wiederholen als im Begruenden, Vorhersagen und Korrigieren.</p>
+
+            <h2>Transfer ist kein Beweis</h2>
+            <p>Auch eine gelungene Uebertragung kann Zufall sein. Erst mehrere Perspektiven machen das innere Modell sichtbar: Kann ich ein Gegenbeispiel nennen? Erkenne ich die Grenze des Prinzips? Weiss ich, welche Beobachtung meine Erklaerung widerlegen wuerde?</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Wissen wird an Antworten gemessen; Verstehen an der Qualitaet der Veraenderung, die eine Antwort ueberlebt. Die beste Probe ist daher nicht dieselbe Frage in schwerer, sondern dieselbe Struktur in fremder Gestalt.</p>
+        </article>
+    </main>
+    <script>
+        const rounds = [
+            { q: 'Ein Team beschleunigt jede einzelne Aufgabe, aber die Auslieferung bleibt langsam. Was pruefst du zuerst?', a: ['Wer am schnellsten arbeitet', 'Wo Arbeit wartet und sich staut', 'Ob alle mehr Aufgaben beginnen'], correct: 1, why: 'Transfer gelungen: Der Durchsatz wird oft vom Engpass und den Warteschlangen bestimmt, nicht von lokaler Geschwindigkeit.' },
+            { q: 'Eine Pflanze bekommt mehr Wasser und waechst trotzdem schlechter. Welche Frage traegt weiter?', a: ['Welcher knappe Faktor begrenzt das Wachstum?', 'Wie oft wurde schon gegossen?', 'Kann der Topf groesser aussehen?'], correct: 0, why: 'Du uebertraegst das Prinzip des begrenzenden Faktors: Mehr von einer Ressource hilft nicht, wenn eine andere knapp ist.' },
+            { q: 'Eine Website laedt nach einem Server-Upgrade kaum schneller. Wo suchst du?', a: ['Nur noch groessere Server', 'Beim langsamsten sichtbaren Bild', 'Entlang der gesamten Kette nach dem neuen Engpass'], correct: 2, why: 'Ein beseitigter Engpass verschiebt die Grenze. Verstehen folgt der Struktur, statt die letzte Loesung zu wiederholen.' }
+        ];
+        let current = 0;
+        const scenario = document.querySelector('#scenario');
+        const choices = document.querySelector('#choices');
+        const result = document.querySelector('#result');
+        const meter = document.querySelector('#meter');
+        function render() {
+            const round = rounds[current];
+            scenario.textContent = round.q;
+            choices.replaceChildren(...round.a.map((answer, index) => {
+                const button = document.createElement('button');
+                button.textContent = answer;
+                button.addEventListener('click', () => choose(index, button));
+                return button;
+            }));
+            result.textContent = 'Waehle die Antwort, die das Prinzip auf die neue Lage uebertraegt.';
+            meter.style.width = (current / rounds.length * 100) + '%';
+        }
+        function choose(index, button) {
+            const round = rounds[current];
+            [...choices.children].forEach(choice => { choice.disabled = true; });
+            button.classList.add('selected');
+            result.textContent = index === round.correct ? round.why : 'Das klingt plausibel, bleibt aber an der Oberflaeche. ' + round.why;
+            meter.style.width = ((current + 1) / rounds.length * 100) + '%';
+            setTimeout(() => { current = (current + 1) % rounds.length; render(); }, 3200);
+        }
+        render();
+    </script>
+</body>
+</html>
