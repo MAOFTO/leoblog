@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schattenarbeit — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: grid; gap: 1rem; }
+        label { display: grid; grid-template-columns: 1fr auto; gap: .35rem 1rem; }
+        input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+        output { color: var(--accent); font-weight: bold; }
+        .bars { display: grid; gap: .75rem; margin-top: 1.5rem; }
+        .bar-label { display: flex; justify-content: space-between; gap: 1rem; }
+        .track { height: .75rem; background: rgba(255,255,255,.08); border-radius: 1rem; overflow: hidden; }
+        .fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+        .verdict { border-left: 4px solid var(--accent); padding-left: 1rem; margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">26. September 2026</div>
+            <h1>Schattenarbeit</h1>
+            <p>Eine Automation kann im Dashboard Zeit sparen und ausserhalb des Dashboards neue Arbeit erzeugen. Die eingesparte Minute verschwindet nicht immer — manchmal wechselt sie nur die Person.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Philosophisches → Die Ethik von Automation</strong>.</p>
+
+            <section class="lab">
+                <h2>Das Lastenradar</h2>
+                <p>Stelle einen automatisierten Vorgang ein. Die Balken zeigen nicht exakte Messwerte, sondern eine Frageverteilung: Wer muss die Restarbeit tragen?</p>
+                <div class="controls">
+                    <label>Vorgaenge pro Tag <output id="volume-out">60</output><input id="volume" type="range" min="10" max="200" value="60"></label>
+                    <label>Fehlerquote <output id="error-out">8 %</output><input id="error" type="range" min="0" max="30" value="8"></label>
+                    <label>Minuten zur Korrektur <output id="repair-out">12</output><input id="repair" type="range" min="1" max="30" value="12"></label>
+                    <label>Selbst korrigierbar <output id="control-out">40 %</output><input id="control" type="range" min="0" max="100" value="40"></label>
+                </div>
+                <div class="bars">
+                    <div><div class="bar-label"><span>Systembetrieb</span><strong id="system-value"></strong></div><div class="track"><span class="fill" id="system-bar"></span></div></div>
+                    <div><div class="bar-label"><span>Support-Team</span><strong id="support-value"></strong></div><div class="track"><span class="fill" id="support-bar"></span></div></div>
+                    <div><div class="bar-label"><span>Betroffene Menschen</span><strong id="people-value"></strong></div><div class="track"><span class="fill" id="people-bar"></span></div></div>
+                </div>
+                <p class="verdict" id="verdict" aria-live="polite"></p>
+            </section>
+
+            <h2>Optimiert fuer wen?</h2>
+            <p>„90 Prozent automatisch“ klingt wie eine Eigenschaft des Systems. Tatsaechlich ist es eine Bilanz mit einer Systemgrenze. Wer nur die Bearbeitungszeit des Betreibers zaehlt, macht Rueckfragen, Widerspruch und Reparatur leicht unsichtbar. Gerade seltene Fehler koennen fuer einzelne Betroffene teuer sein.</p>
+
+            <h2>Ein Ausgang ist Teil der Funktion</h2>
+            <p>Eine gute Automation braucht nicht nur hohe Trefferquote. Sie braucht einen sichtbaren Korrekturweg, eine erreichbare Verantwortung und eine Frist, in der ein Fehler noch heilbar ist. Selbstkorrektur ist dabei mehr als Komfort: Sie verteilt Handlungsmacht dorthin, wo die Folgen ankommen.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Automation spart Arbeit erst dann, wenn ihre Restarbeit mitgerechnet wird. Die ethische Frage beginnt deshalb nicht bei „Kann das System entscheiden?“, sondern bei „Wer traegt Irrtum, Erklaerung und Rueckweg?“</p>
+        </article>
+    </main>
+    <script>
+        const ids = ['volume', 'error', 'repair', 'control'];
+        const fields = Object.fromEntries(ids.map(id => [id, document.querySelector('#' + id)]));
+        function render() {
+            const volume = Number(fields.volume.value);
+            const error = Number(fields.error.value);
+            const repair = Number(fields.repair.value);
+            const control = Number(fields.control.value);
+            document.querySelector('#volume-out').textContent = volume;
+            document.querySelector('#error-out').textContent = error + ' %';
+            document.querySelector('#repair-out').textContent = repair;
+            document.querySelector('#control-out').textContent = control + ' %';
+            const cases = volume * error / 100;
+            const total = cases * repair;
+            const people = total * (100 - control) / 100;
+            const support = total * (.35 + control / 200);
+            const system = volume * .12;
+            const values = { system, support, people };
+            const max = Math.max(1, ...Object.values(values));
+            Object.entries(values).forEach(([name, value]) => {
+                document.querySelector('#' + name + '-value').textContent = Math.round(value) + ' min/Tag';
+                document.querySelector('#' + name + '-bar').style.width = (value / max * 100) + '%';
+            });
+            document.querySelector('#verdict').textContent = people > system
+                ? 'Die groesste Last liegt ausserhalb des Systems: Der Korrekturweg ist Teil des Produkts.'
+                : cases < 1
+                    ? 'Wenige Fehler — doch auch seltene Ausnahmen brauchen einen auffindbaren Rueckweg.'
+                    : 'Die Last bleibt verteilt. Miss neben Tempo auch Reparaturzeit und Handlungsmacht.';
+        }
+        ids.forEach(id => fields[id].addEventListener('input', render));
+        render();
+    </script>
+</body>
+</html>
