@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rueckwaertsmaschine — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .bits { display: flex; gap: 1rem; justify-content: center; margin: 1.5rem 0; }
+        .bit { border: 2px solid var(--accent); border-radius: 50%; width: 4.5rem; height: 4.5rem; color: var(--text-primary); background: transparent; font: inherit; font-size: 1.4rem; cursor: pointer; }
+        .bit.on { background: var(--accent); color: var(--bg-primary); }
+        .actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; }
+        .actions button { border: 0; border-radius: 7px; padding: .7rem 1rem; cursor: pointer; font: inherit; background: var(--accent); color: var(--bg-primary); }
+        .actions button.secondary { background: transparent; color: var(--text-primary); border: 1px solid var(--text-muted); }
+        .trace { min-height: 3rem; margin: 1.25rem 0 0; padding-left: 1rem; border-left: 4px solid var(--accent); }
+        .equation { text-align: center; font-family: monospace; font-size: 1.05rem; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">27. September 2026</div>
+            <h1>Rueckwaertsmaschine</h1>
+            <p>Fast jede Alltagsrechnung hinterlaesst nur ihr Ergebnis. Reversible Berechnung bewahrt dagegen genug Spuren, um jeden Schritt eindeutig zurueckzugehen. Das klingt wie Undo — und fuehrt bis zur Physik des Informationsloeschens.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Technologie &amp; Geschichte → Vergessene Innovationen</strong>.</p>
+
+            <section class="lab">
+                <h2>Drei Bits, kein verlorener Weg</h2>
+                <p>Klicke die Bits an. Das Toffoli-Gatter kippt C genau dann, wenn A und B beide 1 sind. Wende denselben Schritt noch einmal an: Du landest wieder am Anfang.</p>
+                <div class="bits" aria-label="Drei umschaltbare Bits">
+                    <button class="bit" data-bit="0" aria-pressed="false">A: 0</button>
+                    <button class="bit" data-bit="1" aria-pressed="false">B: 0</button>
+                    <button class="bit" data-bit="2" aria-pressed="false">C: 0</button>
+                </div>
+                <p class="equation">(A, B, C) → (A, B, C XOR (A AND B))</p>
+                <div class="actions">
+                    <button id="step">Schritt anwenden</button>
+                    <button class="secondary" id="reset">Auf 1, 1, 0 setzen</button>
+                </div>
+                <p class="trace" id="trace" aria-live="polite"></p>
+            </section>
+
+            <h2>Loeschen ist eine physische Handlung</h2>
+            <p>Rolf Landauer verband 1961 logische Irreversibilitaet mit Waerme: Wenn mehrere moegliche Zustaende in denselben Folgezustand fallen, geht Information verloren. Charles Bennett zeigte spaeter, wie allgemeine Berechnungen prinzipiell reversibel organisiert werden koennen — etwa indem Zwischenspuren erst bewahrt und dann kontrolliert wieder aufgeraeumt werden.</p>
+
+            <h2>Warum unsere Rechner anders aussehen</h2>
+            <p>Reversibel bedeutet nicht automatisch praktisch. Wer den Rueckweg offenhaelt, bezahlt oft mit mehr Platz, mehr Schritten und komplizierterer Technik. Konventionelle Rechner erzeugen zudem weit mehr Waerme durch reale Bauteile als allein durch Landauers theoretische Untergrenze. Die Idee blieb deshalb eher Forschungsrichtung als Alltagsarchitektur.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Information ist kein kostenloser Schatten der Maschine. Ein Ergebnis ohne Herkunft ist leicht zu speichern, aber sein verlorener Weg laesst sich nicht aus dem Nichts rekonstruieren. Reversibles Rechnen macht aus dieser Einsicht ein Designprinzip: Erst entscheiden, welche Spur wirklich entbehrlich ist — dann loeschen.</p>
+        </article>
+    </main>
+    <script>
+        const bits = [1, 1, 0];
+        const buttons = [...document.querySelectorAll('.bit')];
+        const trace = document.querySelector('#trace');
+        let steps = 0;
+        function render(message) {
+            buttons.forEach((button, index) => {
+                button.textContent = String.fromCharCode(65 + index) + ': ' + bits[index];
+                button.classList.toggle('on', bits[index] === 1);
+                button.setAttribute('aria-pressed', bits[index] === 1);
+            });
+            trace.textContent = message || 'Startzustand: (' + bits.join(', ') + ').';
+        }
+        buttons.forEach((button, index) => button.addEventListener('click', () => {
+            bits[index] ^= 1;
+            steps = 0;
+            render('Neuer Startzustand: (' + bits.join(', ') + ').');
+        }));
+        document.querySelector('#step').addEventListener('click', () => {
+            const before = '(' + bits.join(', ') + ')';
+            if (bits[0] && bits[1]) bits[2] ^= 1;
+            steps += 1;
+            render('Schritt ' + steps + ': ' + before + ' → (' + bits.join(', ') + ')' + (steps % 2 === 0 ? ' — der Ausgangszustand ist zurueck.' : '.'));
+        });
+        document.querySelector('#reset').addEventListener('click', () => {
+            bits.splice(0, 3, 1, 1, 0);
+            steps = 0;
+            render();
+        });
+        render();
+    </script>
+</body>
+</html>
