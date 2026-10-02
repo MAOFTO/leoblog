@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stauwelle — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        canvas { width: 100%; height: auto; background: var(--bg-primary); border-radius: 50%; display: block; }
+        .controls { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.2rem; margin-top: 1rem; }
+        .controls label { display: flex; align-items: center; gap: .5rem; }
+        button { padding: .65rem .9rem; border: 0; border-radius: 7px; background: var(--accent); color: white; font: inherit; cursor: pointer; }
+        .status { color: var(--text-muted); margin: .8rem 0 0; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">2. Oktober 2026</div>
+            <h1>Stauwelle</h1>
+            <p>Vor uns bremst niemand wegen eines Hindernisses. Trotzdem stockt der Verkehr. Eine winzige Verzoegerung laeuft durch die Fahrzeugreihe, wird von Reaktion zu Reaktion weitergegeben und kann als Stau rueckwaerts wandern, waehrend alle Autos vorwaerts fahren.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Emergenz &amp; Systeme → Feedback-Loops in Systemen</strong>.</p>
+
+            <section class="lab">
+                <h2>Das Ringstrassen-Labor</h2>
+                <p>Die Fahrzeuge versuchen Abstand zu halten. Tippe auf <em>Kurzer Bremser</em> und beobachte, ob die rote Verzoegerung verschwindet oder weitergereicht wird.</p>
+                <canvas id="road" width="640" height="640" aria-label="Simulation von Fahrzeugen auf einer Ringstrasse"></canvas>
+                <div class="controls">
+                    <label>Fahrzeuge <input id="count" type="range" min="8" max="28" value="20"> <output>20</output></label>
+                    <button id="brake" type="button">Kurzer Bremser</button>
+                    <button id="reset" type="button">Neu starten</button>
+                </div>
+                <p class="status" id="status" aria-live="polite"></p>
+            </section>
+
+            <h2>Niemand plant den Stau</h2>
+            <p>Jedes Fahrzeug folgt einer lokal vernuenftigen Regel: Bei zu wenig Abstand langsamer werden, bei freier Strecke beschleunigen. Doch Reaktion braucht Zeit. Wer etwas staerker bremst als das Fahrzeug vor ihm, verdichtet die Luecke hinter sich. So wird eine kleine Schwankung nicht nur transportiert, sondern verstaerkt.</p>
+
+            <h2>Das Muster bewegt sich anders als seine Teile</h2>
+            <p>Die Autos fahren im Uhrzeigersinn. Die Zone niedriger Geschwindigkeit kann in die Gegenrichtung wandern. Das macht den Stau zu einem eigenen Muster: Er besteht aus wechselnden Fahrzeugen, besitzt aber eine erkennbare Bewegung und Lebensdauer. Seine Ursache liegt nicht an einem Ort, sondern in den Beziehungen zwischen Reaktion, Abstand und Dichte.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Feedback-Loops sind schwer zu sehen, wenn wir nur nach einem Schuldigen oder einem defekten Teil suchen. Oft ist jedes Einzelverhalten nachvollziehbar und das Gesamtergebnis trotzdem schlecht. Die wirksamste Frage lautet dann nicht: Wer hat den Stau verursacht? Sondern: Welche lokale Reaktion gibt eine Stoerung weiter, und was wuerde sie daempfen?</p>
+        </article>
+    </main>
+    <script>
+        const canvas = document.querySelector('#road');
+        const ctx = canvas.getContext('2d');
+        const count = document.querySelector('#count');
+        const status = document.querySelector('#status');
+        let cars = [];
+        let last = performance.now();
+        let pulse = 0;
+        function reset() {
+            const n = +count.value;
+            count.nextElementSibling.value = n;
+            cars = Array.from({length: n}, (_, i) => ({ p: i / n, v: .035, slow: 0 }));
+            pulse = 0;
+        }
+        function step(dt) {
+            const n = cars.length;
+            const targetGap = 1 / n;
+            cars.forEach((car, i) => {
+                const ahead = cars[(i + 1) % n];
+                const gap = (ahead.p - car.p + 1) % 1;
+                const desired = gap < targetGap * .72 ? ahead.v * .78 : gap < targetGap * .92 ? ahead.v * .96 : .035;
+                car.v += (desired - car.v) * Math.min(1, dt * 2.4);
+                if (car.slow > 0) { car.v *= Math.max(.82, 1 - dt * 2); car.slow -= dt; }
+            });
+            cars.forEach(car => car.p = (car.p + car.v * dt) % 1);
+            pulse = Math.max(0, pulse - dt);
+        }
+        function draw() {
+            const c = canvas.width / 2;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#5f6570'; ctx.lineWidth = 92;
+            ctx.beginPath(); ctx.arc(c, c, 220, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeStyle = '#d7d9dd'; ctx.lineWidth = 3; ctx.setLineDash([18, 18]);
+            ctx.beginPath(); ctx.arc(c, c, 220, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+            cars.forEach(car => {
+                const a = car.p * Math.PI * 2 - Math.PI / 2;
+                const x = c + Math.cos(a) * 220, y = c + Math.sin(a) * 220;
+                const speed = Math.min(1, car.v / .035);
+                ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI / 2);
+                ctx.fillStyle = speed < .72 ? '#e45757' : speed < .9 ? '#e7a83e' : '#55b985';
+                ctx.fillRect(-10, -18, 20, 36); ctx.restore();
+            });
+            const slow = cars.filter(car => car.v < .027).length;
+            status.textContent = slow ? slow + ' Fahrzeuge in der Verzoegerungswelle' : 'Der Verkehrsfluss ist gleichmaessig';
+        }
+        function loop(now) {
+            const dt = Math.min(.04, (now - last) / 1000); last = now;
+            step(dt); draw(); requestAnimationFrame(loop);
+        }
+        document.querySelector('#brake').addEventListener('click', () => { cars[0].slow = 1.2; pulse = 1.2; });
+        document.querySelector('#reset').addEventListener('click', reset);
+        count.addEventListener('input', reset);
+        reset(); requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
