@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entropie-Mischer — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: grid; grid-template-columns: auto 1fr auto; gap: .8rem; align-items: center; }
+        .stream { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; margin: 1.3rem 0; }
+        .bit { aspect-ratio: 1; border-radius: 3px; background: var(--accent); opacity: .3; }
+        .bit.one { opacity: 1; }
+        .meter { height: 12px; border-radius: 99px; background: var(--bg-primary); overflow: hidden; }
+        .meter span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+        .reading { color: var(--text-muted); margin-bottom: 0; }
+        code { overflow-wrap: anywhere; }
+        @media (max-width: 560px) { .stream { grid-template-columns: repeat(8, 1fr); } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">3. Oktober 2026</div>
+            <h1>Entropie-Mischer</h1>
+            <p>Zwei Bitfolgen koennen gleich lang sein und gleich viele Einsen enthalten — und trotzdem sehr verschieden viel Ueberraschung tragen. Entscheidend ist nicht nur, <em>was</em> vorkommt, sondern wie vorhersehbar das Naechste aus dem Bisherigen wird.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Visualisierung &amp; Kreatives → Daten sichtbar machen auf unerwartete Weise</strong>.</p>
+
+            <section class="lab">
+                <h2>64 Bits zwischen Takt und Rauschen</h2>
+                <div class="controls">
+                    <label for="mix">Mischung</label>
+                    <input id="mix" type="range" min="0" max="100" value="25">
+                    <output id="mixValue">25 %</output>
+                </div>
+                <div class="stream" id="stream" aria-label="Visualisierte Bitfolge"></div>
+                <p><code id="bits"></code></p>
+                <div class="meter" aria-hidden="true"><span id="bar"></span></div>
+                <p class="reading" id="reading" aria-live="polite"></p>
+            </section>
+
+            <h2>Eine kleine Beschreibung ist ein gefundenes Muster</h2>
+            <p>Die geordnete Folge laesst sich knapp notieren: „32-mal 01“. Eine zufaellige Folge braucht meist fast so viel Platz wie sie selbst. Kompression ist deshalb eine praktische Musterprobe: Sie ersetzt Wiederholung durch eine kuerzere Anweisung.</p>
+
+            <h2>Gleichgewicht ist noch keine Ordnung</h2>
+            <p>Eine Folge aus abwechselnden Nullen und Einsen und eine faire Zufallsfolge enthalten beide ungefaehr gleich viele Zeichen jeder Sorte. Eine reine Haeufigkeitszaehlung verwechselt sie leicht. Erst der Blick auf Uebergaenge sieht, dass bei <code>0101…</code> jeder Schritt den naechsten verraet.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Information sitzt nicht nur in Werten, sondern in der Differenz zwischen Erwartung und Beobachtung. Wer Daten sichtbar machen will, sollte deshalb nicht bloss Elemente zaehlen. Oft wird das eigentliche Muster erst sichtbar, wenn wir fragen: Wie ueberrascht waere ich vom naechsten Schritt?</p>
+        </article>
+    </main>
+    <script>
+        const mix = document.querySelector('#mix');
+        const stream = document.querySelector('#stream');
+        const bits = document.querySelector('#bits');
+        const reading = document.querySelector('#reading');
+        const bar = document.querySelector('#bar');
+        const mixValue = document.querySelector('#mixValue');
+
+        function render() {
+            const chance = +mix.value / 100;
+            const values = Array.from({ length: 64 }, (_, i) => Math.random() < chance ? (Math.random() < .5 ? 0 : 1) : i % 2);
+            const surprises = values.slice(1).reduce((sum, value, i) => sum + (value === values[i] ? 1 : 0), 0);
+            const score = Math.round(surprises / 63 * 100);
+            mixValue.value = mix.value + ' %';
+            stream.replaceChildren(...values.map(value => {
+                const cell = document.createElement('span');
+                cell.className = 'bit' + (value ? ' one' : '');
+                return cell;
+            }));
+            bits.textContent = values.join('');
+            bar.style.width = score + '%';
+            reading.textContent = score + ' % unerwartete Uebergaenge — ' + (score < 15 ? 'starker Takt, kurze Beschreibung' : score < 35 ? 'Muster mit Stoerungen' : 'wenig Vorhersagbarkeit, lange Beschreibung');
+        }
+        mix.addEventListener('input', render);
+        render();
+    </script>
+</body>
+</html>
