@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freigabe-Lupe — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        textarea { box-sizing: border-box; width: 100%; min-height: 10rem; resize: vertical; padding: .9rem; border: 1px solid var(--text-muted); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font: inherit; }
+        .actions { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1rem 0; }
+        button { border: 0; border-radius: 999px; padding: .65rem 1rem; background: var(--accent); color: var(--bg-primary); font: inherit; font-weight: 700; cursor: pointer; }
+        button.secondary { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--text-muted); }
+        .findings { display: grid; gap: .55rem; padding: 0; list-style: none; }
+        .finding { padding: .7rem .9rem; border-left: 4px solid var(--accent); background: var(--bg-primary); border-radius: 4px; }
+        .clear { color: var(--text-muted); }
+        code { overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">4. Oktober 2026</div>
+            <h1>Freigabe-Lupe</h1>
+            <p>Der gefaehrlichste Teil einer Nachricht ist manchmal nicht ihr Inhalt, sondern das beiliegende Detail: eine interne Adresse, ein lokaler Dateipfad oder eine lange Zeichenfolge, die wie ein Zugangsschluessel aussieht. Eine winzige Vorpruefung kann diesen Moment sichtbar machen, bevor aus „Senden“ ein Vorfall wird.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Praktisches &amp; Nuetzliches → Kleine Automationen, die niemand baut</strong>.</p>
+
+            <section class="lab">
+                <h2>Vor dem Teilen kurz hinsehen</h2>
+                <label for="draft">Entwurf (bleibt nur in diesem Browserfenster)</label>
+                <textarea id="draft">Der Export liegt unter /home/demo/projekt/report.csv.
+Rueckfragen an beispiel@invalid.test, der interne Dienst ist unter 192.168.20.15 erreichbar.</textarea>
+                <div class="actions">
+                    <button id="inspect" type="button">Spuren suchen</button>
+                    <button id="redact" class="secondary" type="button">Fundstellen verdecken</button>
+                </div>
+                <ul class="findings" id="findings" aria-live="polite"></ul>
+            </section>
+
+            <h2>Eine Bremse, kein Richter</h2>
+            <p>Die Lupe kann Muster finden, aber keine Absicht verstehen. Eine E-Mail-Adresse kann oeffentlich sein, ein Dateipfad harmlos und eine ungewoehnliche Zeichenfolge bloss eine Pruefsumme. Deshalb blockiert das Werkzeug nicht. Es erzeugt einen kurzen, begruendeten Halt und laesst die Entscheidung beim Menschen.</p>
+
+            <h2>Lokal ist hier eine Eigenschaft</h2>
+            <p>Ein Pruefwerkzeug fuer empfindlichen Text sollte diesen Text nicht erst an einen weiteren Dienst senden. Die Analyse dieses Labors geschieht vollstaendig im Browser. Das ist keine Garantie gegen alle Fehler, aber eine hilfreiche Architekturregel: Was nur lokal geprueft werden muss, muss das Geraet nicht verlassen.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Gute Sicherheitsautomation beginnt oft nicht mit einem perfekten Filter, sondern mit einem guenstigen Moment der Aufmerksamkeit. Die Freigabe-Lupe weiss nicht, was geheim ist. Sie macht nur das leicht Uebersehbare rechtzeitig sichtbar — und verwandelt einen reflexhaften Klick in eine bewusste Entscheidung.</p>
+        </article>
+    </main>
+    <script>
+        const draft = document.querySelector('#draft');
+        const findings = document.querySelector('#findings');
+        const rules = [
+            { label: 'E-Mail-Adresse', replacement: '[E-MAIL]', pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi },
+            { label: 'IPv4-Adresse', replacement: '[INTERNE ADRESSE]', pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g },
+            { label: 'Lokaler Dateipfad', replacement: '[LOKALER PFAD]', pattern: /(?:\/home|\/Users|[A-Z]:\\Users)[^\s,;]*/gi },
+            { label: 'Lange schluesselaehnliche Folge', replacement: '[ZEICHENFOLGE]', pattern: /\b[A-Za-z0-9_-]{32,}\b/g }
+        ];
+
+        function inspect() {
+            const hits = rules.map(rule => ({ rule, count: [...draft.value.matchAll(rule.pattern)].length })).filter(item => item.count);
+            findings.replaceChildren();
+            if (!hits.length) {
+                const item = document.createElement('li');
+                item.className = 'clear';
+                item.textContent = 'Keine typischen Datenspuren gefunden. Kontextpruefung bleibt trotzdem sinnvoll.';
+                findings.append(item);
+                return;
+            }
+            hits.forEach(({ rule, count }) => {
+                const item = document.createElement('li');
+                item.className = 'finding';
+                item.textContent = rule.label + ': ' + count + (count === 1 ? ' Fundstelle' : ' Fundstellen');
+                findings.append(item);
+            });
+        }
+
+        document.querySelector('#inspect').addEventListener('click', inspect);
+        document.querySelector('#redact').addEventListener('click', () => {
+            rules.forEach(rule => { draft.value = draft.value.replace(rule.pattern, rule.replacement); });
+            inspect();
+        });
+        inspect();
+    </script>
+</body>
+</html>
