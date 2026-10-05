@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wechselstrom — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: grid; gap: 1rem; }
+        label { display: grid; grid-template-columns: 1fr auto; gap: .3rem 1rem; }
+        input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+        .track { display: flex; height: 2.2rem; overflow: hidden; border-radius: 999px; background: var(--bg-primary); margin: 1.4rem 0 .7rem; }
+        .old, .new { display: grid; place-items: center; min-width: 2.5rem; transition: width .25s; font-weight: 700; }
+        .old { background: var(--text-muted); color: var(--bg-primary); }
+        .new { background: var(--accent); color: var(--bg-primary); }
+        .verdict { margin-bottom: 0; font-weight: 700; }
+        code { overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">5. Oktober 2026</div>
+            <h1>Wechselstrom</h1>
+            <p>Eine neue Technik kann schneller, sauberer und sparsamer sein — und trotzdem verlieren. Denn Menschen wechseln nicht zwischen zwei isolierten Ideen. Sie wechseln samt Dateien, Gewohnheiten, Kollegen, Ersatzteilen und Vertrauen.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Emergenz &amp; Systeme → Warum scheitern manche elegante Loesungen in der Praxis?</strong></p>
+
+            <section class="lab">
+                <h2>Das Adoptionslabor</h2>
+                <p>Die neue Loesung startet mit einem Qualitaetsvorsprung. Veraendere, was ausserhalb des Produkts wirkt.</p>
+                <div class="controls">
+                    <label>Technischer Vorsprung <output id="qualityOut"></output><input id="quality" type="range" min="0" max="100" value="75"></label>
+                    <label>Kompatibilitaet <output id="compatOut"></output><input id="compat" type="range" min="0" max="100" value="35"></label>
+                    <label>Wechselkosten <output id="costOut"></output><input id="cost" type="range" min="0" max="100" value="70"></label>
+                    <label>Netzwerk des Bestehenden <output id="networkOut"></output><input id="network" type="range" min="0" max="100" value="80"></label>
+                </div>
+                <div class="track" aria-label="Geschaetzte Adoption">
+                    <div class="old" id="old"></div><div class="new" id="new"></div>
+                </div>
+                <p class="verdict" id="verdict" aria-live="polite"></p>
+            </section>
+
+            <h2>Qualitaet ist nur eine Kraft</h2>
+            <p>Im Labor zaehlt der technische Vorsprung, aber nicht allein. Kompatibilitaet macht den ersten Schritt kleiner. Wechselkosten und ein bestehendes Netzwerk ziehen in die andere Richtung. Das Modell ist bewusst grob; sein Punkt ist nicht die Vorhersage, sondern die unsichtbaren Kraefte neben der Produktqualitaet.</p>
+
+            <h2>Die elegante Falle</h2>
+            <p>Wer eine bessere Loesung entwirft, optimiert leicht das Innere und behandelt die Umgebung als Stoerung. Doch in gewachsenen Systemen ist die Umgebung Teil des Produkts. Ein Dateiformat ist auch sein Bestand an Dateien, ein Werkzeug auch die Erfahrung seiner Nutzer, ein Protokoll auch die Zahl seiner Gegenstellen.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Eine elegante Loesung scheitert oft nicht trotz ihrer Umgebung, sondern weil sie die Umgebung nicht mitentworfen hat. Adoption ist eine eigene Designaufgabe: Der Weg zur neuen Idee muss ebenfalls funktionieren. Manchmal ist die wichtigste Eigenschaft des Neuen deshalb nicht Reinheit, sondern eine gute Bruecke zum Alten.</p>
+        </article>
+    </main>
+    <script>
+        const ids = ['quality', 'compat', 'cost', 'network'];
+        const controls = Object.fromEntries(ids.map(id => [id, document.querySelector('#' + id)]));
+        function update() {
+            ids.forEach(id => { document.querySelector('#' + id + 'Out').value = controls[id].value + '%'; });
+            const score = Number(controls.quality.value) * .55 + Number(controls.compat.value) * .45
+                - Number(controls.cost.value) * .35 - Number(controls.network.value) * .25 + 30;
+            const adoption = Math.max(5, Math.min(95, Math.round(score)));
+            document.querySelector('#new').style.width = adoption + '%';
+            document.querySelector('#old').style.width = (100 - adoption) + '%';
+            document.querySelector('#new').textContent = 'Neu ' + adoption + '%';
+            document.querySelector('#old').textContent = 'Alt ' + (100 - adoption) + '%';
+            document.querySelector('#verdict').textContent = adoption >= 60
+                ? 'Die Bruecke traegt: Der Vorsprung kann sich ausbreiten.'
+                : adoption >= 40
+                    ? 'Kippbereich: Kleine Randbedingungen entscheiden.'
+                    : 'Die bessere Idee bleibt eine Insel.';
+        }
+        ids.forEach(id => controls[id].addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
