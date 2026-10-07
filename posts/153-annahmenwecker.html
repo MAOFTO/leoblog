@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annahmenwecker — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: grid; gap: 1rem; }
+        label { display: grid; grid-template-columns: 1fr auto; gap: .35rem 1rem; }
+        input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+        .meter { height: 1rem; border-radius: 999px; background: var(--bg-primary); overflow: hidden; margin: 1.5rem 0 .8rem; }
+        .meter span { display: block; height: 100%; width: 50%; background: var(--accent); transition: width .2s, background .2s; }
+        .score { font-size: 2rem; font-weight: 700; margin: 0; }
+        .verdict { font-weight: 700; }
+        .hint { color: var(--text-muted); margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurueck zum Blog</a>
+        <article>
+            <div class="post-meta">7. Oktober 2026</div>
+            <h1>Annahmenwecker</h1>
+            <p>Viele Entscheidungen beginnen mit einem Satz wie „Unsere Nutzer arbeiten vor allem am Desktop“. Monate spaeter ist der Satz noch da, aber niemand weiss mehr, ob die Welt dahinter ebenfalls geblieben ist.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Praktisches &amp; Nuetzliches → Kleine Automationen, die niemand baut</strong>.</p>
+
+            <section class="lab">
+                <h2>Der Frische-Check</h2>
+                <p>Gib einer Annahme ein Alter und eine Umgebung. Der Wecker schaetzt nicht ihre Wahrheit, sondern wie dringend sie erneut angesehen werden sollte.</p>
+                <div class="controls">
+                    <label>Alter der letzten Pruefung <output id="ageOut"></output><input id="age" type="range" min="0" max="24" value="6"></label>
+                    <label>Veraenderung der Umgebung <output id="changeOut"></output><input id="change" type="range" min="0" max="10" value="4"></label>
+                    <label>Folge einer falschen Annahme <output id="impactOut"></output><input id="impact" type="range" min="0" max="10" value="5"></label>
+                    <label>Staerke der damaligen Evidenz <output id="evidenceOut"></output><input id="evidence" type="range" min="0" max="10" value="7"></label>
+                </div>
+                <div class="meter" aria-hidden="true"><span id="bar"></span></div>
+                <p class="score"><output id="score"></output></p>
+                <p class="verdict" id="verdict" aria-live="polite"></p>
+                <p class="hint">Der Wert ist ein Aufmerksamkeitsfilter, kein Wahrheitsautomat.</p>
+            </section>
+
+            <h2>Entscheidungen tragen unsichtbare Voraussetzungen</h2>
+            <p>Wir dokumentieren oft, <em>was</em> entschieden wurde, aber selten, <em>welche Beobachtung</em> die Entscheidung plausibel machte. Dadurch altert die Entscheidung unsichtbar. Sie sieht weiterhin verbindlich aus, obwohl ihr Fundament laengst weich geworden sein kann.</p>
+
+            <h2>Ein Wecker statt eines Richters</h2>
+            <p>Die kleine Automation soll keine Annahme automatisch verwerfen. Sie kombiniert nur vier Hinweise: Zeit, Wandel, Schadenspotenzial und urspruengliche Evidenz. So tauchen fragile Voraussetzungen wieder auf, bevor ein Fehler beweist, dass sie veraltet waren.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Wissen braucht nicht nur ein Erstellungsdatum, sondern einen Rueckweg zur Beobachtung. Eine Annahme mit Besitzer, Quelle und Wiedervorlage bleibt pruefbar. Ohne diese drei Dinge wird aus einer nuetzlichen Abkuerzung langsam eine unsichtbare Regel.</p>
+        </article>
+    </main>
+    <script>
+        const controls = ['age', 'change', 'impact', 'evidence'].map(id => document.querySelector('#' + id));
+        function update() {
+            const [age, change, impact, evidence] = controls.map(control => Number(control.value));
+            ageOut.value = age + (age === 1 ? ' Monat' : ' Monate');
+            changeOut.value = change + '/10';
+            impactOut.value = impact + '/10';
+            evidenceOut.value = evidence + '/10';
+            const urgency = Math.round(Math.max(0, Math.min(100, age / 24 * 35 + change * 3.5 + impact * 3 - evidence * 1.5)));
+            score.value = urgency + '% Pruefbedarf';
+            bar.style.width = urgency + '%';
+            bar.style.background = urgency < 35 ? '#55b88c' : urgency < 65 ? '#d8a640' : '#d86666';
+            verdict.textContent = urgency < 35 ? 'Noch kein Alarm: Quelle und Pruefdatum sichtbar halten.'
+                : urgency < 65 ? 'Bei der naechsten passenden Gelegenheit erneut beobachten.'
+                : 'Jetzt pruefen: Diese Annahme traegt zu viel, um still weiterzulaufen.';
+        }
+        controls.forEach(control => control.addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
