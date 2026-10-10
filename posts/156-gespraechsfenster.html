@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gesprächsfenster — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .8rem; margin: 1.2rem 0; }
+        .card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; background: var(--bg); cursor: pointer; color: inherit; text-align: left; font: inherit; }
+        .card[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+        .card strong { display: block; margin-bottom: .35rem; }
+        .timeline { height: 1rem; border-radius: 99px; background: linear-gradient(90deg, #7b68ee 0 25%, #42b883 25% 70%, #efb366 70%); position: relative; margin: 1.5rem 0 .7rem; }
+        .marker { position: absolute; top: 50%; width: 1.35rem; height: 1.35rem; border: 3px solid var(--bg-secondary); border-radius: 50%; background: var(--text); transform: translate(-50%, -50%); transition: left .25s ease; }
+        .result { padding: 1rem; border-left: 4px solid var(--accent); background: var(--bg); }
+        .note { color: var(--text-muted); font-size: .94rem; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">10. Oktober 2026</div>
+            <h1>Gesprächsfenster</h1>
+            <p>1987 zeigte Apples Konzeptvideo <em>Knowledge Navigator</em> einen Professor, der mit einem digitalen Assistenten sprach, Nachrichten sichtete, Daten visualisierte und gemeinsam an Dokumenten arbeitete. Vieles davon existiert heute. Das Interessante ist nicht die Trefferquote einer Zukunftsvision, sondern das, was zwischen ihren Funktionen lag: ein zusammenhängendes Gespräch.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Technologie &amp; Geschichte → Vergessene Innovationen, die ihrer Zeit voraus waren.</strong></p>
+
+            <section class="lab">
+                <h2>Wie weit ist die Idee gereist?</h2>
+                <p>Wähle eine Fähigkeit. Der Marker ordnet nicht ihre technische Reife ein, sondern wie geschlossen sie sich heute im Alltag anfühlt.</p>
+                <div class="cards">
+                    <button class="card" data-score="88" data-text="Videogespräche sind alltäglich geworden. Die Vision ist hier fast unsichtbar, weil sie Infrastruktur wurde."><strong>Videogespräch</strong>sehen und sprechen</button>
+                    <button class="card" data-score="72" data-text="Sprache, Suche und Zusammenfassung funktionieren erstaunlich gut — solange Kontext, Quellen und Berechtigungen mitspielen."><strong>Dialog-Assistent</strong>fragen und verfeinern</button>
+                    <button class="card" data-score="58" data-text="Diagramme entstehen schnell. Schwieriger bleibt, Herkunft, Unsicherheit und Entscheidungen in derselben Ansicht verständlich zu halten."><strong>Daten im Gespräch</strong>zeigen und prüfen</button>
+                    <button class="card" data-score="39" data-text="Der Assistent im Video kannte Termine, Nachrichten, Personen und Dokumente zugleich. Heute wohnen diese Teile meist hinter getrennten Grenzen."><strong>Zusammenhängender Kontext</strong>erinnern und verbinden</button>
+                </div>
+                <div class="timeline" aria-hidden="true"><span class="marker" id="marker"></span></div>
+                <div class="result" id="result" aria-live="polite">Wähle eine Fähigkeit.</div>
+                <p class="note">Links: Demonstration. Mitte: brauchbares Werkzeug. Rechts: unsichtbare Alltagsinfrastruktur.</p>
+            </section>
+
+            <h2>Eine Demo ist auch ein Argument</h2>
+            <p>Das Video versprach nicht bloß Spracherkennung oder Videotelefonie. Es ordnete einzelne Techniken um eine menschliche Absicht: eine Vorlesung vorbereiten. Dadurch wirkte die Maschine weniger wie eine Sammlung von Programmen und mehr wie ein Gegenüber, das den Faden hält.</p>
+
+            <h2>Die schwierigen Zwischenräume</h2>
+            <p>Einzelne Fähigkeiten lassen sich messen und verkaufen. Ihre Übergänge sind widerspenstiger. Darf eine Nachricht den Kalender beeinflussen? Welche Quelle trägt ein Diagramm? Was soll vergessen werden? Je nahtloser das Interface wird, desto wichtiger werden Herkunft, Zustimmung und Korrekturwege.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Manche Zukunftsvisionen scheitern nicht an ihren Bausteinen. Sie warten an den Fugen. Der Knowledge Navigator war seiner Zeit voraus, weil er nicht nur neue Funktionen zeigte, sondern Kontinuität zwischen ihnen. Genau dort liegt bis heute die eigentliche Interface-Arbeit.</p>
+        </article>
+    </main>
+    <script>
+        const cards = [...document.querySelectorAll('.card')];
+        const marker = document.querySelector('#marker');
+        const result = document.querySelector('#result');
+        cards.forEach(card => card.addEventListener('click', () => {
+            cards.forEach(item => item.setAttribute('aria-pressed', String(item === card)));
+            marker.style.left = card.dataset.score + '%';
+            result.innerHTML = '<strong>' + card.querySelector('strong').textContent + ': ' + card.dataset.score + '%</strong><br>' + card.dataset.text;
+        }));
+        cards[3].click();
+    </script>
+</body>
+</html>
