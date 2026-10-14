@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widerspruchsfenster — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+        label { display: grid; gap: .45rem; color: var(--text-muted); }
+        input { width: 100%; accent-color: var(--accent); }
+        .window { position: relative; height: 9rem; margin: 1.5rem 0 1rem; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+        .decision { position: absolute; top: 1.35rem; left: 8%; width: 84%; height: .45rem; border-radius: 1rem; background: var(--border); }
+        .decision::before { content: "Automation entscheidet"; position: absolute; top: -1.25rem; left: 0; color: var(--text-muted); font-size: .82rem; }
+        .chance { position: absolute; top: 1.35rem; height: .45rem; border-radius: 1rem; background: var(--accent); }
+        .gate { position: absolute; top: 2.55rem; width: 2px; height: 3.2rem; background: var(--accent); }
+        .gate::after { content: "Widerspruch"; position: absolute; top: 3.35rem; transform: translateX(-50%); color: var(--text-muted); font-size: .82rem; white-space: nowrap; }
+        .reading { padding: 1rem; border-left: 4px solid var(--accent); background: var(--bg); }
+        .formula { color: var(--text-muted); font-size: .92rem; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">14. Oktober 2026</div>
+            <h1>Widerspruchsfenster</h1>
+            <p>Eine Automation kann schnell, zuverlässig und trotzdem unfair sein. Das Problem beginnt oft nicht bei der Entscheidung selbst, sondern danach: Gibt es einen sichtbaren Moment, in dem ein Mensch sagen kann, dass der Fall anders liegt?</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Philosophisches → Die Ethik von Automation.</strong></p>
+
+            <section class="lab">
+                <h2>Wie erreichbar ist der Rückweg?</h2>
+                <p>Verändere Eingriff, Zeitfenster und Aufwand. Der Balken zeigt, wie viel der theoretischen Widerspruchsmöglichkeit praktisch übrig bleibt.</p>
+                <div class="controls">
+                    <label>Eingriffstiefe: <strong id="impactValue">60 %</strong><input id="impact" type="range" min="10" max="100" value="60"></label>
+                    <label>Zeit für Widerspruch: <strong id="timeValue">7 Tage</strong><input id="time" type="range" min="1" max="30" value="7"></label>
+                    <label>Aufwand des Rückwegs: <strong id="effortValue">40 %</strong><input id="effort" type="range" min="0" max="100" value="40"></label>
+                </div>
+                <div class="window" aria-label="Visualisierung des praktisch nutzbaren Widerspruchsfensters">
+                    <div class="decision"></div>
+                    <div class="chance" id="chance"></div>
+                    <div class="gate" id="gate"></div>
+                </div>
+                <div class="reading" id="reading" aria-live="polite"></div>
+                <p class="formula">Das Modell ist eine Denkstütze, kein Ethik-Score: Zeit und Zugänglichkeit öffnen das Fenster; Eingriffstiefe erhöht, wie wichtig es wird.</p>
+            </section>
+
+            <h2>Ein Recht auf dem Papier ist noch kein Rückweg</h2>
+            <p>Ein Formular, das nur nach langer Suche auftaucht, eine Frist, die vor dem Brief endet, oder eine Erklärung in Maschinensprache: Formal existiert Widerspruch. Praktisch wurde er wegoptimiert. Zugang ist deshalb keine Fußnote des Verfahrens, sondern Teil seiner Wirkung.</p>
+
+            <h2>Je tiefer der Eingriff, desto breiter die Tür</h2>
+            <p>Eine automatisch sortierte Playlist und eine automatisch abgelehnte Wohnung dürfen nicht denselben Rückweg haben. Wo Entscheidungen Chancen, Geld oder Bewegungsfreiheit berühren, braucht Korrektur mehr Zeit, weniger Reibung und einen Menschen, der Verantwortung übernehmen kann.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Die Ethik einer Automation zeigt sich nicht nur darin, wie sie entscheidet. Sie zeigt sich auch in der Architektur des Widerspruchs: ob Betroffene die Entscheidung bemerken, verstehen und wirksam verändern können. Ein guter Rückweg ist kein Notausgang — er gehört zum Haupteingang.</p>
+        </article>
+    </main>
+    <script>
+        const impact = document.querySelector('#impact');
+        const time = document.querySelector('#time');
+        const effort = document.querySelector('#effort');
+
+        function draw() {
+            const i = Number(impact.value);
+            const t = Number(time.value);
+            const e = Number(effort.value);
+            const access = Math.round((t / 30) * (100 - e));
+            const width = Math.max(3, access * .84);
+            document.querySelector('#impactValue').textContent = i + ' %';
+            document.querySelector('#timeValue').textContent = t + (t === 1 ? ' Tag' : ' Tage');
+            document.querySelector('#effortValue').textContent = e + ' %';
+            document.querySelector('#chance').style.cssText = `left: 8%; width: ${width}%;`;
+            document.querySelector('#gate').style.left = (8 + width) + '%';
+            const urgent = i > 65 && access < 30;
+            document.querySelector('#reading').innerHTML = urgent
+                ? `<strong>Kritische Enge:</strong> Hoher Eingriff, aber nur ${access} % praktische Zugänglichkeit. Der Rückweg braucht weniger Reibung oder mehr Zeit.`
+                : access > 55
+                    ? `<strong>Offenes Fenster:</strong> Etwa ${access} % praktische Zugänglichkeit geben Fehlern eine realistische Chance auf Korrektur.`
+                    : `<strong>Schmaler Rückweg:</strong> Formal gibt es ${t} Tage; Aufwand lässt davon praktisch nur etwa ${access} % erreichbar erscheinen.`;
+        }
+
+        [impact, time, effort].forEach(control => control.addEventListener('input', draw));
+        draw();
+    </script>
+</body>
+</html>
