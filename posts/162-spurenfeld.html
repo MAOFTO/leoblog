@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spurenfeld — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        canvas { display: block; width: 100%; max-width: 640px; height: auto; margin: 1rem auto; border-radius: 10px; background: #101820; }
+        .controls { display: flex; flex-wrap: wrap; gap: .7rem; align-items: center; }
+        button { padding: .65rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+        label { color: var(--text-muted); }
+        input { vertical-align: middle; }
+        .signal { color: var(--text-muted); font-size: .92rem; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">16. Oktober 2026</div>
+            <h1>Spurenfeld</h1>
+            <p>Wie findet eine Gruppe einen gemeinsamen Weg, wenn niemand den Überblick hat? Oft genügt eine kleine Rückkopplung: Gegangene Wege werden ein wenig attraktiver, häufig genutzte Wege dadurch noch häufiger genutzt.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Emergenz &amp; Systeme → Feedback-Loops in Systemen.</strong></p>
+
+            <section class="lab">
+                <h2>Ein Weg aus vielen Versuchen</h2>
+                <p>Jeder Punkt wandert vom blauen Start zum goldenen Ziel. Er kennt nur die Richtung und die Spuren früherer Wanderer.</p>
+                <canvas id="field" width="640" height="360" aria-label="Simulation entstehender Pfade"></canvas>
+                <div class="controls">
+                    <button id="toggle">Pause</button>
+                    <button id="reset">Neu beginnen</button>
+                    <label>Spurwirkung <input id="pull" type="range" min="0" max="100" value="62"></label>
+                    <span class="signal" id="signal" aria-live="polite"></span>
+                </div>
+            </section>
+
+            <h2>Verstärkung ist noch kein Plan</h2>
+            <p>Kein Punkt zeichnet den späteren Pfad. Jeder Schritt mischt Zielrichtung, Zufall und eine lokale Spur. Erst die Wiederholung macht aus kleinen Bevorzugungen eine sichtbare Struktur. Das Ergebnis wirkt geplant, obwohl es aus vielen begrenzten Entscheidungen entsteht.</p>
+
+            <h2>Der erste Erfolg bekommt Gewicht</h2>
+            <p>Positive Rückkopplung ist schnell, aber nicht automatisch klug. Ein früher Zufall kann sich selbst verstärken und eine brauchbare Route festschreiben, obwohl eine bessere unentdeckt bleibt. Verdunstende Spuren halten das System beweglich: Altes Gewicht verliert langsam seine Macht.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Feedback verwandelt Geschichte in Richtung. Darin liegt seine schöpferische Kraft — und sein Risiko. Wer nur den fertigen Pfad sieht, verwechselt leicht das Ergebnis wiederholter Verstärkung mit der einzig möglichen Lösung.</p>
+        </article>
+    </main>
+    <script>
+        const canvas = document.querySelector('#field');
+        const ctx = canvas.getContext('2d');
+        const pull = document.querySelector('#pull');
+        const signal = document.querySelector('#signal');
+        const cols = 64, rows = 36, cell = 10;
+        let trails, walkers, running = true, arrivals = 0;
+
+        function restart() {
+            trails = new Float32Array(cols * rows);
+            walkers = [];
+            arrivals = 0;
+            for (let i = 0; i < 28; i++) walkers.push({ x: 3, y: 18, path: [] });
+        }
+
+        function step() {
+            trails = trails.map(value => value * .997);
+            const influence = Number(pull.value) / 100;
+            walkers.forEach(w => {
+                const candidates = [];
+                for (let dy = -1; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
+                    const x = w.x + dx, y = w.y + dy;
+                    if (x < 0 || x >= cols || y < 1 || y >= rows - 1 || (!dx && !dy)) continue;
+                    const distance = Math.hypot(60 - x, 18 - y);
+                    const trace = trails[y * cols + x];
+                    candidates.push({ x, y, score: -distance * .08 + trace * influence + Math.random() * (1.5 - influence) });
+                }
+                candidates.sort((a, b) => b.score - a.score);
+                const next = candidates[0];
+                w.x = next.x; w.y = next.y; w.path.push(w.y * cols + w.x);
+                if (Math.hypot(60 - w.x, 18 - w.y) < 2) {
+                    w.path.forEach(index => trails[index] = Math.min(5, trails[index] + .18));
+                    w.x = 3; w.y = 18; w.path = []; arrivals++;
+                } else if (w.path.length > 130) { w.x = 3; w.y = 18; w.path = []; }
+            });
+        }
+
+        function draw() {
+            ctx.fillStyle = '#101820'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < trails.length; i++) if (trails[i] > .04) {
+                ctx.fillStyle = `rgba(76, 201, 176, ${Math.min(.7, trails[i] / 5)})`;
+                ctx.fillRect((i % cols) * cell, Math.floor(i / cols) * cell, cell, cell);
+            }
+            ctx.fillStyle = '#4aa3ff'; ctx.beginPath(); ctx.arc(35, 185, 13, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.arc(605, 185, 13, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f4f7fb'; walkers.forEach(w => { ctx.beginPath(); ctx.arc(w.x * cell + 5, w.y * cell + 5, 2.4, 0, Math.PI * 2); ctx.fill(); });
+            signal.textContent = `${arrivals} erfolgreiche Wege · ${pull.value}% Spurwirkung`;
+        }
+
+        function loop() { if (running) for (let i = 0; i < 2; i++) step(); draw(); requestAnimationFrame(loop); }
+        document.querySelector('#toggle').addEventListener('click', event => { running = !running; event.target.textContent = running ? 'Pause' : 'Weiter'; });
+        document.querySelector('#reset').addEventListener('click', restart);
+        restart(); loop();
+    </script>
+</body>
+</html>
