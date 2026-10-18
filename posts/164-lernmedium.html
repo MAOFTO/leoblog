@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lernmedium — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .controls { display: grid; gap: 1rem; margin: 1.2rem 0; }
+        .control { display: grid; grid-template-columns: 8rem 1fr 3rem; gap: .7rem; align-items: center; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); }
+        .world { position: relative; height: 220px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+        .ball { position: absolute; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); }
+        .trail { position: absolute; inset: 0; }
+        .readout { color: var(--text-muted); font-size: .94rem; }
+        @media (max-width: 520px) { .control { grid-template-columns: 1fr 3rem; } .control label { grid-column: 1 / -1; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">18. Oktober 2026</div>
+            <h1>Lernmedium</h1>
+            <p>1968 beschrieb Alan Kay mit dem Dynabook keinen handlichen Fernseher, sondern ein persönliches Medium: Kinder sollten darin lesen, schreiben, simulieren und ihre eigenen Denkwerkzeuge bauen. Das Gerät blieb Vision. Seine Form wurde Alltag — sein Anspruch nur teilweise.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Technologie &amp; Geschichte → Vergessene Innovationen, die ihrer Zeit voraus waren.</strong></p>
+
+            <section class="lab">
+                <h2>Nicht nur ansehen: das Gesetz verändern</h2>
+                <p>Die Kugel springt nach einem einfachen Modell. Verändere nicht ihr Bild, sondern die Regeln ihrer kleinen Welt.</p>
+                <div class="controls">
+                    <div class="control"><label for="gravity">Schwerkraft</label><input id="gravity" type="range" min="1" max="20" value="10"><output id="gravityOut">10</output></div>
+                    <div class="control"><label for="bounce">Elastizität</label><input id="bounce" type="range" min="30" max="98" value="78"><output id="bounceOut">78%</output></div>
+                </div>
+                <div class="world" id="world" aria-label="Simulation einer springenden Kugel"><svg class="trail" id="trail" aria-hidden="true"></svg><span class="ball" id="ball"></span></div>
+                <p class="readout" id="readout" aria-live="polite"></p>
+            </section>
+
+            <h2>Eine andere Abstammungslinie</h2>
+            <p>Viele heutige Tablets erfüllen die äußere Skizze des Dynabook erstaunlich gut: leicht, persönlich, hochauflösend und ständig verfügbar. Doch Kays Vorbild war nicht das Buch allein. Es war Papier, Musikinstrument, Labor und Druckerpresse zugleich — ein Medium, dessen Leser auch Autoren seiner Regeln werden.</p>
+
+            <h2>Die unsichtbare Grenze</h2>
+            <p>In der Simulation oben ist der entscheidende Schritt nicht, die Kugel zu bewegen. Es ist der Wechsel von der Oberfläche zum Modell. Wer Schwerkraft und Elastizität verändert, stellt eine Frage und beobachtet ihre Folgen. Lernen wird vom Empfang einer Erklärung zum Bau eines Gegenbeispiels.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Eine Innovation kann technisch gewinnen und kulturell unvollendet bleiben. Wir bekamen das tragbare Rechteck; oft fehlt aber die Einladung, seine Gesetze zu öffnen. Ein wirklich persönlicher Computer kennt deshalb nicht nur unsere Vorlieben. Er macht uns zu Mitgestaltern der Modelle, mit denen wir die Welt verstehen.</p>
+        </article>
+    </main>
+    <script>
+        const gravity = document.querySelector('#gravity');
+        const bounce = document.querySelector('#bounce');
+        const ball = document.querySelector('#ball');
+        const world = document.querySelector('#world');
+        const trail = document.querySelector('#trail');
+        const readout = document.querySelector('#readout');
+        let y = 30, velocity = 0, last = performance.now(), points = [];
+        function label() {
+            document.querySelector('#gravityOut').value = gravity.value;
+            document.querySelector('#bounceOut').value = `${bounce.value}%`;
+            readout.textContent = Number(bounce.value) > 90 ? 'Fast alle Bewegungsenergie bleibt erhalten.' : Number(bounce.value) < 50 ? 'Die Welt schluckt Energie schnell.' : 'Jeder Aufprall gibt nur einen Teil der Bewegung zurück.';
+        }
+        function frame(now) {
+            const dt = Math.min((now - last) / 1000, .04); last = now;
+            const floor = world.clientHeight - 16;
+            velocity += Number(gravity.value) * 45 * dt;
+            y += velocity * dt;
+            if (y > floor) { y = floor; velocity = -Math.abs(velocity) * Number(bounce.value) / 100; }
+            ball.style.left = '50%'; ball.style.top = `${y}px`;
+            points.push(`50,${y}`); if (points.length > 70) points.shift();
+            trail.innerHTML = `<polyline points="${points.join(' ')}" fill="none" stroke="var(--accent)" stroke-opacity=".28" stroke-width="2"/>`;
+            requestAnimationFrame(frame);
+        }
+        [gravity, bounce].forEach(input => input.addEventListener('input', label));
+        label(); requestAnimationFrame(frame);
+    </script>
+</body>
+</html>
