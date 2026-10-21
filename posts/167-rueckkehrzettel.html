@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rückkehrzettel — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .field { display: grid; gap: .35rem; margin: 1rem 0; }
+        .field label { font-weight: 700; }
+        textarea { box-sizing: border-box; width: 100%; min-height: 5rem; resize: vertical; border: 1px solid var(--text-muted); border-radius: 8px; padding: .8rem; color: var(--text); background: var(--bg); font: inherit; }
+        textarea:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .actions { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; margin-top: 1.2rem; }
+        button { border: 0; border-radius: 8px; padding: .75rem 1rem; color: var(--bg); background: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+        button.secondary { color: var(--text); background: var(--bg); border: 1px solid var(--text-muted); }
+        #status { color: var(--text-muted); }
+        .receipt { margin-top: 1.2rem; padding: 1rem; border-left: 4px solid var(--accent); background: var(--bg); white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">21. Oktober 2026</div>
+            <h1>Rückkehrzettel</h1>
+            <p>Der Arbeitstag endet selten an einer sauberen Kante. Eine Idee ist halb geprüft, eine Datei halb verstanden, der nächste Schritt nur noch im Kurzzeitgedächtnis. Am Morgen kostet nicht die Arbeit selbst Zeit, sondern ihre Rekonstruktion.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Praktisches &amp; Nützliches → Kleine Automationen, die niemand baut (aber jeder braucht).</strong></p>
+
+            <section class="lab">
+                <h2>Drei Spuren für morgen</h2>
+                <p>Der Zettel bleibt vollständig im Browser. Er speichert nichts automatisch und exportiert nur auf deinen Klick eine einfache Textdatei.</p>
+                <div class="field">
+                    <label for="place">Wo stehe ich?</label>
+                    <textarea id="place" placeholder="Aktueller Zustand, offene Datei, letzter Test …"></textarea>
+                </div>
+                <div class="field">
+                    <label for="next">Was ist der kleinste nächste Schritt?</label>
+                    <textarea id="next" placeholder="Eine konkrete Handlung, mit der ich wieder beginne …"></textarea>
+                </div>
+                <div class="field">
+                    <label for="why">Was darf ich nicht neu herausfinden müssen?</label>
+                    <textarea id="why" placeholder="Entscheidung, Irrweg oder überraschende Erkenntnis …"></textarea>
+                </div>
+                <div class="actions">
+                    <button id="preview" type="button">Zettel falten</button>
+                    <button id="download" class="secondary" type="button">Als Text speichern</button>
+                    <span id="status" aria-live="polite"></span>
+                </div>
+                <div class="receipt" id="receipt" hidden></div>
+            </section>
+
+            <h2>Warum gerade drei Fragen?</h2>
+            <p>Ein vollständiges Protokoll wird selbst zur Aufgabe. Drei Spuren genügen meist: ein Ort, eine Bewegung und eine bereits bezahlte Erkenntnis. Zusammen verkürzen sie die Entfernung zwischen „Ich war hier“ und „Ich bin wieder drin“.</p>
+
+            <h2>Export statt Plattform</h2>
+            <p>Die nützlichste kleine Automation muss nicht alles verwalten. Eine Textdatei ist langweilig, durchsuchbar und unabhängig. Der Zettel darf neben dem Projekt liegen, in eine Notiz wandern oder gelöscht werden, sobald er seinen einzigen Zweck erfüllt hat.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Gute Automation spart nicht nur Handgriffe. Manchmal konserviert sie einen winzigen mentalen Zustand genau an der Stelle, an der er sonst verdampfen würde. Der beste Zeitpunkt für den Wiedereinstieg ist deshalb kurz vor dem Ausstieg.</p>
+        </article>
+    </main>
+    <script>
+        const fields = ['place', 'next', 'why'].map(id => document.getElementById(id));
+        const receipt = document.getElementById('receipt');
+        const status = document.getElementById('status');
+
+        function folded() {
+            const values = fields.map(field => field.value.trim() || '—');
+            return `RÜCKKEHRZETTEL\n${new Date().toLocaleString('de-DE')}\n\nWO ICH STEHE\n${values[0]}\n\nNÄCHSTER SCHRITT\n${values[1]}\n\nNICHT NOCH EINMAL HERAUSFINDEN\n${values[2]}\n`;
+        }
+
+        document.getElementById('preview').addEventListener('click', () => {
+            receipt.textContent = folded();
+            receipt.hidden = false;
+            status.textContent = 'Bereit für morgen.';
+        });
+
+        document.getElementById('download').addEventListener('click', () => {
+            const blob = new Blob([folded()], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `rueckkehrzettel-${new Date().toISOString().slice(0, 10)}.txt`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            status.textContent = 'Textdatei erstellt.';
+        });
+    </script>
+</body>
+</html>
