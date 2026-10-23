@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transferprobe — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { background: var(--bg-secondary); border-radius: 12px; padding: 1.5rem; margin: 2rem 0; }
+        .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin: 1.3rem 0; }
+        .card { border: 2px solid var(--text-muted); border-radius: 10px; padding: 1rem .7rem; background: var(--bg); color: var(--text); cursor: pointer; font: inherit; }
+        .card:hover, .card:focus-visible { border-color: var(--accent); }
+        .card.chosen { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+        .symbol { display: block; font-size: 2rem; margin-bottom: .4rem; }
+        .result { min-height: 3.5rem; padding: 1rem; border-left: 4px solid var(--accent); background: var(--bg); }
+        .next { margin-top: 1rem; padding: .7rem 1rem; border: 0; border-radius: 8px; background: var(--accent); color: white; cursor: pointer; font: inherit; font-weight: 700; }
+        @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">23. Oktober 2026</div>
+            <h1>Transferprobe</h1>
+            <p>Eine Antwort kann richtig sein und trotzdem wenig verraten. Vielleicht wurde sie erinnert, erraten oder nur an vertrauten Merkmalen erkannt. Verstehen zeigt sich erst, wenn die Oberfläche wechselt und eine Idee dennoch brauchbar bleibt.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Philosophisches → Was ist der Unterschied zwischen „wissen“ und „verstehen“?</strong></p>
+
+            <section class="lab">
+                <h2>Welche Form setzt die Reihe fort?</h2>
+                <p id="rule">Runde 1 von 3: ▲ ■ ▲ ■ …</p>
+                <div class="cards" id="cards"></div>
+                <div class="result" id="result" aria-live="polite">Wähle eine Fortsetzung.</div>
+                <button class="next" id="next" type="button" hidden>Nächste Transferprobe</button>
+            </section>
+
+            <h2>Vom Treffer zum Modell</h2>
+            <p>In der ersten Runde genügt Wiedererkennen. Danach wandert dieselbe Regel durch Farben, Wörter und eine kleine Störung. Wer nur die Zeichen gespeichert hat, verliert den Halt. Wer die Beziehung „abwechselnd“ erfasst hat, kann sie übertragen.</p>
+
+            <h2>Verstehen ist bewegliches Wissen</h2>
+            <p>Wissen liefert Bestand: Begriffe, Fakten und gelernte Verfahren. Verstehen ordnet diesen Bestand so, dass wir erklären, vorhersagen und auf neue Fälle reagieren können. Beides gehört zusammen — doch eine Prüfung vertrauter Antworten misst leicht nur den unbeweglichen Teil.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Verstehen erkennt man nicht daran, wie sicher jemand eine bekannte Antwort wiederholt. Die stärkere Probe ist ein behutsam veränderter Fall: Bleibt die zugrunde liegende Beziehung benennbar und handlungsfähig, obwohl ihre Oberfläche nicht dieselbe ist?</p>
+        </article>
+    </main>
+    <script>
+        const rounds = [
+            { prompt: 'Runde 1 von 3: ▲ ■ ▲ ■ …', options: ['▲', '■', '●'], answer: 0, note: 'Richtig. Das Muster lässt sich direkt an den Zeichen wiedererkennen.' },
+            { prompt: 'Runde 2 von 3: blau orange blau orange …', options: ['orange', 'blau', 'grün'], answer: 1, note: 'Richtig. Die Zeichen sind neu, aber die Beziehung ist dieselbe: zwei Elemente wechseln sich ab.' },
+            { prompt: 'Runde 3 von 3: leise laut leise [Lücke] leise …', options: ['leise', 'laut', 'Pause'], answer: 1, note: 'Richtig. Trotz Lücke trägt die erklärte Regel weiter — das ist Transfer.' }
+        ];
+        let current = 0;
+        const rule = document.getElementById('rule');
+        const cards = document.getElementById('cards');
+        const result = document.getElementById('result');
+        const next = document.getElementById('next');
+
+        function render() {
+            const round = rounds[current];
+            rule.textContent = round.prompt;
+            cards.replaceChildren(...round.options.map((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'card';
+                button.type = 'button';
+                button.innerHTML = `<span class="symbol">${option}</span>Option ${index + 1}`;
+                button.addEventListener('click', () => choose(index, button));
+                return button;
+            }));
+            result.textContent = 'Wähle eine Fortsetzung.';
+            next.hidden = true;
+        }
+
+        function choose(index, button) {
+            [...cards.children].forEach(card => { card.disabled = true; card.classList.remove('chosen'); });
+            button.classList.add('chosen');
+            const round = rounds[current];
+            result.innerHTML = index === round.answer
+                ? `<strong>${round.note}</strong>`
+                : '<strong>Noch nicht.</strong> Versuche, nicht das Material, sondern die Beziehung zwischen den Elementen zu beschreiben.';
+            next.hidden = false;
+            next.textContent = current === rounds.length - 1 ? 'Von vorn' : 'Nächste Transferprobe';
+        }
+
+        next.addEventListener('click', () => { current = (current + 1) % rounds.length; render(); });
+        render();
+    </script>
+</body>
+</html>
