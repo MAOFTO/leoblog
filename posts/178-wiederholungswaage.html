@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wiederholungswaage — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .workbench { margin: 2rem 0; padding: 1.25rem; border: 1px solid #526071; border-radius: 14px; background: linear-gradient(145deg, #17202b, #10161e); color: #eef6ff; }
+        .workbench h2 { margin-top: 0; color: #fff; }
+        .control { display: grid; grid-template-columns: 1fr auto; gap: .35rem 1rem; margin: 1rem 0; }
+        .control label { font-weight: 700; }
+        .control output { color: #8fd3ff; font-variant-numeric: tabular-nums; }
+        .control input { grid-column: 1 / -1; width: 100%; accent-color: #62c3ff; }
+        .verdict { margin-top: 1.3rem; padding: 1rem; border-left: 4px solid #62c3ff; background: rgba(98,195,255,.1); }
+        .verdict strong { display: block; font-size: 1.2rem; color: #fff; }
+        .meter { height: 10px; margin-top: .8rem; overflow: hidden; border-radius: 99px; background: #293440; }
+        .meter span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #62c3ff, #8ef0bd); transition: width .2s; }
+        .small { color: #aec0d1; font-size: .9rem; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">1. November 2026</div>
+            <h1>Wiederholungswaage</h1>
+            <p>Manche Handgriffe dauern nur zwei Minuten. Gerade deshalb bleiben sie jahrelang unangetastet: Datei umbenennen, Wert übertragen, denselben Bericht öffnen. Die einzelne Mühe ist zu klein für ein Projekt — ihre Wiederholung aber nicht.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Praktisches &amp; Nützliches → Kleine Automationen, die niemand baut.</strong></p>
+
+            <h2>Nicht nur Zeit zählen</h2>
+            <p>Eine Automation kostet Bauzeit und Pflege. Ihr Nutzen besteht ebenfalls nicht nur aus gesparten Minuten: Ein fehleranfälliger oder lästiger Schritt belastet stärker als ein kurzer, angenehmer Handgriff. Die Waage macht diese Größen gemeinsam sichtbar.</p>
+
+            <section class="workbench" aria-label="Rechner für kleine Automationen">
+                <h2>Lohnt sich der kleine Helfer?</h2>
+                <div class="control">
+                    <label for="minutes">Minuten pro Durchlauf</label><output id="minutesOut">3</output>
+                    <input id="minutes" type="range" min="1" max="20" value="3">
+                </div>
+                <div class="control">
+                    <label for="frequency">Durchläufe pro Monat</label><output id="frequencyOut">12</output>
+                    <input id="frequency" type="range" min="1" max="60" value="12">
+                </div>
+                <div class="control">
+                    <label for="build">Bau und Pflege in Stunden</label><output id="buildOut">2,0</output>
+                    <input id="build" type="range" min="2" max="40" value="8">
+                </div>
+                <div class="control">
+                    <label for="friction">Fehler- und Nervfaktor</label><output id="frictionOut">1,3×</output>
+                    <input id="friction" type="range" min="10" max="20" value="13">
+                </div>
+                <div class="verdict" aria-live="polite">
+                    <strong id="headline"></strong>
+                    <span id="detail"></span>
+                    <div class="meter"><span id="meter"></span></div>
+                </div>
+                <p class="small">Faustmodell für zwölf Monate. Es ersetzt keine Prozessprüfung: Einen unnötigen Schritt sollte man zuerst streichen, nicht automatisieren.</p>
+            </section>
+
+            <h2>Die Reihenfolge entscheidet</h2>
+            <p>Vor dem Bauen stehen drei Fragen: Muss der Schritt überhaupt existieren? Kann eine vorhandene Funktion ihn vereinfachen? Bleibt der Ablauf danach stabil genug? Erst dann ist ein Skript, Shortcut oder Makro die passende Antwort. Eine kleine Automation sollte auch klein zu erklären, zu stoppen und zu reparieren sein.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Die übersehenen Automationen wohnen unterhalb unserer Aufmerksamkeitsschwelle. Man entdeckt sie nicht an spektakulären Zeitverlusten, sondern an unscheinbaren Wiederholungen. Der beste Kandidat spart nicht zwingend die meisten Minuten: Er entfernt eine häufige Unterbrechung, ohne dafür ein neues wartungsintensives System zu schaffen.</p>
+        </article>
+    </main>
+    <script>
+        const ids = ['minutes', 'frequency', 'build', 'friction'];
+        const elements = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+        function render() {
+            const minutes = Number(elements.minutes.value);
+            const frequency = Number(elements.frequency.value);
+            const buildHours = Number(elements.build.value) / 4;
+            const friction = Number(elements.friction.value) / 10;
+            const yearlyBenefit = minutes * frequency * 12 * friction / 60;
+            const balance = yearlyBenefit - buildHours;
+            document.getElementById('minutesOut').textContent = minutes;
+            document.getElementById('frequencyOut').textContent = frequency;
+            document.getElementById('buildOut').textContent = buildHours.toLocaleString('de-DE', {minimumFractionDigits: 1});
+            document.getElementById('frictionOut').textContent = friction.toLocaleString('de-DE', {minimumFractionDigits: 1}) + '×';
+            document.getElementById('headline').textContent = balance > 4 ? 'Guter Kandidat' : balance >= 0 ? 'Klein anfangen' : 'Vorerst manuell lassen';
+            document.getElementById('detail').textContent = `Gewichteter Jahresnutzen: ${yearlyBenefit.toLocaleString('de-DE', {maximumFractionDigits: 1})} Stunden; Aufwand: ${buildHours.toLocaleString('de-DE', {minimumFractionDigits: 1})} Stunden.`;
+            document.getElementById('meter').style.width = `${Math.min(100, yearlyBenefit / Math.max(buildHours, 1) * 35)}%`;
+        }
+        ids.forEach(id => elements[id].addEventListener('input', render));
+        render();
+    </script>
+</body>
+</html>
