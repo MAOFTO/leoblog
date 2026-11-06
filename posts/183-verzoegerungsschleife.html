@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verzögerungsschleife — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { margin: 2rem 0; padding: 1.25rem; border: 1px solid #386b70; border-radius: 14px; background: linear-gradient(145deg, #102126, #0d1418); color: #ecfbf8; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        label { display: grid; gap: .4rem; color: #bcd8d5; }
+        input { width: 100%; accent-color: #6ee7c7; }
+        canvas { width: 100%; height: 260px; display: block; border-radius: 10px; background: #081012; }
+        .reading { display: flex; justify-content: space-between; gap: 1rem; margin-top: .8rem; color: #bcd8d5; }
+        .reading strong { color: #6ee7c7; }
+        @media (max-width: 600px) { .controls { grid-template-columns: 1fr; } canvas { height: 210px; } .reading { flex-direction: column; gap: .25rem; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">6. November 2026</div>
+            <h1>Verzögerungsschleife</h1>
+            <p>Ein Thermostat, ein Lagerbestand und ein Team mit Kennzahlen tun etwas Ähnliches: Sie beobachten eine Abweichung und korrigieren sie. Doch wenn die Wirkung erst später sichtbar wird, antwortet die nächste Korrektur noch auf eine Welt, die es bereits nicht mehr gibt.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Emergenz &amp; Systeme → Feedback-Loops in Systemen</strong>.</p>
+
+            <h2>Wenn die Antwort zu spät ankommt</h2>
+            <p>Die grüne Linie soll die gestrichelte Zielhöhe erreichen. Verstärkung bestimmt, wie kräftig auf den Fehler reagiert wird; Verzögerung, wie alt die dafür benutzte Beobachtung ist. Kleine Änderungen genügen, um ruhiges Annähern in Überschwingen zu verwandeln.</p>
+
+            <section class="lab" aria-label="Interaktives Labor für verzögerte Rückkopplung">
+                <div class="controls">
+                    <label>Verstärkung: <strong id="gainValue">0,30</strong><input id="gain" type="range" min="5" max="80" value="30"></label>
+                    <label>Verzögerung: <strong id="delayValue">2 Schritte</strong><input id="delay" type="range" min="0" max="14" value="2"></label>
+                </div>
+                <canvas id="chart" width="900" height="300" aria-label="Verlauf einer Regelgröße auf dem Weg zum Zielwert"></canvas>
+                <div class="reading" aria-live="polite"><span>Verhalten: <strong id="verdict">ruhige Annäherung</strong></span><span>Letzter Wert: <strong id="lastValue">–</strong></span></div>
+            </section>
+
+            <h2>Mehr Korrektur ist nicht immer mehr Kontrolle</h2>
+            <p>Wer nur die sichtbare Abweichung betrachtet, hält eine stärkere Reaktion leicht für konsequenter. In einer verzögerten Schleife kann sie jedoch mehrere bereits gestartete Wirkungen stapeln. Das System wird nicht träge, weil niemand handelt, sondern unruhig, weil jede Handlung die noch unsichtbaren früheren Handlungen ignoriert.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Feedback braucht ein Gedächtnis für unterwegs befindliche Wirkung. Wo Reaktion und Ergebnis zeitlich auseinanderliegen, ist Geduld keine Passivität, sondern Teil der Regelung. Die wichtigste Frage lautet dann nicht nur „Wie groß ist der Fehler?“, sondern auch: „Welche Korrekturen sind schon auf dem Weg?“</p>
+        </article>
+    </main>
+    <script>
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+        const gain = document.getElementById('gain');
+        const delay = document.getElementById('delay');
+        function simulate() {
+            const k = Number(gain.value) / 100;
+            const lag = Number(delay.value);
+            const values = Array(lag + 1).fill(0);
+            for (let i = 0; i < 70; i++) {
+                const observed = values[Math.max(0, values.length - 1 - lag)];
+                values.push(values.at(-1) + k * (1 - observed));
+            }
+            gainValue.textContent = k.toFixed(2).replace('.', ',');
+            delayValue.textContent = lag + (lag === 1 ? ' Schritt' : ' Schritte');
+            draw(values.slice(lag + 1));
+        }
+        function draw(values) {
+            const w = canvas.width, h = canvas.height, pad = 28;
+            const min = Math.min(-.25, ...values), max = Math.max(1.25, ...values);
+            const y = value => h - pad - (value - min) / (max - min) * (h - pad * 2);
+            ctx.clearRect(0, 0, w, h);
+            ctx.setLineDash([9, 8]); ctx.strokeStyle = '#78918e'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(pad, y(1)); ctx.lineTo(w - pad, y(1)); ctx.stroke();
+            ctx.setLineDash([]); ctx.strokeStyle = '#6ee7c7'; ctx.lineWidth = 4; ctx.beginPath();
+            values.forEach((value, i) => { const x = pad + i / (values.length - 1) * (w - pad * 2); i ? ctx.lineTo(x, y(value)) : ctx.moveTo(x, y(value)); });
+            ctx.stroke();
+            const tail = values.slice(-18); const spread = Math.max(...tail) - Math.min(...tail);
+            verdict.textContent = spread < .03 ? 'ruhige Annäherung' : Math.max(...values) > 2.2 ? 'aufschaukelnd' : 'schwingend';
+            lastValue.textContent = values.at(-1).toFixed(2).replace('.', ',');
+        }
+        gain.addEventListener('input', simulate);
+        delay.addEventListener('input', simulate);
+        simulate();
+    </script>
+</body>
+</html>
