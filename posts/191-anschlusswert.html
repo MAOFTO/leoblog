@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anschlusswert — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { margin: 2rem 0; padding: 1.2rem; border: 1px solid #4f8f8a; border-radius: 14px; background: #101f21; color: #efffff; }
+        .controls { display: grid; gap: 1rem; }
+        label { display: grid; grid-template-columns: 10rem 1fr 2.5rem; gap: .7rem; align-items: center; }
+        input { width: 100%; accent-color: #6ed5c9; }
+        .result { margin-top: 1.2rem; padding: 1rem; background: #193033; border-left: 4px solid #6ed5c9; }
+        .meter { height: .7rem; margin-top: .8rem; border-radius: 1rem; overflow: hidden; background: #29494b; }
+        .meter span { display: block; height: 100%; background: #6ed5c9; transition: width .2s; }
+        @media (max-width: 540px) { label { grid-template-columns: 1fr 2.5rem; } label span:first-child { grid-column: 1 / -1; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">14. November 2026</div>
+            <h1>Anschlusswert</h1>
+            <p>Manche Technologien verlieren, obwohl sie messbar gut sind. Sie sind schneller, klarer oder eleganter — und finden trotzdem keinen Platz im Alltag. Denn eine Erfindung tritt nicht gegen eine andere Erfindung an. Sie tritt gegen Gewohnheiten, vorhandene Geräte und bereits verbundene Menschen an.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Technologie &amp; Geschichte → Gescheiterte Technologien — was können wir von ihnen lernen?</strong></p>
+
+            <section class="lab" aria-label="Interaktive Anschlusswert-Probe">
+                <div class="controls">
+                    <label><span>Technischer Vorteil</span><input id="advantage" type="range" min="0" max="10" value="8"><output id="advantageValue">8</output></label>
+                    <label><span>Wechselaufwand</span><input id="switching" type="range" min="0" max="10" value="7"><output id="switchingValue">7</output></label>
+                    <label><span>Vorhandene Anschlüsse</span><input id="connections" type="range" min="0" max="10" value="3"><output id="connectionsValue">3</output></label>
+                </div>
+                <div class="result" id="result" aria-live="polite"></div>
+            </section>
+
+            <h2>Das Produkt endet nicht an seinem Gehäuse</h2>
+            <p>Ein neues Format braucht Abspielgeräte, ein Kommunikationsdienst braucht Gesprächspartner, ein Werkzeug braucht Dateien, Kenntnisse und Vertrauen. Wer nur die Eigenschaften des Produkts vergleicht, schneidet genau jene Verbindungen ab, die seinen tatsächlichen Wert erzeugen. Der vermeintlich schwächere Standard kann deshalb die stärkere Umgebung besitzen.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Gescheiterte Technologien sind nicht immer schlechte Antworten. Manchmal beantworten sie nur die Frage „Was kann dieses Ding?“ und übersehen „Woran kann es anschließen?“. Technischer Vorsprung wird erst wirksam, wenn er größer ist als die Kosten des Wechsels — oder wenn eine Brücke das Neue mit der alten Welt verbindet.</p>
+        </article>
+    </main>
+    <script>
+        const ids = ['advantage', 'switching', 'connections'];
+        const result = document.getElementById('result');
+
+        function update() {
+            const values = Object.fromEntries(ids.map(id => [id, Number(document.getElementById(id).value)]));
+            ids.forEach(id => document.getElementById(id + 'Value').value = values[id]);
+            const score = Math.max(0, Math.min(100, Math.round(50 + values.advantage * 5 + values.connections * 6 - values.switching * 7)));
+            const label = score >= 70 ? 'Das Neue findet Anschluss.' : score >= 40 ? 'Der Vorteil braucht eine Brücke.' : 'Die alte Umgebung gewinnt.';
+            const advice = values.switching > values.connections ? ' Kompatibilität oder ein sanfter Übergang wären hier wertvoller als noch ein Feature.' : ' Bestehende Verbindungen tragen den technischen Vorteil in den Alltag.';
+            result.innerHTML = '<strong>' + label + '</strong>' + advice + '<div class="meter" aria-label="Anschlusswert ' + score + ' Prozent"><span style="width:' + score + '%"></span></div>';
+        }
+        ids.forEach(id => document.getElementById(id).addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
