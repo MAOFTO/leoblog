@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rückkopplungsfenster — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { margin: 2rem 0; padding: 1.2rem; border: 1px solid #8b76c8; border-radius: 14px; background: #19162a; color: #faf7ff; }
+        .controls { display: grid; gap: 1rem; }
+        label { display: grid; grid-template-columns: 9rem 1fr 2.5rem; gap: .7rem; align-items: center; }
+        input { width: 100%; accent-color: #b9a2ff; }
+        canvas { width: 100%; height: 170px; margin-top: 1.2rem; border-radius: 8px; background: #0f0d19; }
+        .result { margin-top: .8rem; color: #ded4ff; }
+        @media (max-width: 540px) { label { grid-template-columns: 1fr 2.5rem; } label span:first-child { grid-column: 1 / -1; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">15. November 2026</div>
+            <h1>Rückkopplungsfenster</h1>
+            <p>Ein Thermostat, ein Team und ein Algorithmus tun etwas Ähnliches: Sie beobachten eine Abweichung und reagieren. Doch wenn die Wirkung erst später sichtbar wird, antworten sie leicht auf eine Vergangenheit, die gar nicht mehr existiert.</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Emergenz &amp; Systeme → Feedback-Loops in Systemen.</strong></p>
+
+            <section class="lab" aria-label="Interaktive Rückkopplungssimulation">
+                <div class="controls">
+                    <label><span>Korrekturstärke</span><input id="gain" type="range" min="1" max="15" value="7"><output id="gainValue">7</output></label>
+                    <label><span>Verzögerung</span><input id="delay" type="range" min="0" max="8" value="2"><output id="delayValue">2</output></label>
+                </div>
+                <canvas id="chart" width="700" height="170" aria-label="Verlauf der Abweichung"></canvas>
+                <div class="result" id="result" aria-live="polite"></div>
+            </section>
+
+            <h2>Die verspätete Antwort</h2>
+            <p>Starke Korrekturen wirken vernünftig, solange Beobachtung und Wirkung fast gleichzeitig geschehen. Mit Verzögerung wird dieselbe Entschlossenheit zum Problem: Während die erste Reaktion noch unterwegs ist, wird bereits nachgesteuert. Das System überschießt, korrigiert zurück und erzeugt sein eigenes Pendeln.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Stabilität ist keine Eigenschaft der Korrektur allein. Sie entsteht aus dem Verhältnis von Stärke, Verzögerung und Beobachtungsrhythmus. Wer ein nervöses System beruhigen will, sollte deshalb nicht nur fragen: „Wie stark reagieren wir?“, sondern zuerst: „Auf welchen Zeitpunkt reagieren wir gerade?“</p>
+        </article>
+    </main>
+    <script>
+        const gain = document.getElementById('gain');
+        const delay = document.getElementById('delay');
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+
+        function update() {
+            const g = Number(gain.value) / 10;
+            const d = Number(delay.value);
+            gain.nextElementSibling.value = gain.value;
+            delay.nextElementSibling.value = delay.value;
+            const values = Array(d + 1).fill(1);
+            for (let i = d + 1; i < 55; i++) values.push(values[i - 1] - g * values[i - d - 1]);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#4b426c'; ctx.beginPath(); ctx.moveTo(0, 85); ctx.lineTo(700, 85); ctx.stroke();
+            ctx.strokeStyle = '#b9a2ff'; ctx.lineWidth = 3; ctx.beginPath();
+            values.forEach((v, i) => { const x = i * 700 / 54; const y = Math.max(4, Math.min(166, 85 - v * 55)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+            ctx.stroke();
+            const tail = values.slice(-10); const amplitude = Math.max(...tail.map(Math.abs));
+            document.getElementById('result').textContent = amplitude < .12 ? 'Das System findet zur Ruhe.' : amplitude < 1 ? 'Das System pendelt noch.' : 'Die Korrektur verstärkt die Unruhe.';
+        }
+        [gain, delay].forEach(input => input.addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
