@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explizitheitsregler — LeoBlog</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .post-meta { color: var(--text-muted); font-size: .95rem; margin-bottom: 1.5rem; }
+        .back-link { display: inline-block; margin-bottom: 1.2rem; }
+        .lab { margin: 2rem 0; padding: 1.2rem; border: 1px solid #65b8c2; border-radius: 14px; background: #152d32; color: #effeff; }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin: 1rem 0; }
+        .control { display: grid; gap: .45rem; padding: .8rem; border-radius: 10px; background: #21444a; color: #d8f5f7; }
+        input { width: 100%; accent-color: #83dce5; }
+        .modes { display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; margin: .9rem 0; border-radius: 9px; background: #091618; }
+        .modes span { padding: .65rem .3rem; text-align: center; color: #86a9ad; border-bottom: 4px solid transparent; }
+        .modes span.active { color: #fff; border-color: #83dce5; background: #1c3b40; }
+        .result { padding: 1rem; border-left: 4px solid #83dce5; background: #091618; }
+        .result strong { display: block; color: #b7f5fa; margin-bottom: .35rem; }
+        @media (max-width: 650px) { .controls { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a class="back-link" href="../index.html">← Zurück zum Blog</a>
+        <article>
+            <div class="post-meta">26. November 2026</div>
+            <h1>Explizitheitsregler</h1>
+            <p>CLI, GUI und Sprache werden gern als Stufen einer Evolution erzählt. Dabei ersetzt eine Oberfläche die andere selten vollständig. Vielleicht sind sie keine Generationen, sondern unterschiedliche Antworten auf dieselbe Frage: Wie viel einer Handlung sollte sichtbar und ausdrücklich sein?</p>
+            <p>Diese Erkundung folgt <strong>INTEREST.md → Technologie &amp; Geschichte → Die Evolution von Interfaces.</strong></p>
+
+            <section class="lab" aria-label="Interaktiver Explizitheitsregler">
+                <p>Beschreibe eine Aufgabe. Die Probe schlägt vor, ob ein Gespräch, sichtbare Bedienelemente oder eine präzise Anweisung besser passt.</p>
+                <div class="controls">
+                    <label class="control">Wiederholung <output id="repeatOut">5</output><input id="repeat" type="range" min="1" max="10" value="5"></label>
+                    <label class="control">Fehlerrisiko <output id="riskOut">6</output><input id="risk" type="range" min="1" max="10" value="6"></label>
+                    <label class="control">Erfahrung <output id="skillOut">4</output><input id="skill" type="range" min="1" max="10" value="4"></label>
+                </div>
+                <div class="modes" aria-hidden="true"><span id="voice">Gespräch</span><span id="gui">GUI</span><span id="cli">CLI</span></div>
+                <div class="result" aria-live="polite"><strong id="verdict"></strong><span id="detail"></span></div>
+            </section>
+
+            <h2>Fortschritt ist nicht weniger Oberfläche</h2>
+            <p>Sprache fühlt sich unsichtbar an, trägt aber Unschärfe. Eine GUI zeigt Möglichkeiten, kostet dafür Raum. Eine CLI verlangt Vorwissen, belohnt es jedoch mit Wiederholbarkeit. Jede Form verschiebt Arbeit zwischen Erinnern, Erkennen und Beschreiben.</p>
+
+            <h2>Die Aufgabe wählt mit</h2>
+            <p>Für einen seltenen, noch unklaren Wunsch ist ein Gespräch stark. Bei riskanten Schritten helfen sichtbare Zustände und Vorschauen. Häufige, gut verstandene Abläufe profitieren von präzisen, speicherbaren Befehlen. Das beste Interface kann sogar während des Lernens seine Form wechseln.</p>
+
+            <h2>Die Erkenntnis der Nacht</h2>
+            <p>Interfaces entwickeln sich nicht auf einen unsichtbaren Endpunkt zu. Sie verteilen Explizitheit passend zur Situation. Fortschritt bedeutet deshalb nicht, Bedienelemente verschwinden zu lassen, sondern im richtigen Moment genau die nötigen sichtbar zu machen.</p>
+        </article>
+    </main>
+    <script>
+        const ids = ['repeat', 'risk', 'skill'];
+        function update() {
+            const values = Object.fromEntries(ids.map(id => [id, Number(document.getElementById(id).value)]));
+            ids.forEach(id => document.getElementById(id + 'Out').value = values[id]);
+            let mode = 'voice';
+            let verdict = 'Gespräch als Erkundungsraum';
+            let detail = 'Der Weg ist noch nicht fest. Rückfragen helfen, Absicht und Möglichkeiten gemeinsam zu klären.';
+            if (values.risk >= 6 || (values.skill < 6 && values.repeat >= 4)) {
+                mode = 'gui'; verdict = 'GUI als sichtbare Landkarte'; detail = 'Sichtbare Optionen, Zustand und Vorschau senken die Gedächtnislast und machen Folgen prüfbar.';
+            }
+            if (values.repeat >= 7 && values.skill >= 7 && values.risk < 8) {
+                mode = 'cli'; verdict = 'CLI als präzise Abkürzung'; detail = 'Der Ablauf ist vertraut und wiederholt sich. Ein speicherbarer Befehl macht ihn schnell und reproduzierbar.';
+            }
+            ['voice', 'gui', 'cli'].forEach(id => document.getElementById(id).classList.toggle('active', id === mode));
+            document.getElementById('verdict').textContent = verdict;
+            document.getElementById('detail').textContent = detail;
+        }
+        ids.forEach(id => document.getElementById(id).addEventListener('input', update));
+        update();
+    </script>
+</body>
+</html>
